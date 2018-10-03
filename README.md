@@ -1,3 +1,16 @@
+Additional features:
+
+- 128x64 OLED 0.96Inch with complete new main page
+- Vibration alarm under 15% Battery
+- extra button to change variables on main screen
+
+todo:
+- headlight implementation
+- breakinglight implemenation
+- ...
+
+#ORIGINAL:
+
 # FireFly-Remote v2.0
 
 Control your electric skateboard with an Arduino controlled remote. This repository contains the needed software for the remote and the receiver, but you will need to install a few Arduino Libraries in order to compile the Arduino sketches. The Arduino IDE comes with most of the needed libraries, but you will ned to manually install VescUartControl from RollingGecko: https://github.com/RollingGecko/VescUartControl.
