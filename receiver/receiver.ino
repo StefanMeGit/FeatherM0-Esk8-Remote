@@ -41,6 +41,8 @@ struct callback {
 	long rpm;
 	long tachometerAbs;
 	bool headlight;
+	float avgInputCurrent;
+	float avgMotorCurrent;
 } returnData;
 
 // Defining struct to handle receiver settings
@@ -530,13 +532,17 @@ void getUartData()
 			returnData.inpVoltage		  = UART.data.inpVoltage;
 			returnData.rpm 				    = UART.data.rpm;
 			returnData.tachometerAbs 	= UART.data.tachometerAbs;
+			returnData.avgInputCurrent 	= UART.data.avgInputCurrent;
+			returnData.avgMotorCurrent 	= UART.data.avgMotorCurrent
 		} 
 		else
 		{
-			returnData.ampHours 		  = 0.0;
-			returnData.inpVoltage     = 0.0;
-			returnData.rpm 				    = 0;
-			returnData.tachometerAbs  = 0;
+			returnData.ampHours 			= 0.0;
+			returnData.inpVoltage     		= 0.0;
+			returnData.rpm 				   	= 0;
+			returnData.tachometerAbs  		= 0;
+			returnData.avgInputCurrent 		= 0.0;
+			returnData.avgMotorCurrent 		= 0.0;
 		}
 	}
 }
