@@ -533,7 +533,7 @@ void getUartData()
 			returnData.rpm 				    = UART.data.rpm;
 			returnData.tachometerAbs 	= UART.data.tachometerAbs;
 			returnData.avgInputCurrent 	= UART.data.avgInputCurrent;
-			returnData.avgMotorCurrent 	= UART.data.avgMotorCurrent
+			returnData.avgMotorCurrent 	= UART.data.avgMotorCurrent;
 		} 
 		else
 		{
