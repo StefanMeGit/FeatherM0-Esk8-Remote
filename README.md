@@ -3,7 +3,7 @@ Additional features:
 - 128x64 OLED 0.96Inch with complete new main page
 - Vibration alarm under 15% Battery
 - extra button to change variables on main screen
-	- first view Speed, Distance, Voltage
+	- first view speed, distance, voltage
 	- second view voltage, battery current, motor current
 
 todo:
