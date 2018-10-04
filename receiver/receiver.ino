@@ -21,6 +21,7 @@ struct package {		  // | Normal 	| Setting 	| Confirm
 	uint8_t type;		    // | 0 			  | 1 		    | 2
 	uint16_t throttle;	// | Throttle | ---		    | ---
 	uint8_t trigger;	  // | Trigger 	| --- 		  | ---
+	bool headlight;
 } remPackage;
 
 #define NORMAL 0
@@ -39,6 +40,7 @@ struct callback {
 	float inpVoltage;
 	long rpm;
 	long tachometerAbs;
+	bool headlight;
 } returnData;
 
 // Defining struct to handle receiver settings
