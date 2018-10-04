@@ -976,7 +976,7 @@ void drawPage() {
     lastExtraButtonState = extraButtonState;
    }
 
-    if (displayData > 2) {
+    if (displayData > 1) {
       displayData = 0;
     }
 
