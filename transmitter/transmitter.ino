@@ -45,11 +45,13 @@ const unsigned char noconnectionIcon[] PROGMEM = {
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
-  float ampHours;
-  float inpVoltage;
-  long rpm;
-  long tachometerAbs;
-  bool headlightActive;
+	float ampHours;
+	float inpVoltage;
+	long rpm;
+	long tachometerAbs;
+	bool headlightActive;
+	float avgInputCurrent;
+	float avgMotorCurrent;
 } returnData;
 
 // Transmit and receive package
@@ -140,7 +142,7 @@ const char stringValues[3][3][13] = {
 };
 
 const char settingUnits[3][3] = {"S", "T", "mm"};
-const char dataSuffix[3][4] = {"V", "KMH", "KM"};
+const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[3][9] = {"BATTERY", "SPEED", "DISTANCE"};
 
 // Pin defination
@@ -980,37 +982,26 @@ void drawPage() {
 
   switch (displayData) {
     case 0:
-      valueMain = returnData.inpVoltage;
+      valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
-      unitMain = 0;
-      valueSecond = ratioRpmSpeed * returnData.rpm;
-      decimalsSecond = 1;
-      unitSecond = 1;
-      valueThird = ratioPulseDistance * returnData.tachometerAbs;
+      unitMain = 1;
+      valueSecond = returnData.inpVoltage;
+      decimalsSecond = 2;
+      unitSecond = 0;
+      valueThird = ratiPulseDistance * returnData.tachometerAbs;
       decimalsThird = 2;
       unitThird = 2;
       break;
     case 1:
-      valueMain = ratioRpmSpeed * returnData.rpm;
+      valueMain = returnData.inpVoltage;
       decimalsMain = 1;
-      unitMain = 1;
-      valueSecond = ratioPulseDistance * returnData.tachometerAbs;
+      unitMain = 0;
+      valueSecond = returnData.avgInputCurrent;
       decimalsSecond = 1;
-      unitSecond = 2;
-      valueThird = returnData.inpVoltage;
+      unitSecond = 3;
+      valueThird = returnData.avgMotorCurrent;
       decimalsThird = 1;
-      unitThird = 0;
-      break;
-    case 2:
-      valueMain = ratioPulseDistance * returnData.tachometerAbs;
-      decimalsMain = 1;
-      unitMain = 2;
-      valueSecond = returnData.inpVoltage;
-      decimalsSecond = 0;
-      unitSecond = 0;
-      valueThird = ratioRpmSpeed * returnData.rpm;
-      decimalsThird = 1;
-      unitThird = 1;
+      unitThird = 3;s
       break;
   }
 
