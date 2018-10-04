@@ -143,7 +143,7 @@ const char stringValues[3][3][13] = {
 
 const char settingUnits[3][3] = {"S", "T", "mm"};
 const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
-const char dataPrefix[3][9] = {"BATTERY", "SPEED", "DISTANCE"};
+const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
 // Pin defination
 const uint8_t triggerPin = 4;
@@ -988,7 +988,7 @@ void drawPage() {
       valueSecond = returnData.inpVoltage;
       decimalsSecond = 2;
       unitSecond = 0;
-      valueThird = ratiPulseDistance * returnData.tachometerAbs;
+      valueThird = ratioPulseDistance * returnData.tachometerAbs;
       decimalsThird = 2;
       unitThird = 2;
       break;
@@ -1001,7 +1001,7 @@ void drawPage() {
       unitSecond = 3;
       valueThird = returnData.avgMotorCurrent;
       decimalsThird = 1;
-      unitThird = 3;s
+      unitThird = 3;
       break;
   }
 
