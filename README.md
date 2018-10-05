@@ -1,3 +1,5 @@
+BETA!!! CAREFULL USE!
+
 Additional features:
 
 - 128x64 OLED 0.96Inch with complete new main page
