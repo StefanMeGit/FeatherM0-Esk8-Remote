@@ -78,8 +78,6 @@ struct settingPackage {
 
 // Defining struct to hold stats 
 struct stats {
-  float maxSpeed;
-  long maxRpm;
   float minVoltage;
   float maxVoltage;
 };
@@ -158,7 +156,7 @@ const uint8_t triggerPin = 4;
 const uint8_t extraButtonPin = 5;
 const uint8_t batteryMeasurePin = A2;
 const uint8_t hallSensorPin = A3;
-const uint8_t vibrationActuator = 6;
+const uint8_t vibrationActuatorPin = 6;
 const uint8_t CE = 9;
 const uint8_t CS = 10;
 
@@ -218,14 +216,6 @@ unsigned short settingWaitDelay = 500;
 unsigned short settingScrollWait = 800;
 unsigned long settingChangeMillis = 0;
 
-// Defining variables for Extras
-bool extraButtonActivated = false;
-int extraButtonState = 1;
-int lastExtraButtonState = 1;     // previous state of the button
-
-// headlight
-bool headlight = false;
-
 // Instantiating RF24 object for NRF24 communication
 RF24 radio(CE, CS);
 
@@ -243,7 +233,7 @@ void setup() {
   pinMode(extraButtonPin, INPUT_PULLUP);
   pinMode(hallSensorPin, INPUT);
   pinMode(batteryMeasurePin, INPUT);
-  pinMode(vibrationActuator, OUTPUT);
+  pinMode(vibrationActuatorPin, OUTPUT);
 
   // Start OLED operations
   u8g2.begin();
@@ -853,9 +843,9 @@ void alarmActivated() {
     }
 
     if (vibrationBlink == true) {
-      digitalWrite(vibrationActuator, HIGH);
+      digitalWrite(vibrationActuatorPin, HIGH);
     } else {
-      digitalWrite(vibrationActuator, LOW);
+      digitalWrite(vibrationActuatorPin, LOW);
     }
 }
 
