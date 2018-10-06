@@ -533,15 +533,6 @@ bool triggerActive() {
     return false;
 }
 
-// called when button is kept pressed for more than 2 seconds
-void mediumbuttonPress() {
-    if ( returnData.headlightActive == true) {
-    	remPackage.headlight = false;
-    } else {
-    	remPackage.headlight = true;
-    }
-}
-
 //Function used to transmit the remPackage and receive auto acknowledgement.
 void transmitToReceiver(){
   // Transmit once every 50 millisecond
@@ -956,9 +947,7 @@ void drawTitleScreen(String title) {
 // called when key goes from pressed to not pressed
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void buttonRelease() {
-    Serial.println("button release");
-    
+void buttonRelease() {    
     if (buttonPressCount < longbuttonPressCountMax && buttonPressCount >= mediumbuttonPressCountMin) {
         mediumbuttonPress();
     }
@@ -971,19 +960,27 @@ void buttonRelease() {
 
 // called when key goes from not pressed to pressed
 void buttonPress() {
-    Serial.println("button press");
     buttonPressCount = 0;
 }
  
  // called when button is kept pressed for less than .5 seconds
 void shortbuttonPress() {
-    Serial.println("short");
     displayView++;
+}
+
+// called when button is kept pressed for more than 2 seconds
+void mediumbuttonPress() {
+    if ( returnData.headlightActive == true) {
+    	remPackage.headlight = false;
+    } else {
+    	remPackage.headlight = true;
+    }
+    // Transmit to receiver
+    transmitToReceiver();
 }
 
 // called when button is kept pressed for 2 seconds or more
 void longbuttonPress() {
-    Serial.println("long");
 }
  
 // draw main page
