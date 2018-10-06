@@ -4,13 +4,14 @@ Additional features:
 
 - 128x64 OLED 0.96Inch with complete new main page
 - Vibration alarm under 15% Battery
-- extra button to change variables on main screen
+- short extra button press (<= 0.5s) to change variables on main screen
 	- first view speed, distance, voltage
 	- second view voltage, battery current, motor current
+- medium extra button press (0.5s - 2.0s) to switch lights on or off
 
 todo:
-- headlight implementation
-- breakinglight implemenation
+- headlight implementation on reciver
+- breakinglight implemenation on reciver
 - ...
 
 #ORIGINAL:
