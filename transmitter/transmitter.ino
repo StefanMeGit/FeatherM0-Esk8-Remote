@@ -45,14 +45,22 @@ const unsigned char noconnectionIcon[] PROGMEM = {
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
-	float ampHours;
-	float inpVoltage;
-	long rpm;
-	long tachometerAbs;
-	bool headlightActive;
-	float avgInputCurrent;
-	float avgMotorCurrent;
+  float ampHours;
+  float inpVoltage;
+  long rpm;
+  long tachometerAbs;
+  bool headlightActive;
+  float avgInputCurrent;
+  float avgMotorCurrent;
 } returnData;
+
+// defining button data 
+  unsigned long buttonPrevMillis = 0;
+  const unsigned long buttonSampleIntervalsMs = 25;
+  byte longbuttonPressCountMax = 80;    // 80 * 25 = 2000 ms
+  byte mediumbuttonPressCountMin = 20;    // 20 * 25 = 500 ms
+  byte buttonPressCount = 0;
+  byte prevButtonState = HIGH;         // button is active low
 
 // Transmit and receive package
 struct package {    // | Normal   | Setting   | Dummy
@@ -150,7 +158,7 @@ const uint8_t triggerPin = 4;
 const uint8_t extraButtonPin = 5;
 const uint8_t batteryMeasurePin = A2;
 const uint8_t hallSensorPin = A3;
-uint8_t vibrationActuator = 6;
+const uint8_t vibrationActuator = 6;
 const uint8_t CE = 9;
 const uint8_t CS = 10;
 
@@ -182,7 +190,7 @@ short failCount;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayData = 0;
+uint8_t displayView = 0;
 uint8_t x, y;
 unsigned long lastSignalBlink;
 unsigned long lastDataRotation;
@@ -215,6 +223,9 @@ bool extraButtonActivated = false;
 int extraButtonState = 1;
 int lastExtraButtonState = 1;     // previous state of the button
 
+// headlight
+bool headlight = false;
+
 // Instantiating RF24 object for NRF24 communication
 RF24 radio(CE, CS);
 
@@ -227,9 +238,7 @@ void setup() {
   #endif
 
   loadEEPROMSettings();
-  
-  u8g2.setContrast(255);
-  
+    
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(extraButtonPin, INPUT_PULLUP);
   pinMode(hallSensorPin, INPUT);
@@ -252,14 +261,33 @@ void setup() {
 
 void loop() {
 
-  if (triggerActive() && (extraButtonState == 0)) {
-    remPackage.headlight = true;
-    } else {
-    remPackage.headlight = false;
-  }
+// detect button press
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+    if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
+        buttonPrevMillis = millis();
+        
+        byte currButtonState = digitalRead(extraButtonPin);
+        
+        if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
+            buttonPress();
+        }
+        else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
+            buttonRelease();
+        }
+        else if (currButtonState == LOW) {
+            buttonPressCount++;
+    if (buttonPressCount >= longbuttonPressCountMax) {
+        longbuttonPress();
+    }
+        }
+        
+        prevButtonState = currButtonState;
+    }
 
-  extraButtonState = digitalRead(extraButtonPin);
-  DEBUG_PRINT( extraButtonState);
+// calculate throttle position
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 
   calculateThrottlePosition();
 
@@ -502,16 +530,12 @@ void setSettingValue(uint8_t index, uint64_t value) {
   }
 }
 
-/*
- * Check if an integer is within a min and max value
- */ 
+// Check if an integer is within a min and max value 
 bool inRange(short val, short minimum, short maximum) {
   return ((minimum <= val) && (val <= maximum));
 }
-
-/* 
- * Return true if trigger is activated, false otherwice
- */ 
+ 
+// Return true if trigger is activated, false otherwise 
 bool triggerActive() {
   if (digitalRead(triggerPin) == LOW)
     return true;
@@ -519,17 +543,16 @@ bool triggerActive() {
     return false;
 }
 
-/* 
- * Return true if extra pin is activated, false otherwice
- */ 
-bool extraButtonActive() {
-
-
+// called when button is kept pressed for more than 2 seconds
+void mediumbuttonPress() {
+    if ( returnData.headlightActive == true) {
+    	remPackage.headlight = false;
+    } else {
+    	remPackage.headlight = true;
+    }
 }
 
-/*
- * Function used to transmit the remPackage and receive auto acknowledgement.
- */
+//Function used to transmit the remPackage and receive auto acknowledgement.
 void transmitToReceiver(){
   // Transmit once every 50 millisecond
   if ( millis() - lastTransmission >= 50 ) {
@@ -539,24 +562,16 @@ void transmitToReceiver(){
     // Transmit the remPackage
     if ( radio.write( &remPackage, sizeof(remPackage) ) )
     {
-
       // Listen for an acknowledgement reponse (return of uart data).
       while (radio.isAckPayloadAvailable()) {
         radio.read( &returnData, sizeof(returnData) );
       }
-
       // Transmission was a succes
       failCount = 0;
-
-      DEBUG_PRINT( uint64ToAddress(txSettings.address) + ": Transmission succes");
     } else {
       // Transmission was not a succes
-      failCount++;
-
-      DEBUG_PRINT( uint64ToAddress(txSettings.address) +  + ": Failed transmission");
-     
+      failCount++;     
     }
-
     // If lost more than 5 transmissions, we can assume that connection is lost.
     if (failCount < 5) {
       connected = true;
@@ -601,9 +616,7 @@ bool transmitSetting(uint8_t setting, uint64_t value){
   // ** Begin transmitting new setting **
 
   if(payloadSend == true){
-
     DEBUG_PRINT( F("TX --> New setting") );
-
     // Transmit setPackage to receiver
     beginTime = millis(); 
 
@@ -625,7 +638,6 @@ bool transmitSetting(uint8_t setting, uint64_t value){
   // Check if the receiver Acknowledgement data is matching
   if( ackRecieved && setPackage.setting == setting && setPackage.value == value ){
 
-    DEBUG_PRINT( F("Setting confirmed") );
     payloadSend = false;
 
     // Wait a little
@@ -657,9 +669,9 @@ bool transmitSetting(uint8_t setting, uint64_t value){
 
 }
 
-/*
- * Initiate the nRF24 module, needed to reinitiate the nRF24 after address change
- */
+// Initiate the nRF24 module, needed to reinitiate the nRF24 after address change
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void initiateTransmitter(){
 
   radio.begin();
@@ -675,10 +687,10 @@ void initiateTransmitter(){
 
 }
 
-/*
- * Update the OLED for each loop
- * To-Do: Only update display when needed
- */
+// Update the OLED for each loop
+// To-Do: Only update display when needed
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void updateMainDisplay()
 {
   u8g2.firstPage();
@@ -692,8 +704,6 @@ void updateMainDisplay()
     {
       drawThrottle();
       drawVoltage();
-      //drawSpeed();
-      //drawDistance();
       drawBatteryLevel();
       drawSignal();
       drawHeadlightStatus();
@@ -703,14 +713,14 @@ void updateMainDisplay()
   } while ( u8g2.nextPage() );
 }
 
-/*
- * Measure the hall sensor output and calculate throttle posistion
- */
+// Measure the hall sensor output and calculate throttle posistion
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 10;
+  uint8_t samples = 20;
 
   for ( uint8_t i = 0; i < samples; i++ )
   {
@@ -743,14 +753,14 @@ void calculateThrottlePosition()
     throttlePosition = MIDDLE;
   }
 }
-
-/* 
- * Calculate the remotes battery level
- */ 
+ 
+// Calculate the remotes battery level
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 uint8_t batteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 5;
+  uint8_t samples = 10;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -767,9 +777,9 @@ uint8_t batteryLevel() {
   return (voltage - minVoltage) * 100 / (maxVoltage - minVoltage);
 }
 
-/*
- * Calculate the battery level of the board based on the telemetry voltage
- */
+// Calculate the battery level of the board based on the telemetry voltage
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 float batteryPackPercentage( float voltage ){
 
   float maxCellVoltage = 4.2;
@@ -798,6 +808,8 @@ float batteryPackPercentage( float voltage ){
 }
 
 // check battery level and set alarm - 120 seconds blocked(not implemented yet)
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void checkBatteryLevel() {
   float boardBattery;
   uint16_t remoteBattery;
@@ -847,9 +859,9 @@ void alarmActivated() {
     }
 }
 
-/*
- * Prints the settings menu on the OLED display
- */
+// Prints the settings menu on the OLED display
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void drawSettingsMenu() {
   // Local variables to store the setting value and unit
   uint64_t value;
@@ -915,9 +927,9 @@ void drawSettingsMenu() {
   }
 }
 
-/*
- * Print the startup screen 
- */
+// Print the startup screen 
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void drawStartScreen() {
   u8g2.firstPage();
  
@@ -935,9 +947,9 @@ void drawStartScreen() {
   delay(2000);
 }
 
-/*
- * Print a title on the OLED display
- */
+// Print a title on the OLED display
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void drawTitleScreen(String title) {
   u8g2.firstPage();
  
@@ -947,40 +959,64 @@ void drawTitleScreen(String title) {
 
   } while ( u8g2.nextPage() );
 
-  delay(1500);
+  delay(1000);
 }
 
-/*
- * Print the main page: Throttle, battery level and telemetry
- */
+// Extra button handling
+// called when key goes from pressed to not pressed
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void buttonRelease() {
+    Serial.println("button release");
+    
+    if (buttonPressCount < longbuttonPressCountMax && buttonPressCount >= mediumbuttonPressCountMin) {
+        mediumbuttonPress();
+    }
+    else {
+      if (buttonPressCount < mediumbuttonPressCountMin) {
+        shortbuttonPress();
+      }
+    }
+}
+
+// called when key goes from not pressed to pressed
+void buttonPress() {
+    Serial.println("button press");
+    buttonPressCount = 0;
+}
+ 
+ // called when button is kept pressed for less than .5 seconds
+void shortbuttonPress() {
+    Serial.println("short");
+    displayView++;
+}
+
+// called when button is kept pressed for 2 seconds or more
+void longbuttonPress() {
+    Serial.println("long");
+}
+ 
+// draw main page
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void drawPage() {
   
-  uint8_t decimalsMain;
-  uint8_t decimalsSecond;
-  uint8_t decimalsThird;
-  float valueMain;
-  float valueSecond;
-  float valueThird;
-  int unitMain;
-  int unitSecond;
-  int unitThird;
+  uint8_t decimalsMain, decimalsSecond, decimalsThird;
+  float valueMain, valueSecond, valueThird;
+  int unitMain, unitSecond, unitThird;
   uint16_t first, last, firstSecond, lastSecond, firstThird, lastThird;
 
   x = 0;
   y = 15;
 
-  if (extraButtonState != lastExtraButtonState) {
-    if (extraButtonState == 0) {
-      displayData++;
-    }
-    lastExtraButtonState = extraButtonState;
-   }
-
-    if (displayData > 1) {
-      displayData = 0;
+// handle rotation of different views
+// - first view: Speed, voltage, distance
+// - second view; voltage, battery amps, motor amps
+    if (displayView > 1) {
+      displayView = 0;
     }
 
-  switch (displayData) {
+  switch (displayView) {
     case 0:
       valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
@@ -1007,7 +1043,7 @@ void drawPage() {
 
 // Display prefix (title)
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr(x, y-1, dataPrefix[ displayData ] );
+  u8g2.drawStr(x, y-1, dataPrefix[ displayView ] );
 
   // Split up the float value: a number, b decimals.
   first = abs( floor(valueMain) );
