@@ -1,11 +1,11 @@
 #include <U8g2lib.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <EEPROM.h>
-#include "RF24.h"
+#include <FlashStorage.h>
+#include <RH_RF69.h>
 
 // Uncomment DEBUG if you need to debug the remote
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 2.0
 
@@ -42,6 +42,22 @@ const unsigned char noconnectionIcon[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x09,
   0x00, 0x09, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
+
+// Defining struct to hold setting values while remote is turned on.
+// Defining varibales for FLash
+FlashStorage(triggerMode, uint8_t);
+FlashStorage(batteryType, uint8_t);
+FlashStorage(batteryCells, uint8_t);
+FlashStorage(motorPoles, uint8_t);
+FlashStorage(motorPulley, uint8_t);
+FlashStorage(wheelPulley, uint8_t);
+FlashStorage(wheelDiameter, uint8_t);
+FlashStorage(controlMode, uint8_t);
+FlashStorage(minHallValue, short);
+FlashStorage(centerHallValue, short);
+FlashStorage(maxHallValue, short);
+FlashStorage(address, uint64_t);
+FlashStorage(firmVersion, float);
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -152,13 +168,23 @@ const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
 // Pin defination
-const uint8_t triggerPin = 4;
+const uint8_t triggerPin = 6;
 const uint8_t extraButtonPin = 5;
 const uint8_t batteryMeasurePin = A2;
 const uint8_t hallSensorPin = A3;
 const uint8_t vibrationActuatorPin = 6;
-const uint8_t CE = 9;
-const uint8_t CS = 10;
+
+// Definition for RFM69HW radio on Feather m0
+#define RFM69_CS     8
+#define RFM69_INT   3
+#define RFM69_RST   4
+#define DiagLED     13
+#define RF69_FREQ   433.0
+
+uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+
+RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 // define variable for battery alert
 bool alarmTriggered = false;
@@ -216,44 +242,78 @@ unsigned short settingWaitDelay = 500;
 unsigned short settingScrollWait = 800;
 unsigned long settingChangeMillis = 0;
 
-// Instantiating RF24 object for NRF24 communication
-RF24 radio(CE, CS);
+int16_t packetnum = 0;  // packet counter, we increment per xmission
 
+// SETUP
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void setup() {
+
 
   #ifdef DEBUG
     Serial.begin(9600);
     while (!Serial){};
     printf_begin();
   #endif
-
-  loadEEPROMSettings();
+  
+  loadFlashSettings();
     
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(extraButtonPin, INPUT_PULLUP);
   pinMode(hallSensorPin, INPUT);
   pinMode(batteryMeasurePin, INPUT);
   pinMode(vibrationActuatorPin, OUTPUT);
+  
+  pinMode(DiagLED, OUTPUT);     
+  pinMode(RFM69_RST, OUTPUT);
+  
+  digitalWrite(RFM69_RST, LOW);
 
   // Start OLED operations
   u8g2.begin();
   drawStartScreen();
+
+  // Start Radio
+  initiateTransmitter();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
     changeSettings = true;
     drawTitleScreen("Settings");
   }
-
-  // Start radio communication
-  initiateTransmitter();
 }
 
+// loop
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void loop() {
+// calculate throttle position
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 
-// detect button press
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
+  calculateThrottlePosition();
+
+  if (changeSettings == true) {
+    // Use throttle and trigger to change settings
+    DEBUG_PRINT( F("Open setting menu") );
+    controlSettingsMenu();
+  } else {
+    // Normal transmission. The state of the trigger, cruise and throttle is handled by the receiver. 
+    remPackage.type = 0;
+    remPackage.trigger = triggerActive();
+    remPackage.throttle = throttle;
+
+    // Transmit to receiver
+    transmitToReceiver();
+  }
+
+  // Call function to update display
+  updateMainDisplay();
+   
+//detect button press
+//--------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
+ 
     if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
         buttonPrevMillis = millis();
         
@@ -271,38 +331,68 @@ void loop() {
         longbuttonPress();
     }
         }
-        
         prevButtonState = currButtonState;
     }
-
-// calculate throttle position
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-
-  calculateThrottlePosition();
-
-  if (changeSettings == true) {
-    // Use throttle and trigger to change settings
-    controlSettingsMenu();
-  }
-  else
-  {
-    // Normal transmission. The state of the trigger, cruise and throttle is handled by the receiver. 
-    remPackage.type = 0;
-    remPackage.trigger = triggerActive();
-    remPackage.throttle = throttle;
-
-    // Transmit to receiver
-    transmitToReceiver();
-  }
-
-  // Call function to update display
-  updateMainDisplay();
 }
 
-/*
- * Uses the throttle and trigger to navigate and change settings
- */
+// initiate radio 
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void initiateTransmitter() {
+  digitalWrite(RFM69_RST, HIGH);
+  delay(10);
+  digitalWrite(RFM69_RST, LOW);
+  delay(10);
+  
+  if (!rf69.init()) {
+    DEBUG_PRINT( F("RFM69 radio init failed") );
+    while (1);
+  }
+  DEBUG_PRINT( F("RFM69 radio init OK!") );
+  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module), no encryption
+  if (!rf69.setFrequency(RF69_FREQ)) {
+    DEBUG_PRINT( F("setFrequency failed") );
+  }
+
+  rf69.setEncryptionKey(encryptionKey);
+  DEBUG_PRINT(F("setFrequency to:"));
+  DEBUG_PRINT((int)RF69_FREQ);
+}
+
+//Function used to transmit the remPackage and receive auto acknowledgement
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void transmitToReceiver(){
+  
+  DEBUG_PRINT( remPackage.type);
+  DEBUG_PRINT( remPackage.throttle);
+  DEBUG_PRINT( remPackage.trigger);
+  DEBUG_PRINT( remPackage.headlight);
+  
+  // Send a message!
+  rf69.send((byte*)&remPackage, sizeof(remPackage));
+  rf69.waitPacketSent();
+
+  // Now wait for a reply
+  uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
+  uint8_t len = sizeof(buf);
+
+  if (rf69.waitAvailableTimeout(100))  { 
+    // Should be a reply message for us now   
+    if (rf69.recv(buf, &len)) {
+      DEBUG_PRINT( F("Got a reply: ") );
+      Serial.println((char*)buf);
+    } else {
+      DEBUG_PRINT( F("Receive failed") );
+    }
+  } else {
+    DEBUG_PRINT( F("No reply...") );
+  }
+}
+
+// Uses the throttle and trigger to navigate and change settings
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void controlSettingsMenu() {
 
   if (changeThisSetting == true) {
@@ -366,20 +456,20 @@ void controlSettingsMenu() {
       if( currentSetting == TRIGGER || currentSetting == MODE ){
         if( ! transmitSetting( currentSetting, getSettingValue(currentSetting) ) ){
           // Error! Load the old setting
-          loadEEPROMSettings();
+          loadFlashSettings();
         }
       }
       // If new address is choosen
       else if ( currentSetting == ADDRESS ){
         // Generate new address
-        uint64_t address = generateAddress();
+        uint64_t address; // = generateAddress();
     
         if( transmitSetting( currentSetting, address ) ){
           setSettingValue(currentSetting, address);
           initiateTransmitter();
         }else{
           // Error! Load the old address
-          loadEEPROMSettings();
+          loadFlashSettings();
         }
       }
       // If we want to use the default address again
@@ -388,7 +478,7 @@ void controlSettingsMenu() {
         setSettingValue( ADDRESS, defaultAddress );
       }
     
-      updateEEPROMSettings();
+      updateFlashSettings();
     }
 
     if(triggerFlag == false){
@@ -402,10 +492,10 @@ void controlSettingsMenu() {
   }
 }
 
-/*
- * Save the default settings in the EEPROM
- */
-void setDefaultEEPROMSettings() {
+// Save the default settings in the FLASH
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void setDefaultFlashSettings() {
   for ( uint8_t i = 0; i < numOfSettings; i++ )
   {
     setSettingValue( i, rules[i][0] );
@@ -413,59 +503,63 @@ void setDefaultEEPROMSettings() {
 
   txSettings.firmVersion = VERSION;
   txSettings.address = defaultAddress;
-  updateEEPROMSettings();
+  updateFlashSettings();
 }
 
-/*
- * Load saved settings from the EEPROM to the settings struct
- */
-void loadEEPROMSettings() {
-  // Load settings from EEPROM to custom struct
-  EEPROM.get(0, txSettings);
-
-  bool rewriteSettings = false;
-
-  // Loop through all settings to check if everything is fine
-  for (uint8_t i = 0; i < numOfSettings; i++) { 
-
-    // If setting default value is -1, don't check if its valid
-    if( rules[i][0] != -1 ){
-
-      short val = getSettingValue(i);
-    
-      if (! inRange(val, rules[i][1], rules[i][2])) {
-        // Setting is damaged or never written. Rewrite default.
-        rewriteSettings = true;
-        setSettingValue(i, rules[i][0] );
-      }
-    }
-  }
+// load settings from flash
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void loadFlashSettings(){
+   txSettings.triggerMode   = triggerMode.read();
+   txSettings.batteryType   = batteryType.read(); // 1
+   txSettings.batteryCells  = batteryCells.read();   // 2
+   txSettings.motorPoles  = motorPoles.read();   // 3
+   txSettings.motorPulley   = motorPulley.read();   // 4
+   txSettings.wheelPulley   = wheelPulley.read(); // 5
+   txSettings.wheelDiameter = wheelDiameter.read();   // 6
+   txSettings.controlMode   = controlMode.read();   // 7
+   txSettings.minHallValue  = minHallValue.read();      // 8
+   txSettings.centerHallValue = centerHallValue.read();   // 9
+   txSettings.maxHallValue  = maxHallValue.read();     // 10
+   txSettings.address     = address.read();      // 11
+   txSettings.firmVersion   = firmVersion.read();  //12
 
   if(txSettings.firmVersion != VERSION){
-    
-    setDefaultEEPROMSettings();
-    
+    setDefaultFlashSettings();
   }
-  else if (rewriteSettings == true) {
-    updateEEPROMSettings();
+  else {
+    updateFlashSettings();
   }
   
-  // Calculate constants
-  calculateRatios();
-
+   calculateRatios();
+  
 }
 
-/* 
- * Write settings to the EEPROM then exiting settings menu.
- */
-void updateEEPROMSettings() {
-  EEPROM.put(0, txSettings);
-  calculateRatios();
+// write/update settings to flash
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void updateFlashSettings() {
+    triggerMode.write(txSettings.triggerMode);
+    batteryType.write(txSettings.batteryType);  
+    batteryCells.write(txSettings.batteryCells);   
+    motorPoles.write(txSettings.motorPoles);   
+    motorPulley.write(txSettings.motorPulley);    
+    wheelPulley.write(txSettings.wheelPulley);    
+    wheelDiameter.write(txSettings.wheelDiameter); 
+    controlMode.write(txSettings.controlMode);   
+    minHallValue.write(txSettings.minHallValue);  
+    centerHallValue.write(txSettings.centerHallValue);
+    maxHallValue.write(txSettings.maxHallValue); 
+    address.write(txSettings.address);    
+    firmVersion.write(txSettings.firmVersion);   
+   
+    calculateRatios();
+   
 }
 
-/*
- * Update values used to calculate speed and distance travelled.
- */
+// Update values used to calculate speed and distance travelled.
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void calculateRatios() {
   // Gearing ratio
   gearRatio = (float)txSettings.motorPulley / (float)txSettings.wheelPulley; 
@@ -474,10 +568,10 @@ void calculateRatios() {
   // Pulses to km travelled
   ratioPulseDistance = (gearRatio * (float)txSettings.wheelDiameter * 3.14156) / (((float)txSettings.motorPoles * 3) * 1000000); 
 }
-
-/* 
- * Get settings value by index (usefull when iterating through settings)
- */
+ 
+// Get settings value by index (usefull when iterating through settings)
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 short getSettingValue(uint8_t index) {
   short value;
   switch (index) {
@@ -497,10 +591,10 @@ short getSettingValue(uint8_t index) {
   }
   return value;
 }
-
-/* 
- * Set a value of a specific setting by index.
- */
+ 
+// Set a value of a specific setting by index.
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void setSettingValue(uint8_t index, uint64_t value) {
   switch (index) {
     case TRIGGER:   txSettings.triggerMode = value;     break;
@@ -521,11 +615,15 @@ void setSettingValue(uint8_t index, uint64_t value) {
 }
 
 // Check if an integer is within a min and max value 
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 bool inRange(short val, short minimum, short maximum) {
   return ((minimum <= val) && (val <= maximum));
 }
  
 // Return true if trigger is activated, false otherwise 
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 bool triggerActive() {
   if (digitalRead(triggerPin) == LOW)
     return true;
@@ -533,139 +631,90 @@ bool triggerActive() {
     return false;
 }
 
-//Function used to transmit the remPackage and receive auto acknowledgement.
-void transmitToReceiver(){
-  // Transmit once every 50 millisecond
-  if ( millis() - lastTransmission >= 50 ) {
-
-    lastTransmission = millis();
-
-    // Transmit the remPackage
-    if ( radio.write( &remPackage, sizeof(remPackage) ) )
-    {
-      // Listen for an acknowledgement reponse (return of uart data).
-      while (radio.isAckPayloadAvailable()) {
-        radio.read( &returnData, sizeof(returnData) );
-      }
-      // Transmission was a succes
-      failCount = 0;
-    } else {
-      // Transmission was not a succes
-      failCount++;     
-    }
-    // If lost more than 5 transmissions, we can assume that connection is lost.
-    if (failCount < 5) {
-      connected = true;
-    } else {
-      connected = false;
-    }
-  }
-}
-
-
-/*
- * Transmit a specific setting to the receiver, so both devices has same configuration
- */
+// Transmit a specific setting to the receiver, so both devices has same configuration
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 bool transmitSetting(uint8_t setting, uint64_t value){
   
-  uint64_t returnedValue;
-  unsigned long beginTime = millis(); 
-  bool payloadSend = false;
-  bool ackRecieved = false;
- 
-  // Lets clear the ack-buffer (so it can be used to confirm the new setting).
-  while ( radio.isAckPayloadAvailable() && settingWaitDelay >= ( millis() - beginTime) ) {
-    radio.read( &returnData, sizeof(returnData) );
-    delay(100);
-  }
-
-  // Feed the setPackage with the new setting
-  setPackage.setting = setting;
-  setPackage.value = value;
-
-  // Tell the receiver next package will be new settings
-  remPackage.type = 1;
-
-  beginTime = millis(); 
-  
-  while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
-    if( radio.write( &remPackage, sizeof(remPackage)) ){
-      payloadSend = true;
-    }
-  }
-
-  // ** Begin transmitting new setting **
-
-  if(payloadSend == true){
-    DEBUG_PRINT( F("TX --> New setting") );
-    // Transmit setPackage to receiver
-    beginTime = millis(); 
-
-    while ( !ackRecieved && settingWaitDelay >= ( millis() - beginTime) ){
-      // Write setPackage until an acknowledgement is received (or timeout is reached)
-      if( radio.write( &setPackage, sizeof(setPackage) ) ){
-
-        delay(100);
-
-        while( radio.isAckPayloadAvailable() && !ackRecieved ){
-          DEBUG_PRINT( F("TX <-- Acknowledgement") );
-          radio.read( &setPackage, sizeof(setPackage) );
-          ackRecieved = true;
-        }
-      }
-    }
-  }
-
-  // Check if the receiver Acknowledgement data is matching
-  if( ackRecieved && setPackage.setting == setting && setPackage.value == value ){
-
-    payloadSend = false;
-
-    // Wait a little
-    delay(500);
-
-    // Send confirmation to the receiver
-    beginTime = millis(); 
-
-    while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
-
-      remPackage.type = 2;
-
-      if(radio.write( &remPackage, sizeof(remPackage))){
-        payloadSend = true;
-        DEBUG_PRINT( F("TX --> Confirmation") );
-      }
-
-      delay(100);
-    }
-
-    if( payloadSend == true) {
-      // Success
-      DEBUG_PRINT( F("Setting done") );
-      return true;
-    }
-  }
-
-  return false;
-
-}
-
-// Initiate the nRF24 module, needed to reinitiate the nRF24 after address change
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-void initiateTransmitter(){
-
-  radio.begin();
-  radio.setChannel(defaultChannel);
-  radio.setPALevel(RF24_PA_MAX);
-  radio.enableAckPayload();
-  radio.enableDynamicPayloads();
-  radio.openWritingPipe( txSettings.address );
-
-  #ifdef DEBUG
-    radio.printDetails();
-  #endif
-
+//  uint64_t returnedValue;
+//  unsigned long beginTime = millis(); 
+//  bool payloadSend = false;
+//  bool ackRecieved = false;
+// 
+//  // Lets clear the ack-buffer (so it can be used to confirm the new setting).
+//  while ( radio.isAckPayloadAvailable() && settingWaitDelay >= ( millis() - beginTime) ) {
+//    radio.read( &returnData, sizeof(returnData) );
+//    delay(100);
+//  }
+//
+//  // Feed the setPackage with the new setting
+//  setPackage.setting = setting;
+//  setPackage.value = value;
+//
+//  // Tell the receiver next package will be new settings
+//  remPackage.type = 1;
+//
+//  beginTime = millis(); 
+//  
+//  while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
+//    if( radio.write( &remPackage, sizeof(remPackage)) ){
+//      payloadSend = true;
+//    }
+//  }
+//
+//  // ** Begin transmitting new setting **
+//
+//  if(payloadSend == true){
+//    DEBUG_PRINT( F("TX --> New setting") );
+//    // Transmit setPackage to receiver
+//    beginTime = millis(); 
+//
+//    while ( !ackRecieved && settingWaitDelay >= ( millis() - beginTime) ){
+//      // Write setPackage until an acknowledgement is received (or timeout is reached)
+//      if( radio.write( &setPackage, sizeof(setPackage) ) ){
+//
+//        delay(100);
+//
+//        while( radio.isAckPayloadAvailable() && !ackRecieved ){
+//          DEBUG_PRINT( F("TX <-- Acknowledgement") );
+//          radio.read( &setPackage, sizeof(setPackage) );
+//          ackRecieved = true;
+//        }
+//      }
+//    }
+//
+//  // Check if the receiver Acknowledgement data is matching
+//  if( ackRecieved && setPackage.setting == setting && setPackage.value == value ){
+//
+//    payloadSend = false;
+//
+//    // Wait a little
+//    delay(500);
+//
+//    // Send confirmation to the receiver
+//    beginTime = millis(); 
+//
+//    while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
+//
+//      remPackage.type = 2;
+//
+//      if(radio.write( &remPackage, sizeof(remPackage))){
+//        payloadSend = true;
+//        DEBUG_PRINT( F("TX --> Confirmation") );
+//      }
+//
+//      delay(100);
+//    }
+//
+//    if( payloadSend == true) {
+//      // Success
+//      DEBUG_PRINT( F("Setting done") );
+//      return true;
+//    }
+//  }
+//
+//  return false;
+//
 }
 
 // Update the OLED for each loop
@@ -676,20 +725,20 @@ void updateMainDisplay()
 {
   u8g2.firstPage();
  
-  do {
+ do {
     if ( changeSettings == true )
     {
       drawSettingsMenu();
     }
     else
     {
-      drawThrottle();
-      drawVoltage();
-      drawBatteryLevel();
-      drawSignal();
-      drawHeadlightStatus();
-      checkBatteryLevel();
-      drawPage();
+    drawThrottle();
+    drawVoltage();
+    drawBatteryLevel();
+    drawSignal();
+    drawHeadlightStatus();
+    checkBatteryLevel();
+    drawPage();
     }
   } while ( u8g2.nextPage() );
 }
@@ -925,7 +974,7 @@ void drawStartScreen() {
 
   } while ( u8g2.nextPage() );
 
-  delay(2000);
+  delay(1000);
 }
 
 // Print a title on the OLED display
@@ -971,9 +1020,9 @@ void shortbuttonPress() {
 // called when button is kept pressed for more than 2 seconds
 void mediumbuttonPress() {
     if ( returnData.headlightActive == true) {
-    	remPackage.headlight = false;
+      remPackage.headlight = false;
     } else {
-    	remPackage.headlight = true;
+      remPackage.headlight = true;
     }
     // Transmit to receiver
     transmitToReceiver();
@@ -1248,42 +1297,6 @@ void drawHeadlightStatus() {
     u8g2.drawLine(x -3 , y + 3, x -5, y + 4);
     u8g2.drawLine(x -3 , y - 3, x -5, y - 4);
   }
-}
-
-/* 
- * Generate a random address for nrf24 communication
- */
-uint64_t generateAddress()
-{
-  randomSeed( millis() );
-  
-  // Holding the address as char array
-  char temp[10];
-
-  // Char arrays with HEX digites
-  const char *hexdigits = "0123456789ABCDEF";
-  const char *safedigits = "12346789BCDE";
-
-  // Generate a char array with the pipe address
-  for(uint8_t i = 0 ; i < 10; i++ )
-  {
-    char next;
-    
-    // Avoid addresses that start with 0x00, 0x55, 0xAA and 0xFF.
-    if(i == 0)
-      next = safedigits[ random(0, 12) ];
-    else if(i == 1)
-      next = safedigits[ random(0, 12) ];
-
-    // Otherwise generate random HEX digit
-    else
-      next = hexdigits[ random(0, 16) ];
-      
-    temp[i] = next;
-  }
- 
-  // Convert hex char array to uint64_t 
-  return StringToUint64(temp);
 }
 
 String uint64ToString(uint64_t number)
