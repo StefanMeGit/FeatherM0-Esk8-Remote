@@ -1,9 +1,10 @@
 # FeatherFly Transmitter - eSk8 Remote 
-#
-# basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
-# modified to run on an Feather M0 with RFM69 | https://github.com/StefanMeGit/FeatherM0-Esk8-Remote
-#
-# ATTENTION!!! This is not for daily use!! Still under hard development!
+
+ basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
+ modified to run on an Feather M0 with RFM69 | https://github.com/StefanMeGit/FeatherM0-Esk8-Remote
+
+**ATTENTION!!! This is not for daily use!! Still under hard development!**
+
 
 
 #ORIGINAL from SOLIDGEEK:
