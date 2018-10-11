@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include <FlashStorage.h>
 #include <RH_RF69.h>
+#include <RHReliableDatagram.h>
 
 // Uncomment DEBUG if you need to debug the remote
 #define DEBUG
@@ -68,6 +69,7 @@ struct callback {
   bool headlightActive;
   float avgInputCurrent;
   float avgMotorCurrent;
+  float duryCycleNow;
 } returnData;
 
 // defining button data 
@@ -180,11 +182,20 @@ const uint8_t vibrationActuatorPin = 6;
 #define RFM69_RST   4
 #define DiagLED     13
 #define RF69_FREQ   433.0
-
+// Where to send packets to!
+#define DEST_ADDRESS   1
+// change addresses for each client board, any number :)
+#define MY_ADDRESS     2
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
+// Class to manage message delivery and receipt, using the driver declared above
+RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
+//??
+// Dont put this on the stack:
+uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
+uint8_t data[] = "  OK";
+uint8_t transmissionFailCounter = 0;
 
 // define variable for battery alert
 bool alarmTriggered = false;
@@ -242,7 +253,6 @@ unsigned short settingWaitDelay = 500;
 unsigned short settingScrollWait = 800;
 unsigned long settingChangeMillis = 0;
 
-int16_t packetnum = 0;  // packet counter, we increment per xmission
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -250,8 +260,8 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 void setup() {
 
 
+  Serial.begin(115200);
   #ifdef DEBUG
-    Serial.begin(9600);
     while (!Serial){};
     printf_begin();
   #endif
@@ -344,10 +354,11 @@ void initiateTransmitter() {
   digitalWrite(RFM69_RST, LOW);
   delay(10);
   
-  if (!rf69.init()) {
+  if (!rf69_manager.init()) {
     DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
-  }
+  }  
+  
   DEBUG_PRINT( F("RFM69 radio init OK!") );
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module), no encryption
   if (!rf69.setFrequency(RF69_FREQ)) {
@@ -369,24 +380,28 @@ void transmitToReceiver(){
   DEBUG_PRINT( remPackage.trigger);
   DEBUG_PRINT( remPackage.headlight);
   
-  // Send a message!
-  rf69.send((byte*)&remPackage, sizeof(remPackage));
-  rf69.waitPacketSent();
-
-  // Now wait for a reply
-  uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
-
-  if (rf69.waitAvailableTimeout(100))  { 
-    // Should be a reply message for us now   
-    if (rf69.recv(buf, &len)) {
-      DEBUG_PRINT( F("Got a reply: ") );
-      Serial.println((char*)buf);
+  rf69_manager.setTimeout(50);
+  
+  // Send a message!  
+  if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    // Now wait for a reply from the server
+    uint8_t len = sizeof(buf);
+    uint8_t from;   
+    if (rf69_manager.recvfromAckTimeout(buf, &len, 500, &from)) {
+      buf[len] = 0; // zero out remaining string
+      
+      Serial.print("Got reply from #"); Serial.print(from);
+      Serial.print(" [RSSI :");
+      Serial.print(rf69.lastRssi());
+      Serial.print("] : ");
+      Serial.println((char*)buf);     
     } else {
-      DEBUG_PRINT( F("Receive failed") );
+      DEBUG_PRINT( F("No reply, is anyone listening?") );
     }
   } else {
-    DEBUG_PRINT( F("No reply...") );
+    DEBUG_PRINT( F("Sending failed (no ack)") );
+    transmissionFailCounter++;
+    DEBUG_PRINT(transmissionFailCounter);
   }
 }
 
