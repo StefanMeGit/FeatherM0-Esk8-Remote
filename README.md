@@ -1,20 +1,12 @@
-BETA!!! CAREFULL USE!
+# FeatherFly Transmitter - eSk8 Remote 
+#
+# basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
+# modified to run on an Feather M0 with RFM69 | https://github.com/StefanMeGit/FeatherM0-Esk8-Remote
+#
+# ATTENTION!!! This is not for daily use!! Still under hard development!
 
-Additional features:
 
-- 128x64 OLED 0.96Inch with complete new main page
-- Vibration alarm under 15% Battery
-- short extra button press (<= 0.5s) to change variables on main screen
-	- first view speed, distance, voltage
-	- second view voltage, battery current, motor current
-- medium extra button press (0.5s - 2.0s) to switch lights on or off
-
-todo:
-- headlight implementation on reciver
-- breakinglight implemenation on reciver
-- ...
-
-#ORIGINAL:
+#ORIGINAL from SOLIDGEEK:
 
 # FireFly-Remote v2.0
 
