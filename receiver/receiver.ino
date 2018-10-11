@@ -7,7 +7,7 @@
 
 #define DEBUG
 
-#define VERSION 2.0
+#define VERSION 0.1
 
 #ifdef DEBUG
 	#define DEBUG_PRINT(x)  Serial.println (x)
@@ -143,8 +143,9 @@ VescUart UART;
 void setup()
 {
 	#ifdef DEBUG
-    UART.setDebugPort(&Serial);
+    	UART.setDebugPort(&Serial);
 		Serial.begin(115200);
+		 while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 		DEBUG_PRINT("** Esk8-remote receiver **");
 		printf_begin();
 	#endif
@@ -160,19 +161,20 @@ void setup()
 	
 	// Start Radio
   	initiateReceiver();
-	
-
-	DEBUG_PRINT("Setup complete - begin listening");
+	#ifdef DEBUG
+		DEBUG_PRINT("Setup complete");
+	#endif
 }
 
 // LOOP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop()
-{ 
-
-  if (rf69_manager.available())
-  {
+{
+  if (rf69_manager.available()) {
+  #ifdef DEBUG
+  	DEBUG_PRINT("RFM69 manager avaible...");
+  #endif
     // Wait for a message addressed to us from the client
     uint8_t len = sizeof(buf);
     uint8_t from;
@@ -189,7 +191,7 @@ void loop()
       if (!rf69_manager.sendtoWait(data, sizeof(data), from))
         Serial.println("Sending failed (no ack)");
     }
-  }
+}
 
 //  /* Control Status LED */
 //  controlStatusLed();
@@ -337,101 +339,11 @@ void controlStatusLed(){
   }  
 }
 
+// control status LED TIMEOUT | COMPLETE | FAIL
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void acquireSetting() {
-//  
-//	uint8_t setting;
-//	uint64_t value;
-//
-//	unsigned long beginTime = millis();
-//
-//	bool receivedSetting = false;
-//	bool receivedConfirm = false;
-//
-//	DEBUG_PRINT("Waiting for new setting...");
-//
-//	// Wait for new setting
-//	while ( receivedSetting == false && 500 >= ( millis() - beginTime) ) {
-//
-//		if ( radio.available() ) {
-//
-//			// Read and store the received setting
-//			radio.read( &setPackage, sizeof(setPackage));
-//
-//			if(receivedSetting == false){
-//			DEBUG_PRINT("Received new setting");
-//			setting = setPackage.setting;
-//			value = setPackage.value;
-//
-//			// Return the setPackage in acknowlegdement
-//			radio.writeAckPayload(1, &setPackage, sizeof(setPackage));
-//		}
-//
-//		receivedSetting = true;
-//
-//		delay(100);
-//
-//		}
-//	}
-//
-//	// Clear receiver buffer
-//	beginTime = millis();
-//	while ( radio.available() && 500 >= ( millis() - beginTime) ) {
-//		DEBUG_PRINT("Cleared");
-//		radio.read( &setPackage, sizeof(setPackage) );
-//		delay(100);
-//	}
-//
-//	if (receivedSetting == true) {
-//
-//		// Check if the TX Ack DATA is matching
-//		DEBUG_PRINT("Waiting for confirmation");
-//
-//		beginTime = millis();
-//
-//		while (1000 >= ( millis() - beginTime) && !receivedConfirm) {
-//
-//			if( radio.available() ){
-//
-//  				radio.read( &remPackage, sizeof(remPackage));
-//  
-//  				DEBUG_PRINT(String(remPackage.type));
-//  
-//  				if(remPackage.type == CONFIRM){
-//  				receivedConfirm = true;
-//  				DEBUG_PRINT("Confirmed");
-//  			}
-//  		}
-//  
-//  		delay(100);
-//		}
-//
-//		if( receivedConfirm == true){
-//			updateSetting(setting, value);
-//			DEBUG_PRINT("Updated setting.");
-//
-//			setStatus(COMPLETE);
-//		}
-//
-//		delay(100);
-//	}
-//
-////	// Something went wrong, lets clear all buffers
-//
-//	if (receivedSetting == false || receivedConfirm == false || rf69_manager.available()) {
-//
-//		DEBUG_PRINT("Failed! Clearing buffer");
-//		setStatus(FAILED);
-//
-//		beginTime = millis();
-//
-//		while (rf69_manager.available() && 500 >= ( millis() - beginTime)) {
-//
-//			radio.read( &setPackage, sizeof(setPackage) );
-//			radio.read( &remPackage, sizeof(remPackage) );
-//
-//			DEBUG_PRINT("Cleared buffer");
-//		}
-//	}
+
 }
 
 // initiate receiver radio 

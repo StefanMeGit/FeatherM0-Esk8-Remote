@@ -1,3 +1,7 @@
+// FeatherFly Transmitter - eSk8 Remote 
+// basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
+// modified to run on an Feather M0 with RFM69 
+
 #include <U8g2lib.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -8,7 +12,7 @@
 // Uncomment DEBUG if you need to debug the remote
 #define DEBUG
 
-#define VERSION 2.0
+#define VERSION 0.1
 
 #ifdef DEBUG
   #define DEBUG_PRINT(x)  Serial.println (x)
