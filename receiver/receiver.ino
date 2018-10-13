@@ -1,3 +1,10 @@
+// FeatherFly Receiver - eSk8 Remote 
+//
+// basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
+// modified to run on an Feather M0 with RFM69 | https://github.com/StefanMeGit/FeatherM0-Esk8-Remote
+//
+// ATTENTION!!! This is not for daily use!! Still under hard development!
+
 #include <SPI.h>
 #include <Servo.h>
 #include <FlashStorage.h>
@@ -36,14 +43,14 @@ struct settingPackage {
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
-	float ampHours;
-	float inpVoltage;
-	long rpm;
-	long tachometerAbs;
-	bool headlight;
-	float avgInputCurrent;
-	float avgMotorCurrent;
-	float dutyCycleNow;
+	float ampHours = 10;
+	float inpVoltage = 22.2;
+	long rpm  = 33333;
+	long tachometerAbs = 4000;
+	uint8_t headlight = 5;
+	float avgInputCurrent = 6.6;
+	float avgMotorCurrent = 7.7;
+	float dutyCycleNow = 8.8;
 } returnData;
 
 // Defining struct to handle receiver settings
@@ -159,11 +166,11 @@ void setup()
 	
 	digitalWrite(RFM69_RST, LOW);
 	
-	// Start Radio
   	initiateReceiver();
 	#ifdef DEBUG
 		DEBUG_PRINT("Setup complete");
 	#endif
+		
 }
 
 // LOOP
@@ -172,116 +179,32 @@ void setup()
 void loop()
 {
   if (rf69_manager.available()) {
-  #ifdef DEBUG
-  	DEBUG_PRINT("RFM69 manager avaible...");
-  #endif
-    // Wait for a message addressed to us from the client
+    
     uint8_t len = sizeof(buf);
     uint8_t from;
     if (rf69_manager.recvfromAck(buf, &len, &from)) {
-      buf[len] = 0; // zero out remaining string
+      buf[len] = 0;
+      #ifdef DEBUG
+        Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
+        Serial.print(" [RSSI :");
+        Serial.print(rf69.lastRssi());
+        Serial.println("] : ");
+      #endif
+      remPackage.type = buf[1];
+      remPackage.throttle = buf[2];
+      remPackage.trigger = buf[4];
+      remPackage.headlight = buf[5];
+      #ifdef DEBUG
+        Serial.print("Type: ");Serial.println(remPackage.type);
+        Serial.print("Throttle: ");Serial.println(remPackage.throttle);
+        Serial.print("Trigger: ");Serial.println(remPackage.trigger);
+        Serial.print("Headlight: ");Serial.println(remPackage.headlight);
+      #endif
       
-      Serial.print("Got packet from #"); Serial.print(from);
-      Serial.print(" [RSSI :");
-      Serial.print(rf69.lastRssi());
-      Serial.print("] : ");
-      Serial.println((char*)buf);
-
-      // Send a reply back to the originator client
-      if (!rf69_manager.sendtoWait(data, sizeof(data), from))
+      if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from))
         Serial.println("Sending failed (no ack)");
     }
-}
-
-//  /* Control Status LED */
-//  controlStatusLed();
-//  
-//	/* Begin address reset */
-//	if (digitalRead(resetAddressPin) == LOW) {
-//		if(resetButtonState == LOW){
-//			resetButtonTimer = millis();
-//		}
-//		resetButtonState = HIGH;
-//	}else{
-//		resetButtonState = LOW;
-//	}
-//
-//	if (resetButtonState == HIGH && (millis() - resetButtonTimer) > 3000 ) {
-//
-//		DEBUG_PRINT("Loading default address");
-//
-//		// Load default address
-//		rxSettings.address = defaultAddress;
-//		updateFlashSettings(); 
-//
-//		// Reinitiate the recevier module
-//		initiateReceiver();
-//
-//		setStatus(COMPLETE);
-//
-//		resetButtonTimer = millis();
-//	}
-//	/* End address reset */
-//
-//	/* Begin listen for transmission */
-//
-//
-//	while (radio.available() && !recievedData)
-//	{
-//		// Read and store the received package
-//		radio.read( &remPackage, sizeof(remPackage) );
-//		DEBUG_PRINT( "New package: '" + String(remPackage.type) + "-" + String(remPackage.throttle) + "-" + String(remPackage.trigger) + "'" );
-//    delay(10); 
-//    
-//		if( remPackage.type <= 2 ){
-//			timeoutTimer = millis();
-//			recievedData = true;
-//		}
-//	}
-//	/* End listen for transmission */
-//
-//	/* Begin data handling */
-//	if(recievedData == true){
-//
-//		setStatus(CONNECTED);
-//
-//		if ( remPackage.type == NORMAL ) {
-//
-//			// Normal package
-//			speedControl( remPackage.throttle, remPackage.trigger );
-//			
-//			if( rxSettings.controlMode != 0 ){
-//				#ifdef DEBUG
-//				  DEBUG_PRINT("Getting VESC data");
-//          getUartData();
-//        #endif
-//        
-//			}
-//
-//			// The next time a transmission is received, the returnData will be sent back in acknowledgement 
-//			radio.writeAckPayload(1, &returnData, sizeof(returnData));
-//
-//		} else if ( remPackage.type == SETTING ) {
-//
-//			// Next package will be a change of setting
-//			acquireSetting();
-//		}
-//	
-//		recievedData = false;
-//	}
-//	/* End data handling */
-//
-//	/* Begin timeout handling */
-//	if ( timeoutMax <= ( millis() - timeoutTimer ) )
-//	{
-//		// No speed is received within the timeout limit.
-//		setStatus(TIMEOUT);
-//		speedControl( defaultThrottle, false );
-//		timeoutTimer = millis();
-//
-//		DEBUG_PRINT( uint64ToAddress(rxSettings.address) + " - Timeout");
-//	}
-//	/* End timeout handling */
+  }
 }
 
 // set status
@@ -365,7 +288,8 @@ void initiateReceiver(){
   if (!rf69.setFrequency(RF69_FREQ)) {
     DEBUG_PRINT( F("setFrequency failed") );
   }
-
+  
+  rf69.setTxPower(20, true);
   rf69.setEncryptionKey(encryptionKey);
   DEBUG_PRINT(F("setFrequency to:"));
   DEBUG_PRINT((int)RF69_FREQ);
