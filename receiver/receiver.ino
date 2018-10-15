@@ -43,8 +43,8 @@ struct settingPackage {
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
-	float ampHours = 10;
-	float inpVoltage = 22.2;
+	float ampHours = 11.11;
+	float inpVoltage = 22.22;
 	long rpm  = 33333;
 	long tachometerAbs = 4000;
 	uint8_t headlight = 5;
@@ -178,23 +178,36 @@ void setup()
 // --------------------------------------------------------------------------------------
 void loop()
 {
+  // check if message is avaible
   if (rf69_manager.available()) {
-    
+    // check if message is valid and for us
+    analyseMessage();
+  }
+  
+}
+
+
+// check message
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void analyseMessage() {
     uint8_t len = sizeof(buf);
     uint8_t from;
     if (rf69_manager.recvfromAck(buf, &len, &from)) {
-      buf[len] = 0;
+  
       #ifdef DEBUG
         Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
         Serial.print(" [RSSI :");
         Serial.print(rf69.lastRssi());
         Serial.println("] : ");
       #endif
+      
       remPackage.type = buf[1];
       remPackage.throttle = buf[2];
       remPackage.trigger = buf[4];
       remPackage.headlight = buf[5];
       #ifdef DEBUG
+      
         Serial.print("Type: ");Serial.println(remPackage.type);
         Serial.print("Throttle: ");Serial.println(remPackage.throttle);
         Serial.print("Trigger: ");Serial.println(remPackage.trigger);
@@ -202,9 +215,10 @@ void loop()
       #endif
       
       if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from))
+      #ifdef DEBUG
         Serial.println("Sending failed (no ack)");
+      #endif
     }
-  }
 }
 
 // set status

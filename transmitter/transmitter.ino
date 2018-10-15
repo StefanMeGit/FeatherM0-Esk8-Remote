@@ -36,7 +36,6 @@ const unsigned char logo[] PROGMEM = {
   0x80, 0x3c, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 
 };
 
-// Defining struct to hold setting values while remote is turned on.
 // Defining varibales for FLash
 FlashStorage(triggerMode, uint8_t);
 FlashStorage(batteryType, uint8_t);
@@ -50,6 +49,7 @@ FlashStorage(minHallValue, short);
 FlashStorage(centerHallValue, short);
 FlashStorage(maxHallValue, short);
 FlashStorage(firmVersion, float);
+FlashStorage(customEncryptionKey, uint8_t);
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -104,7 +104,8 @@ struct settings {
   short minHallValue;     // 8
   short centerHallValue;  // 9
   short maxHallValue;     // 10
-  float firmVersion; 
+  float firmVersion;      // 11
+  uint8_t customEncryptionKey; //12
 } txSettings;
 
 // Defining constants to hold the special settings, so it's easy changed thoughout the code
@@ -119,22 +120,23 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 12;
+const uint8_t numOfSettings = 13;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
-  {0, 0, 1},    // 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},    // 0: Li-ion      | 1: LiPo
-  {10, 0, 12},  // Cell count
-  {14, 0, 250}, // Motor poles
-  {14, 0, 250}, // Motor pully
-  {38, 0, 250}, // Wheel pulley
-  {80, 0, 250}, // Wheel diameter
-  {1, 0, 2},    // 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},  // Min hall value
+  {0, 0, 1},        // 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},        // 0: Li-ion      | 1: LiPo
+  {10, 0, 12},      // Cell count
+  {14, 0, 250},     // Motor poles
+  {14, 0, 250},     // Motor pully
+  {38, 0, 250},     // Wheel pulley
+  {80, 0, 250},     // Wheel diameter
+  {1, 0, 2},        // 0: PPM only   | 1: PPM and UART | 2: UART only
+  {200, 0, 300},    // Min hall value
   {500, 300, 700},  // Center hall value
   {800, 700, 1023}, // Max hall value
-  {-1, 0, 0}
+  {-1, 0, 0},       // firmware
+  {-1,0,}           // key
 };
 
 const char titles[numOfSettings][17] = {
@@ -274,6 +276,9 @@ void setup() {
 
   // Start Radio
   initiateTransmitter();
+  
+  // check if default encryptionKey is still in use
+  checkEncryptionKey();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -305,35 +310,30 @@ void loop() {
     transmitToReceiver();
   }
 
-   updateMainDisplay();
+  updateMainDisplay();
    
-//detect button press
-//--------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------
- 
-    if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
-        buttonPrevMillis = millis();
-        
-        byte currButtonState = digitalRead(extraButtonPin);
-        
-        if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
-            buttonPress();
-        }
-        else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
-            buttonRelease();
-        }
-        else if (currButtonState == LOW) {
-            buttonPressCount++;
-    if (buttonPressCount >= longbuttonPressCountMax) {
-        longbuttonPress();
-    }
-        }
-        prevButtonState = currButtonState;
-    }
+  //detect button press
+  if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
+      buttonPrevMillis = millis();
+      byte currButtonState = digitalRead(extraButtonPin);
+      if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
+          buttonPress();
+      }
+      else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
+          buttonRelease();
+      }
+      else if (currButtonState == LOW) {
+          buttonPressCount++;
+  if (buttonPressCount >= longbuttonPressCountMax) {
+      longbuttonPress();
+  }
+      }
+      prevButtonState = currButtonState;
+  }
 
-    cycleTimeFinish = millis();
-    cycleTimeDuration = cycleTimeFinish - cycleTimeStart;
-    Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms"); 
+  cycleTimeFinish = millis();
+  cycleTimeDuration = cycleTimeFinish - cycleTimeStart;
+  //Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms"); 
 }
 
 // initiate radio 
@@ -362,6 +362,16 @@ void initiateTransmitter() {
   DEBUG_PRINT((int)RF69_FREQ);
 }
 
+// check encryptionKey
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void checkEncryptionKey() {
+
+//  if (encryptionKey == customEncryptionKey);
+
+}
+
+
 //Function used to transmit the remPackage and receive auto acknowledgement
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -372,60 +382,8 @@ transmissionTimeStart = millis();
     uint8_t len = sizeof(buf);
     uint8_t from;   
       counterSent++;
-    if (rf69_manager.recvfromAckTimeout(buf, &len, 10, &from)) {
-            buf[len] = 0;
-
-      byte bufAmpHours[3];
-      bufAmpHours[0] = buf[0]; 
-      bufAmpHours[1] = buf[1]; 
-      bufAmpHours[2] = buf[2]; 
-      bufAmpHours[3] = buf[3]; 
-
-      byte bufInpVoltage[3];
-      bufInpVoltage[0] = buf[4]; 
-      bufInpVoltage[1] = buf[5]; 
-      bufInpVoltage[2] = buf[6]; 
-      bufInpVoltage[3] = buf[7]; 
-
-      byte bufrpm[3];
-      bufrpm[0] = buf[8]; 
-      bufrpm[1] = buf[9]; 
-      bufrpm[2] = buf[10]; 
-      bufrpm[3] = buf[11];
-
-      byte bufTachometerAbs[3];
-      bufTachometerAbs[0] = buf[12]; 
-      bufTachometerAbs[1] = buf[13]; 
-      bufTachometerAbs[2] = buf[14]; 
-      bufTachometerAbs[3] = buf[15];
-
-      byte bufHeadlight = buf[16];
-
-      byte bufAvgInputCurrent[3];
-      bufAvgInputCurrent[0] = buf[20]; 
-      bufAvgInputCurrent[1] = buf[21]; 
-      bufAvgInputCurrent[2] = buf[22]; 
-      bufAvgInputCurrent[3] = buf[23];
-
-      byte bufAvgMotorCurrent[3];
-      bufAvgMotorCurrent[0] = buf[24]; 
-      bufAvgMotorCurrent[1] = buf[25]; 
-      bufAvgMotorCurrent[2] = buf[26]; 
-      bufAvgMotorCurrent[3] = buf[27];
-
-      byte bufDutyCycleNow[3];
-      bufDutyCycleNow[0] = buf[28]; 
-      bufDutyCycleNow[1] = buf[29]; 
-      bufDutyCycleNow[2] = buf[30]; 
-      bufDutyCycleNow[3] = buf[31];
-
-      returnData.ampHours = *((float*)bufAmpHours);
-      returnData.inpVoltage = *((float*)bufInpVoltage);
-      returnData.rpm = *((long*)bufrpm);
-      returnData.tachometerAbs = *((long*)bufTachometerAbs);
-      returnData.avgInputCurrent = *((float*)bufAvgInputCurrent);
-      returnData.avgMotorCurrent = *((float*)bufAvgMotorCurrent);
-      returnData.dutyCycleNow = *((float*)bufDutyCycleNow);
+    //if (rf69_manager.recvfromAckTimeout(buf, &len, 10, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -451,7 +409,7 @@ transmissionTimeStart = millis();
       DEBUG_PRINT( F("No reply, is anyone listening?") );
     }
   } else {
-    DEBUG_PRINT( F("Sending failed (no ack)") );
+    //DEBUG_PRINT( F("Sending failed (no ack)") );
   }
 }
 
@@ -555,18 +513,19 @@ void setDefaultFlashSettings() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loadFlashSettings(){
-   txSettings.triggerMode   = triggerMode.read();
-   txSettings.batteryType   = batteryType.read(); // 1
-   txSettings.batteryCells  = batteryCells.read();   // 2
-   txSettings.motorPoles  = motorPoles.read();   // 3
-   txSettings.motorPulley   = motorPulley.read();   // 4
-   txSettings.wheelPulley   = wheelPulley.read(); // 5
-   txSettings.wheelDiameter = wheelDiameter.read();   // 6
-   txSettings.controlMode   = controlMode.read();   // 7
-   txSettings.minHallValue  = minHallValue.read();      // 8
-   txSettings.centerHallValue = centerHallValue.read();   // 9
-   txSettings.maxHallValue  = maxHallValue.read();     // 10
-   txSettings.firmVersion   = firmVersion.read();  //12
+   txSettings.triggerMode         = triggerMode.read();
+   txSettings.batteryType         = batteryType.read(); // 1
+   txSettings.batteryCells        = batteryCells.read();   // 2
+   txSettings.motorPoles          = motorPoles.read();   // 3
+   txSettings.motorPulley         = motorPulley.read();   // 4
+   txSettings.wheelPulley         = wheelPulley.read(); // 5
+   txSettings.wheelDiameter       = wheelDiameter.read();   // 6
+   txSettings.controlMode         = controlMode.read();   // 7
+   txSettings.minHallValue        = minHallValue.read();      // 8
+   txSettings.centerHallValue     = centerHallValue.read();   // 9
+   txSettings.maxHallValue        = maxHallValue.read();     // 10
+   txSettings.firmVersion         = firmVersion.read();  //12
+   txSettings.customEncryptionKey = customEncryptionKey.read(); //13
 
   if(txSettings.firmVersion != VERSION){
     setDefaultFlashSettings();
@@ -810,6 +769,8 @@ void calculateThrottlePosition()
   {
     throttle = centerThrottle;
   }
+
+  Serial.println(throttle);
 
   // Find the throttle positions
   if (throttle >= (centerThrottle + hallMenuMargin)) {
