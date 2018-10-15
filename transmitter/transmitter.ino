@@ -36,21 +36,29 @@ const unsigned char logo[] PROGMEM = {
   0x80, 0x3c, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 
 };
 
-// Defining varibales for FLash
-FlashStorage(triggerMode, uint8_t);
-FlashStorage(batteryType, uint8_t);
-FlashStorage(batteryCells, uint8_t);
-FlashStorage(motorPoles, uint8_t);
-FlashStorage(motorPulley, uint8_t);
-FlashStorage(wheelPulley, uint8_t);
-FlashStorage(wheelDiameter, uint8_t);
-FlashStorage(controlMode, uint8_t);
-FlashStorage(minHallValue, short);
-FlashStorage(centerHallValue, short);
-FlashStorage(maxHallValue, short);
-FlashStorage(firmVersion, float);
-FlashStorage(customEncryptionKey, customKey);
-FlashStorage(boardID, uint8_t);
+
+// Defining struct to hold setting values while remote is turned on.
+typedef struct{
+  uint8_t triggerMode;              // 0
+  uint8_t batteryType;              // 1
+  uint8_t batteryCells;             // 2
+  uint8_t motorPoles;               // 3
+  uint8_t motorPulley;              // 4
+  uint8_t wheelPulley;              // 5
+  uint8_t wheelDiameter;            // 6
+  uint8_t controlMode;              // 7
+  short minHallValue;               // 8
+  short centerHallValue;            // 9
+  short maxHallValue;               // 10
+  float firmVersion;                // 11
+  uint8_t customEncryptionKey[16];  // 12
+  uint8_t boardID;                  // 13
+} TxSettings;
+
+TxSettings txSettings;
+
+// Defining flash storage
+FlashStorage(my_flash_store, TxSettings);
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -92,24 +100,6 @@ struct stats {
   float maxVoltage;
 };
 
-// Defining struct to hold setting values while remote is turned on.
-struct settings {
-  uint8_t triggerMode;  			// 0
-  uint8_t batteryType;  			// 1
-  uint8_t batteryCells;   			// 2
-  uint8_t motorPoles;   			// 3
-  uint8_t motorPulley;  			// 4
-  uint8_t wheelPulley;  			// 5
-  uint8_t wheelDiameter;  			// 6
-  uint8_t controlMode;  			// 7
-  short minHallValue;     			// 8
-  short centerHallValue; 			// 9
-  short maxHallValue;     			// 10
-  float firmVersion;      			// 11
-  uint8_t customEncryptionKey[16]; 	// 12
-  uint8_t boardID 					// 13
-} txSettings;
-
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER 0
 #define MODE    7
@@ -138,7 +128,7 @@ const short rules[numOfSettings][3] {
   {500, 300, 700},  // Center hall value
   {800, 700, 1023}, // Max hall value
   {-1, 0, 0},       // firmware
-  {-1,0,0}          // key
+  {-1,0,0},          // key
   {1,0,9}           // boardID
 };
 
@@ -179,8 +169,8 @@ const uint8_t vibrationActuatorPin = 6;
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
-uint8_t encryptionKey[] = {1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8};
-uint8_t customKey[16],
+uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 
 unsigned long counterCalled = 0;
 unsigned long  counterSent = 0;
@@ -214,9 +204,6 @@ uint8_t throttlePosition;
 String tString;
 uint8_t displayView = 0;
 uint8_t x, y;
-unsigned long lastSignalBlink;
-unsigned long lastDataRotation;
-bool signalBlink = false;
 
 // Defining variables for alarm
 unsigned long lastAlarmBlink;
@@ -254,7 +241,6 @@ unsigned short cycleTimeDuration = 0;
 // --------------------------------------------------------------------------------------
 void setup() {
 
-
   Serial.begin(115200);
   #ifdef DEBUG
     while (!Serial){};
@@ -275,7 +261,9 @@ void setup() {
   digitalWrite(RFM69_RST, LOW);
 
   // Start OLED operations
+  Serial.println("Start u8g2.begin");
   u8g2.begin();
+  Serial.println("Draw start screen");
   drawStartScreen();
 
   // Start Radio
@@ -298,9 +286,7 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-// calculate throttle position
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
+  
   cycleTimeStart = millis();
   calculateThrottlePosition();
   detectButtonPress();
@@ -334,7 +320,7 @@ void initiateTransmitter() {
   delay(10);
   digitalWrite(RFM69_RST, LOW);
   delay(10);
-  
+  Serial.println("Reset transmitter");
   if (!rf69_manager.init()) {
     DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
@@ -345,10 +331,10 @@ void initiateTransmitter() {
     DEBUG_PRINT( F("setFrequency failed") );
   }
 
-  rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  rf69.setEncryptionKey(encryptionKey);
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   rf69_manager.setTimeout(20);
-	DEBUG_PRINT(F("setFrequency to:"));
+	Serial.print("Set frequecy to: ");
 	DEBUG_PRINT((int)RF69_FREQ);
   delay(500);
 }
@@ -358,27 +344,54 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-  if (txSettings.customEncryptionKey == encryptionKey) {
-	  createCustomKey();
+  Serial.println("Check for default encruption key");  
+  for (uint8_t i = 0; i < 16; i++) {
+    Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
+    Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
+    
+    if (txSettings.customEncryptionKey[i] == encryptionKey[i]) {
+      
+      if (i == 15 ) {
+        Serial.println("Default key detected => createCustomKey();");  
+        createCustomKey();
+      }
+    
+    } else {
+      
+    Serial.println("Custom key detected => setup/loop");   
+    break;
+      
+    }
+    
   }
+  
 }
 
 // create a new custom encryptionKey and send it to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void createCustomKey(){
-	
+	Serial.print("Create custom encryptionKey");
 	uint8_t generatedCustomEncryptionKey[16];
-	
-	for (i=1,i=sizeof(customEncryptionKey,),i++){
-		generatedCustomEncryptionKey[i] = random(255);
+
+  Serial.print("Custom encryptionKey: ");
+	for (uint8_t i = 0; i < 16; i++) {
+		generatedCustomEncryptionKey[i] = random(9);
+    Serial.print(generatedCustomEncryptionKey[i]);
 	}
-	
-	Serial.print("Generated key first: "); Serial.print(generatedCustomEncryptionKey[1]);
-	Serial.println(" last: "); Serial.println(generatedCustomEncryptionKey[16]);
-	generatedCustomEncryptionKey[16] = 1; // TODO last byte is the boardID
-	txSettings.customEncryptionKey = generatedCustomEncryptionKey;
-	
+ Serial.println("");
+  
+	generatedCustomEncryptionKey[15] = 1; // TODO last byte is the boardID
+  for (uint8_t i = 0; i < 16; i++){
+     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i]; 
+    }
+
+  Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
+     Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
+  
 	remPackage.type = 1; // tell receiver, next package are settings
 	transmitSafeToReceiver(); // try 60 times ever 500ms
 	
@@ -393,11 +406,11 @@ void createCustomKey(){
 // write boardID to the encryptionKey
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void selectBoard((uint8_t)value) {
+void selectBoard() {
 	
-	uint8_t customEncryptionKeyBoard[16] = customEncryptionKey.read()
-	customEncryptionKeyBoard[16] = value;
-	customEncryptionKey.write(customEncryptionKeyBoard);
+//	uint8_t customEncryptionKeyBoard[16] = customEncryptionKey.read()
+//	customEncryptionKeyBoard[16] = value;
+//	customEncryptionKey.write(customEncryptionKeyBoard);
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
@@ -407,9 +420,10 @@ void transmitToReceiver(){
 counterCalled++;
 transmissionTimeStart = millis();
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    uint8_t len = sizeof(returnData);
     uint8_t from;   
       counterSent++;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, sizeof(returnData), 10, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -435,32 +449,40 @@ transmissionTimeStart = millis();
       DEBUG_PRINT( F("No reply, is anyone listening?") );
     }
   } else {
-    //DEBUG_PRINT( F("Sending failed (no ack)") );
+    DEBUG_PRINT( F("Sending failed (no ack)") );
   }
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgement
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void transmitSaveToReceiver(){ 
-rf69_manager.setTimeout = 500;
-rf69_manager.setRetrys = 60;
+void transmitSafeToReceiver() { 
+  
+  Serial.println("Transmit SAFE to receiver");
+  
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    
     uint8_t len = sizeof(returnData);
     uint8_t from;   
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 1000, &from)) {
-	  DEBUG_PRINT( F("successfully save-transmission to receiver") );
-	  Seriel.Print("returnData.type :"); Seriel.Println(returnData.type);    
+        
+	  Serial.println("Safe transmission OK");
+   
     } else {
-      DEBUG_PRINT( F("No one there?") );
+      
+      Serial.println("No one there?");
     }
+    
   } else {
-    DEBUG_PRINT( F("Sending failed (no ack)") );
+    
+    Serial.println("Sending safe transmission failed, no ack");
   }
-rf69_manager.setTimeout = 20;
-rf69_manager.setRetrys = 0;
+  
 }
 
+//Function used to transmit settings to receiver
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 void transmitSettingsToReceiver() {
 
    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
@@ -563,12 +585,18 @@ void controlSettingsMenu() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setDefaultFlashSettings() {
+
+  Serial.println("Load default flash settings");
   for ( uint8_t i = 0; i < numOfSettings; i++ )
   {
     setSettingValue( i, rules[i][0] );
   }
-  
-  txSettings.customEncryptionKey = encryptionKey;
+  Serial.print("Default encryptionKey: ");
+  for ( uint8_t i = 0; i < 16 ; i++){
+      txSettings.customEncryptionKey[i] = encryptionKey[i];
+      Serial.print(encryptionKey[i]);
+  }
+  Serial.println("");
   txSettings.firmVersion = VERSION;
   updateFlashSettings();
 }
@@ -577,20 +605,11 @@ void setDefaultFlashSettings() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loadFlashSettings(){
-   txSettings.triggerMode         = triggerMode.read();
-   txSettings.batteryType         = batteryType.read(); // 1
-   txSettings.batteryCells        = batteryCells.read();   // 2
-   txSettings.motorPoles          = motorPoles.read();   // 3
-   txSettings.motorPulley         = motorPulley.read();   // 4
-   txSettings.wheelPulley         = wheelPulley.read(); // 5
-   txSettings.wheelDiameter       = wheelDiameter.read();   // 6
-   txSettings.controlMode         = controlMode.read();   // 7
-   txSettings.minHallValue        = minHallValue.read();      // 8
-   txSettings.centerHallValue     = centerHallValue.read();   // 9
-   txSettings.maxHallValue        = maxHallValue.read();     // 10
-   txSettings.firmVersion         = firmVersion.read();  //12
-   txSettings.customEncryptionKey = customEncryptionKey.read(); //13
 
+  Serial.println("Load flash settings");
+
+   txSettings = my_flash_store.read();
+   
   if(txSettings.firmVersion != VERSION){
     setDefaultFlashSettings();
   }
@@ -606,24 +625,15 @@ void loadFlashSettings(){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
-    triggerMode.write(txSettings.triggerMode);
-    batteryType.write(txSettings.batteryType);  
-    batteryCells.write(txSettings.batteryCells);   
-    motorPoles.write(txSettings.motorPoles);   
-    motorPulley.write(txSettings.motorPulley);    
-    wheelPulley.write(txSettings.wheelPulley);    
-    wheelDiameter.write(txSettings.wheelDiameter); 
-    controlMode.write(txSettings.controlMode);   
-    minHallValue.write(txSettings.minHallValue);  
-    centerHallValue.write(txSettings.centerHallValue);
-    maxHallValue.write(txSettings.maxHallValue); 
-    firmVersion.write(txSettings.firmVersion);   
+
+    Serial.println("Update flash settings");
+
+    my_flash_store.write(txSettings);
    
     calculateRatios();
-   
 }
 
-// write/update settings to flash
+// Detect button press
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void detectButtonPress() {
