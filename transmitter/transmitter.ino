@@ -49,7 +49,8 @@ FlashStorage(minHallValue, short);
 FlashStorage(centerHallValue, short);
 FlashStorage(maxHallValue, short);
 FlashStorage(firmVersion, float);
-FlashStorage(customEncryptionKey, uint8_t);
+FlashStorage(customEncryptionKey, customKey);
+FlashStorage(boardID, uint8_t);
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -93,22 +94,23 @@ struct stats {
 
 // Defining struct to hold setting values while remote is turned on.
 struct settings {
-  uint8_t triggerMode;  // 0
-  uint8_t batteryType;  // 1
-  uint8_t batteryCells;   // 2
-  uint8_t motorPoles;   // 3
-  uint8_t motorPulley;  // 4
-  uint8_t wheelPulley;  // 5
-  uint8_t wheelDiameter;  // 6
-  uint8_t controlMode;  // 7
-  short minHallValue;     // 8
-  short centerHallValue;  // 9
-  short maxHallValue;     // 10
-  float firmVersion;      // 11
-  uint8_t customEncryptionKey; //12
+  uint8_t triggerMode;  		// 0
+  uint8_t batteryType;  		// 1
+  uint8_t batteryCells;   		// 2
+  uint8_t motorPoles;   		// 3
+  uint8_t motorPulley;  		// 4
+  uint8_t wheelPulley;  		// 5
+  uint8_t wheelDiameter;  		// 6
+  uint8_t controlMode;  		// 7
+  short minHallValue;     		// 8
+  short centerHallValue; 		// 9
+  short maxHallValue;     		// 10
+  float firmVersion;      		// 11
+  uint8_t customEncryptionKey; 	// 12
+  uint8_t boardID 				// 13
 } txSettings;
 
-// Defining constants to hold the special settings, so it's easy changed thoughout the code
+// Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER 0
 #define MODE    7
 #define RESET 12
@@ -120,7 +122,7 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 13;
+const uint8_t numOfSettings = 14;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
@@ -136,7 +138,8 @@ const short rules[numOfSettings][3] {
   {500, 300, 700},  // Center hall value
   {800, 700, 1023}, // Max hall value
   {-1, 0, 0},       // firmware
-  {-1,0,}           // key
+  {-1,0,0}          // key
+  {1,0,9}           // boardID
 };
 
 const char titles[numOfSettings][17] = {
@@ -173,10 +176,11 @@ const uint8_t vibrationActuatorPin = 6;
 #define RF69_FREQ   433.0
 #define DEST_ADDRESS   1 // where the packages goes to
 #define MY_ADDRESS     2 // own address
-uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
+
+uint8_t encryptionKey[] = {1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8};
+uint8_t customKey[16],
 
 unsigned long counterCalled = 0;
 unsigned long  counterSent = 0;
@@ -277,9 +281,12 @@ void setup() {
   // Start Radio
   initiateTransmitter();
   
-  // check if default encryptionKey is still in use
+  // check if default encryptionKey is still in use and create custom one if needed
   checkEncryptionKey();
-
+  
+  //select board
+  selectBoard();
+  
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
     changeSettings = true;
@@ -296,9 +303,9 @@ void loop() {
 // --------------------------------------------------------------------------------------
   cycleTimeStart = millis();
   calculateThrottlePosition();
+  detectButtonPress();
 
   if (changeSettings == true) {
-    // Use throttle and trigger to change settings
     DEBUG_PRINT( F("Open setting menu") );
     controlSettingsMenu();
   } else {
@@ -311,29 +318,12 @@ void loop() {
   }
 
   updateMainDisplay();
-   
-  //detect button press
-  if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
-      buttonPrevMillis = millis();
-      byte currButtonState = digitalRead(extraButtonPin);
-      if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
-          buttonPress();
-      }
-      else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
-          buttonRelease();
-      }
-      else if (currButtonState == LOW) {
-          buttonPressCount++;
-  if (buttonPressCount >= longbuttonPressCountMax) {
-      longbuttonPress();
-  }
-      }
-      prevButtonState = currButtonState;
-  }
 
   cycleTimeFinish = millis();
   cycleTimeDuration = cycleTimeFinish - cycleTimeStart;
-  //Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms"); 
+  #ifdef DEBUG
+	Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms"); 
+  #endif
 }
 
 // initiate radio 
@@ -355,11 +345,11 @@ void initiateTransmitter() {
     DEBUG_PRINT( F("setFrequency failed") );
   }
 
-  rf69.setEncryptionKey(encryptionKey);
+  rf69.setEncryptionKey(txSettings.customEncryptionKey);
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   rf69_manager.setTimeout(20);
-  DEBUG_PRINT(F("setFrequency to:"));
-  DEBUG_PRINT((int)RF69_FREQ);
+	DEBUG_PRINT(F("setFrequency to:"));
+	DEBUG_PRINT((int)RF69_FREQ);
 }
 
 // check encryptionKey
@@ -367,22 +357,58 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-//  if (encryptionKey == customEncryptionKey);
-
+  if (customEncryptionKey.read == encryptionKey) {
+	  createCustomKey();
+  }
 }
 
+// create a new custom encryptionKey and send it to receiver
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void createCustomKey(){
+	
+	uint8_t generatedCustomEncryptionKey[16];
+	
+	for (i=1,i=sizeof(customEncryptionKey,),i++){
+		generatedCustomEncryptionKey[i] = random(255);
+	}
+	
+	Serial.print("Generated key first: "); Serial.print(generatedCustomEncryptionKey[1]);
+	Serial.println(" last: "); Serial.println(generatedCustomEncryptionKey[16]);
+	generatedCustomEncryptionKey[16] = 1;
+	customEncryptionKey.write(generatedCustomEncryptionKey);
+	
+	remPackage.type = 1; // tell receiver, next package are settings
+	transmitSafeToReceiver(); // try 60 times ever 500ms
+	
+	transmitSettingsToReceiver(); //TODO make shure receiver got message
+	
+	remPackage.type = 0; // tell the receiver next package are normals
+	transmitSafeToReceiver(); // try 60 times ever 500ms
+	
+	initiateTransmitter(); // restart receiver with new key
+}
 
-//Function used to transmit the remPackage and receive auto acknowledgement
+// write boardID to the encryptionKey
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void selectBoard((uint8_t)value) {
+	
+	uint8_t customEncryptionKeyBoard[16] = customEncryptionKey.read()
+	customEncryptionKeyBoard[16] = value;
+	customEncryptionKey.write(customEncryptionKeyBoard);
+}
+
+//Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void transmitToReceiver(){ 
 counterCalled++;
 transmissionTimeStart = millis();
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
-    uint8_t len = sizeof(buf);
+    uint8_t len = sizeof(returnData);
     uint8_t from;   
       counterSent++;
-    //if (rf69_manager.recvfromAckTimeout(buf, &len, 10, &from)) {
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
@@ -411,6 +437,46 @@ transmissionTimeStart = millis();
   } else {
     //DEBUG_PRINT( F("Sending failed (no ack)") );
   }
+}
+
+//Function used to transmit the remPackage and receive auto acknowledgement
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void transmitSaveToReceiver(){ 
+rf69_manager.setTimeout = 500;
+rf69_manager.setRetrys = 60;
+  if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    uint8_t len = sizeof(returnData);
+    uint8_t from;   
+      counterSent++;
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 1000, &from)) {
+	  DEBUG_PRINT( F("successfully save-transmission to receiver") );
+	  Seriel.Print("returnData.type :"); Seriel.Println(returnData.type);    
+    } else {
+      DEBUG_PRINT( F("No one there?") );
+    }
+  } else {
+    DEBUG_PRINT( F("Sending failed (no ack)") );
+  }
+rf69_manager.setTimeout = 20;
+rf69_manager.setRetrys = 0;
+}
+
+transmitSettingsToReceiver() {
+
+   if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      uint8_t len = sizeof(txSettings);
+      uint8_t from;   
+        counterSent++;
+        if (rf69_manager.recvfromAckTimeout((uint8_t*)&txSettings, &len, 1000, &from)) {
+                  
+      } else {
+        DEBUG_PRINT( F("No reply, is anyone listening?") );
+      }
+    } else {
+      DEBUG_PRINT( F("Sending failed (no ack)") );
+    }
+	
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -504,7 +570,8 @@ void setDefaultFlashSettings() {
   {
     setSettingValue( i, rules[i][0] );
   }
-
+  
+  txSettings.customEncryptionKey = encryptionKey;
   txSettings.firmVersion = VERSION;
   updateFlashSettings();
 }
@@ -557,6 +624,29 @@ void updateFlashSettings() {
    
     calculateRatios();
    
+}
+
+// write/update settings to flash
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void detectButtonPress() {
+  if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
+      buttonPrevMillis = millis();
+      byte currButtonState = digitalRead(extraButtonPin);
+      if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
+          buttonPress();
+      }
+      else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
+          buttonRelease();
+      }
+      else if (currButtonState == LOW) {
+          buttonPressCount++;
+  if (buttonPressCount >= longbuttonPressCountMax) {
+      longbuttonPress();
+  }
+      }
+      prevButtonState = currButtonState;
+  }
 }
 
 // Update values used to calculate speed and distance travelled.
