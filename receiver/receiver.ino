@@ -196,6 +196,12 @@ void loop()
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseMessage() {
+	Serial.println(" join analyseMessage EncryptionKey: ");
+	for(int i = 1; i < sizeof(customEncryptionKey); i++)
+	{
+		Serial.print(customEncryptionKey[i]);
+	}
+	Serial.println("");
     uint8_t from;
     if (rf69_manager.recvfromAck((uint8_t*)&remPackage, sizeof(remPackage), &from)) {
   
@@ -222,6 +228,12 @@ void analyseMessage() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseSettingsMessage() {
+	Serial.println("join analyseSettingsMessage EncryptionKey: ");
+	for(int i = 1; i < sizeof(customEncryptionKey); i++)
+	{
+		Serial.print(customEncryptionKey[i]);
+	}
+	Serial.println("");
     uint8_t from;
     if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, sizeof(rxSettings), &from)) {
   
@@ -241,6 +253,12 @@ void analyseSettingsMessage() {
         Serial.println("Sending failed (no ack)");
       #endif
 	remPackage.type = 0; // go back to normal transmissions type
+	Serial.println("exit analyseSettingsMessage EncryptionKey: ");
+	for(int i = 1; i < sizeof(customEncryptionKey); i++)
+	{
+		Serial.print(customEncryptionKey[i]);
+	}
+	Serial.println("");
     }
 }
 

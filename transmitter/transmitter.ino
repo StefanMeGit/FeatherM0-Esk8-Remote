@@ -407,10 +407,9 @@ void transmitToReceiver(){
 counterCalled++;
 transmissionTimeStart = millis();
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
-    uint8_t len = sizeof(returnData);
     uint8_t from;   
       counterSent++;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, sizeof(returnData), 10, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -462,7 +461,7 @@ rf69_manager.setTimeout = 20;
 rf69_manager.setRetrys = 0;
 }
 
-transmitSettingsToReceiver() {
+void transmitSettingsToReceiver() {
 
    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(txSettings);
