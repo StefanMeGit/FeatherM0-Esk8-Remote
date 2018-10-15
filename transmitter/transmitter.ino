@@ -94,20 +94,20 @@ struct stats {
 
 // Defining struct to hold setting values while remote is turned on.
 struct settings {
-  uint8_t triggerMode;  		// 0
-  uint8_t batteryType;  		// 1
-  uint8_t batteryCells;   		// 2
-  uint8_t motorPoles;   		// 3
-  uint8_t motorPulley;  		// 4
-  uint8_t wheelPulley;  		// 5
-  uint8_t wheelDiameter;  		// 6
-  uint8_t controlMode;  		// 7
-  short minHallValue;     		// 8
-  short centerHallValue; 		// 9
-  short maxHallValue;     		// 10
-  float firmVersion;      		// 11
-  uint8_t customEncryptionKey; 	// 12
-  uint8_t boardID 				// 13
+  uint8_t triggerMode;  			// 0
+  uint8_t batteryType;  			// 1
+  uint8_t batteryCells;   			// 2
+  uint8_t motorPoles;   			// 3
+  uint8_t motorPulley;  			// 4
+  uint8_t wheelPulley;  			// 5
+  uint8_t wheelDiameter;  			// 6
+  uint8_t controlMode;  			// 7
+  short minHallValue;     			// 8
+  short centerHallValue; 			// 9
+  short maxHallValue;     			// 10
+  float firmVersion;      			// 11
+  uint8_t customEncryptionKey[16]; 	// 12
+  uint8_t boardID 					// 13
 } txSettings;
 
 // Defining constants to hold the special settings, so it's easy changed though the code
@@ -285,7 +285,7 @@ void setup() {
   checkEncryptionKey();
   
   //select board
-  selectBoard();
+  //selectBoard(); //TODO for multiple Boards
   
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -312,8 +312,8 @@ void loop() {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-    remPackage.headlight = true;
-  
+    remPackage.headlight = false;
+	
     transmitToReceiver();
   }
 
@@ -350,6 +350,7 @@ void initiateTransmitter() {
   rf69_manager.setTimeout(20);
 	DEBUG_PRINT(F("setFrequency to:"));
 	DEBUG_PRINT((int)RF69_FREQ);
+  delay(500);
 }
 
 // check encryptionKey
@@ -357,7 +358,7 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-  if (customEncryptionKey.read == encryptionKey) {
+  if (txSettings.customEncryptionKey == encryptionKey) {
 	  createCustomKey();
   }
 }
@@ -375,8 +376,8 @@ void createCustomKey(){
 	
 	Serial.print("Generated key first: "); Serial.print(generatedCustomEncryptionKey[1]);
 	Serial.println(" last: "); Serial.println(generatedCustomEncryptionKey[16]);
-	generatedCustomEncryptionKey[16] = 1;
-	customEncryptionKey.write(generatedCustomEncryptionKey);
+	generatedCustomEncryptionKey[16] = 1; // TODO last byte is the boardID
+	txSettings.customEncryptionKey = generatedCustomEncryptionKey;
 	
 	remPackage.type = 1; // tell receiver, next package are settings
 	transmitSafeToReceiver(); // try 60 times ever 500ms
@@ -448,7 +449,6 @@ rf69_manager.setRetrys = 60;
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
     uint8_t from;   
-      counterSent++;
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 1000, &from)) {
 	  DEBUG_PRINT( F("successfully save-transmission to receiver") );
 	  Seriel.Print("returnData.type :"); Seriel.Println(returnData.type);    
@@ -467,7 +467,6 @@ transmitSettingsToReceiver() {
    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(txSettings);
       uint8_t from;   
-        counterSent++;
         if (rf69_manager.recvfromAckTimeout((uint8_t*)&txSettings, &len, 1000, &from)) {
                   
       } else {
@@ -476,7 +475,6 @@ transmitSettingsToReceiver() {
     } else {
       DEBUG_PRINT( F("Sending failed (no ack)") );
     }
-	
 }
 
 // Uses the throttle and trigger to navigate and change settings

@@ -53,6 +53,24 @@ struct callback {
 	float dutyCycleNow = 8.8;
 } returnData;
 
+// Defining struct to hold setting values while remote is turned on.
+struct settings {
+  uint8_t triggerMode;  		// 0
+  uint8_t batteryType;  		// 1
+  uint8_t batteryCells;   		// 2
+  uint8_t motorPoles;   		// 3
+  uint8_t motorPulley;  		// 4
+  uint8_t wheelPulley;  		// 5
+  uint8_t wheelDiameter;  		// 6
+  uint8_t controlMode;  		// 7
+  short minHallValue;     		// 8
+  short centerHallValue; 		// 9
+  short maxHallValue;     		// 10
+  float firmVersion;      		// 11
+  uint8_t customEncryptionKey; 	// 12
+  uint8_t boardID 				// 13
+} rxSettings;
+
 // Defining struct to handle receiver settings
 struct settings {
 	uint8_t triggerMode; // Trigger mode
@@ -88,23 +106,10 @@ const short settingRules[numOfSettings][3] {
 #define RFM69_INT   3
 #define RFM69_RST   4
 #define RF69_FREQ   433.0
-// change addresses for each client board, any number :)
 #define MY_ADDRESS     1
-uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+uint8_t encryptionKey[] = {1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8};
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
-// Class to manage message delivery and receipt, using the driver declared above
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
-//??
-// Dont put this on the stack:
-uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-uint8_t data[] = "  OK";
-uint8_t transmissionFailCounter = 0;
-//needed??? old stuff
-uint32_t timeoutTimer = 0;
-bool recievedData = false;
-// just for test
-int16_t packetnum = 0;
 
 // Current mode of receiver - 0: Connected | 1: Timeout | 2: Updating settings
 #define CONNECTED 0
@@ -180,34 +185,25 @@ void loop()
 {
   // check if message is avaible
   if (rf69_manager.available()) {
-    // check if message is valid and for us
-    analyseMessage();
+    if (remPackage.type = 0) { // join normal transmissions
+	  analyseMessage();
+	} else {
+	  analyseSettingsMessage(); // join settings transmission
   }
-  
 }
-
 
 // check message
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseMessage() {
-    uint8_t len = sizeof(buf);
     uint8_t from;
-    if (rf69_manager.recvfromAck(buf, &len, &from)) {
+    if (rf69_manager.recvfromAck((uint8_t*)&remPackage, sizeof(remPackage), &from)) {
   
       #ifdef DEBUG
         Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
         Serial.print(" [RSSI :");
         Serial.print(rf69.lastRssi());
         Serial.println("] : ");
-      #endif
-      
-      remPackage.type = buf[1];
-      remPackage.throttle = buf[2];
-      remPackage.trigger = buf[4];
-      remPackage.headlight = buf[5];
-      #ifdef DEBUG
-      
         Serial.print("Type: ");Serial.println(remPackage.type);
         Serial.print("Throttle: ");Serial.println(remPackage.throttle);
         Serial.print("Trigger: ");Serial.println(remPackage.trigger);
@@ -218,6 +214,33 @@ void analyseMessage() {
       #ifdef DEBUG
         Serial.println("Sending failed (no ack)");
       #endif
+	  
+    }
+}
+
+// check settings message
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void analyseSettingsMessage() {
+    uint8_t from;
+    if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, sizeof(rxSettings), &from)) {
+  
+      #ifdef DEBUG
+        Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
+        Serial.print(" [RSSI :");
+        Serial.print(rf69.lastRssi());
+        Serial.println("] : ");
+        Serial.print("triggerMode: ");Serial.println(rxSettings.triggerMode);
+        Serial.print("controlMode: ");Serial.println(rxSettings.controlMode);
+        Serial.print("customEncryptionKey: ");Serial.println(rxSettings.customEncryptionKey);
+        Serial.print("boardID: ");Serial.println(rxSettings.boardID);
+      #endif
+      
+      if (!rf69_manager.sendtoWait((uint8_t*)&rxSettings, sizeof(rxSettings), from))
+      #ifdef DEBUG
+        Serial.println("Sending failed (no ack)");
+      #endif
+	remPackage.type = 0; // go back to normal transmissions type
     }
 }
 
