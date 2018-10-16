@@ -331,7 +331,12 @@ void initiateTransmitter() {
     DEBUG_PRINT( F("setFrequency failed") );
   }
 
-  rf69.setEncryptionKey(encryptionKey);
+  rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  Serial.print("Set transmitter custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
+     Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   rf69_manager.setTimeout(20);
 	Serial.print("Set frequecy to: ");
@@ -381,7 +386,7 @@ void createCustomKey(){
 	}
  Serial.println("");
   
-	generatedCustomEncryptionKey[15] = 1; // TODO last byte is the boardID
+	generatedCustomEncryptionKey[15] = 1;
   for (uint8_t i = 0; i < 16; i++){
      txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i]; 
     }
@@ -416,9 +421,10 @@ bool transmitToReceiver(){
 transmissionTimeStart = millis();
 
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    
     uint8_t len = sizeof(returnData);
     uint8_t from;
-	
+      Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
@@ -463,14 +469,13 @@ bool transmitSettingsToReceiver() {
 	Serial.println("Try to send receiver next package are settings");
 	
 	if ( transmitToReceiver()) {
-		Serial.println("Sent to the the receiver the next package are settings ");
-		Serial.println("Try to send settings to receiver ");
+		Serial.println("Send settings... ");
 		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
 			uint8_t len = sizeof(remPackage);
 			uint8_t from;   
 			if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
-                Serial.println("Received ack from receiver");
-				Serial.print("Variable remPackage.type: "); Serial.println(remPackage.type);
+        Serial.print("Received ack for settings from receiver #"); Serial.println(from);
+				Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
 			} else {
 			Serial.println("Sending settings failed, no ack");
 			remPackage.type = 0;
@@ -481,6 +486,8 @@ bool transmitSettingsToReceiver() {
 			remPackage.type = 0;
 			return false;
 		}
+    Serial.println("Reciever have new Settings, restart transmitter");
+    //initiateTransmitter();
 	    return true;
 	} else {
 		Serial.println("Could not tell the receiver next package are settings");
@@ -740,11 +747,11 @@ void updateMainDisplay()
     else
     {
     drawThrottle();
-    drawBatteryLevel();
+    //drawBatteryLevel();
     drawHeadlightStatus();
     drawPage();
     }
-  } while ( u8g2.nextPage() );
+  } while ( u1qq8g2.nextPage() );
 }
 
 // Measure the hall sensor output and calculate throttle posistion

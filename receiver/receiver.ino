@@ -25,7 +25,7 @@
 
 // Transmit and receive package
 struct package {		  	// | Normal 	| Setting 	| Confirm
-	uint8_t type;		    // | 0 			| 1 		| 2
+	uint8_t type = 0;		    // | 0 			| 1 		| 2
 	uint16_t throttle;		// | Throttle 	| ---		| ---
 	uint8_t trigger;	  	// | Trigger 	| --- 		| ---
 	uint8_t headlight;
@@ -145,7 +145,6 @@ void setup()
     	UART.setDebugPort(&Serial);
 		Serial.begin(115200);
 		 while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
-		DEBUG_PRINT("** Esk8-remote receiver **");
 		printf_begin();
 	#endif
 
@@ -172,9 +171,13 @@ void loop()
 {
   // check if message is available
   if (rf69_manager.available()) {
-    if (remPackage.type = 0) { // join normal transmission
+     Serial.println("Package available");
+    if (remPackage.type == 0) { // join normal transmission
+      
+      Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	    analyseMessage();
 	  } else {
+      Serial.print("Setting package remPackage.type: "); Serial.println(remPackage.type);
 	    analyseSettingsMessage(); // join settings transmission
     }
   }
@@ -184,8 +187,8 @@ void loop()
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseMessage() {
-	Serial.println(" join analyseMessage EncryptionKey: ");
-	for(int i = 1; i < 16; i++)
+	Serial.print("Join analyseMessage: ");
+	for(int i = 0; i < 16; i++)
 	{
 		Serial.print(rxSettings.customEncryptionKey[i]);
 	}
@@ -219,14 +222,14 @@ void analyseMessage() {
 // --------------------------------------------------------------------------------------
 void analyseSettingsMessage() {
 	
-	Serial.println("join analyseSettingsMessage EncryptionKey: ");
+	Serial.println("join analyseSettingsMessage");
 
     uint8_t len = sizeof(rxSettings);
     uint8_t from;
 	if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
   
       #ifdef DEBUG
-        Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
+        Serial.print("Received settings from remote with ID: "); Serial.print(from);
         Serial.print(" [RSSI :");
         Serial.print(rf69.lastRssi());
         Serial.println("] : ");
@@ -235,6 +238,8 @@ void analyseSettingsMessage() {
         Serial.print("boardID: ");Serial.println(rxSettings.boardID);
       #endif
       
+      remPackage.type = 0;
+      
       if (!rf69_manager.sendtoWait((uint8_t*)&remPackage, sizeof(remPackage), from)) {
 		  
       #ifdef DEBUG
@@ -242,17 +247,16 @@ void analyseSettingsMessage() {
       #endif
 	  
 	  }
-	  Serial.println("exit analyseSettingsMessage EncryptionKey: ");
-	
-	  for(int i = 1; i < 16; i++) {
-		
-		  Serial.print(rxSettings.customEncryptionKey[i]);
-	
-	  }
-	
-	Serial.println("");
-	
+    Serial.print("Received encryptionKey: ");
+    for(int i = 0; i < 16; i++) {
+    
+      Serial.print(rxSettings.customEncryptionKey[i]);
+  
+    }
+    Serial.println("");
     remPackage.type = 0;
+    initiateReceiver();
+	  Serial.println("Exit analyseSettingsMessage");	
 	}
 }
 
