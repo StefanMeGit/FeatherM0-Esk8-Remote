@@ -50,10 +50,10 @@ typedef struct{
   short minHallValue;               // 8
   short centerHallValue;            // 9
   short maxHallValue;               // 10
-  float firmVersion;                // 11
-  uint8_t customEncryptionKey[16];  // 12
-  uint8_t boardID;                  // 13
-  uint8_t transmissionPower			// 14
+  uint8_t boardID;                  // 11
+  uint8_t transmissionPower;			  // 12
+  float firmVersion;                // 13
+  uint8_t customEncryptionKey[16];  // 14
 } TxSettings;
 
 TxSettings txSettings;
@@ -128,13 +128,13 @@ const short rules[numOfSettings][3] {
   {200, 0, 300},   	 	// Min hall value
   {500, 300, 700},  	// Center hall value
   {800, 700, 1023}, 	// Max hall value
-  {1, 1, 9}           	// boardID
-  {18, 14, 20}			// transmission power 
+  {1, 1, 9},           	// boardID
+  {18, 14, 20},			// transmission power 
   {-1, 0, 0},      		// firmware
-  {-1, 0 ,0},         	// encryptionKey
+  {-1, 0 ,0}         	// encryptionKey
 };
 
-const char titles[numOfSettings][17] = {
+const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
   "Throttle max", "Board ID", "Transmission Power", "Settings", "Encryption Key"
@@ -149,7 +149,7 @@ const char stringValues[3][3][13] = {
   {"PPM", "PPM and UART", "UART only"},
 };
 
-const char settingUnits[4][3] = {"S", "T", "mm", "#", "dBm"};
+const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
 const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
@@ -262,7 +262,6 @@ void setup() {
   digitalWrite(RFM69_RST, LOW);
 
   // Start OLED operations
-  Serial.println("Start u8g2.begin");
   u8g2.begin();
   Serial.println("Draw start screen");
   drawStartScreen();
@@ -321,7 +320,7 @@ void initiateTransmitter() {
   delay(10);
   digitalWrite(RFM69_RST, LOW);
   delay(10);
-  Serial.println("Reset transmitter");
+  Serial.println("Restart transmitter");
   if (!rf69_manager.init()) {
     DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
@@ -412,7 +411,7 @@ void selectBoard() {
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void transmitToReceiver(){ 
+bool transmitToReceiver(){ 
 
 transmissionTimeStart = millis();
 
@@ -457,14 +456,14 @@ transmissionTimeStart = millis();
 //Function used to transmit settings to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void transmitSettingsToReceiver() {
+bool transmitSettingsToReceiver() {
 	
 	remPackage.type = 1;
 	
 	Serial.println("Try to send receiver next package are settings");
 	
 	if ( transmitToReceiver()) {
-		Serial.println("Sent to receiver next package are settings ");
+		Serial.println("Sent to the the receiver the next package are settings ");
 		Serial.println("Try to send settings to receiver ");
 		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
 			uint8_t len = sizeof(remPackage);
@@ -484,7 +483,7 @@ void transmitSettingsToReceiver() {
 		}
 	    return true;
 	} else {
-		Serial.println("could not say receiver next package are settings");
+		Serial.println("Could not tell the receiver next package are settings");
 		remPackage.type = 0;
 		return false;
 	}
@@ -555,8 +554,8 @@ void controlSettingsMenu() {
       // Settings that needs to be transmitted to the recevier
       if( currentSetting == TRIGGER || currentSetting == MODE ){
 		  
-		  if (currentSetting == TRIGGER){txSettings.triggerMode = currentSetting;
-		  } else if {(currentSetting == MODE){txSettings.controlMode = currentSetting; }
+		  if (currentSetting == TRIGGER) {txSettings.triggerMode = currentSetting;
+		  } else if (currentSetting == MODE) {txSettings.controlMode = currentSetting;}
         if( ! transmitSettingsToReceiver()){
           // Error! Load the old setting
           loadFlashSettings();

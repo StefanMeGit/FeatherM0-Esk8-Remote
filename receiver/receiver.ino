@@ -54,7 +54,7 @@ struct callback {
 } returnData;
 
 // Defining struct to hold setting values while remote is turned on.
-struct settings {
+typedef struct {
   uint8_t triggerMode;  		// 0
   uint8_t batteryType;  		// 1
   uint8_t batteryCells;   		// 2
@@ -66,23 +66,16 @@ struct settings {
   short minHallValue;     		// 8
   short centerHallValue; 		// 9
   short maxHallValue;     		// 10
-  float firmVersion;      		// 11
-  uint8_t customEncryptionKey; 	// 12
-  uint8_t boardID 				// 13
-  uint8_t transmissionPower			// 14
+  uint8_t boardID; 				// 11
+  uint8_t transmissionPower;			// 12
+  float firmVersion;          // 13
+  uint8_t customEncryptionKey[16];   // 14
 } RxSettings;
 
 RxSettings rxSettings;
 
 //Defining flash storage
 FlashStorage(flash_RxSettings, RxSettings);
-
-// Defining struct to handle receiver settings
-struct settings {
-	uint8_t triggerMode; // Trigger mode
-	uint8_t controlMode; // PWM, PWM & UART or UART only
-	float firmVersion;   
-} rxSettings;
 
 const uint8_t numOfSettings = 3;
 // Setting rules format: default, min, max.
@@ -180,9 +173,10 @@ void loop()
   // check if message is available
   if (rf69_manager.available()) {
     if (remPackage.type = 0) { // join normal transmission
-	  analyseMessage();
-	} else {
-	  analyseSettingsMessage(); // join settings transmission
+	    analyseMessage();
+	  } else {
+	    analyseSettingsMessage(); // join settings transmission
+    }
   }
 }
 
@@ -191,13 +185,15 @@ void loop()
 // --------------------------------------------------------------------------------------
 void analyseMessage() {
 	Serial.println(" join analyseMessage EncryptionKey: ");
-	for(int i = 1; i < sizeof(customEncryptionKey); i++)
+	for(int i = 1; i < 16; i++)
 	{
-		Serial.print(customEncryptionKey[i]);
+		Serial.print(rxSettings.customEncryptionKey[i]);
 	}
 	Serial.println("");
+
+    uint8_t len = sizeof(remPackage);
     uint8_t from;
-    if (rf69_manager.recvfromAck((uint8_t*)&remPackage, sizeof(remPackage), &from)) {
+    if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
   
       #ifdef DEBUG
         Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
@@ -224,10 +220,10 @@ void analyseMessage() {
 void analyseSettingsMessage() {
 	
 	Serial.println("join analyseSettingsMessage EncryptionKey: ");
-	
+
+    uint8_t len = sizeof(rxSettings);
     uint8_t from;
-    
-	if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, sizeof(rxSettings), &from)) {
+	if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
   
       #ifdef DEBUG
         Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
@@ -236,7 +232,6 @@ void analyseSettingsMessage() {
         Serial.println("] : ");
         Serial.print("triggerMode: ");Serial.println(rxSettings.triggerMode);
         Serial.print("controlMode: ");Serial.println(rxSettings.controlMode);
-        Serial.print("customEncryptionKey: ");Serial.println(rxSettings.customEncryptionKey);
         Serial.print("boardID: ");Serial.println(rxSettings.boardID);
       #endif
       
@@ -249,9 +244,9 @@ void analyseSettingsMessage() {
 	  }
 	  Serial.println("exit analyseSettingsMessage EncryptionKey: ");
 	
-	  for(int i = 1; i < sizeof(customEncryptionKey); i++) {
+	  for(int i = 1; i < 16; i++) {
 		
-		  Serial.print(customEncryptionKey[i]);
+		  Serial.print(rxSettings.customEncryptionKey[i]);
 	
 	  }
 	
@@ -340,7 +335,7 @@ void initiateReceiver(){
   rf69.setTxPower(20, true);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
   Serial.print("Receiver set customEncryptionKey to: ");
-	for(int i = 1; i < 16); i++) {
+	for(int i = 0; i < 16; i++) {
 		Serial.print(rxSettings.customEncryptionKey[i]);
 	}
 	Serial.println("");
@@ -517,7 +512,7 @@ void setDefaultFlashSettings() {
 	}
 	
 	#ifdef DEBUG
-		DEBUG_PRINT("Default settings loaded, update settings...");
+		DEBUG_PRINT("Default settings loaded, update flash");
 	#endif
 	updateFlashSettings();
 }
@@ -535,7 +530,7 @@ void loadFlashSettings(){
 	
   if(rxSettings.firmVersion != VERSION){
   	#ifdef DEBUG
-		DEBUG_PRINT("Firmware Version is invalid, load default Settings...");
+		DEBUG_PRINT("Firmware Version is invalid, load default settings");
 	#endif
     setDefaultFlashSettings();
   }
@@ -548,7 +543,7 @@ void updateFlashSettings() {
     flash_RxSettings.write(rxSettings);
     
     #ifdef DEBUG
-		DEBUG_PRINT("Settings updated");
+		DEBUG_PRINT("Settings updated to flash");
 	#endif
    
 }
