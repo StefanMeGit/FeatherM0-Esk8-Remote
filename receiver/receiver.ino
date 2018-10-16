@@ -28,7 +28,7 @@ struct package {		  	// | Normal 	| Setting 	| Confirm
 	uint8_t type;		    // | 0 			| 1 		| 2
 	uint16_t throttle;		// | Throttle 	| ---		| ---
 	uint8_t trigger;	  	// | Trigger 	| --- 		| ---
-	bool headlight;
+	uint8_t headlight;
 } remPackage;
 
 #define NORMAL 0
@@ -69,29 +69,20 @@ struct settings {
   float firmVersion;      		// 11
   uint8_t customEncryptionKey; 	// 12
   uint8_t boardID 				// 13
-} rxSettings;
+  uint8_t transmissionPower			// 14
+} RxSettings;
+
+RxSettings rxSettings;
+
+//Defining flash storage
+FlashStorage(flash_RxSettings, RxSettings);
 
 // Defining struct to handle receiver settings
 struct settings {
 	uint8_t triggerMode; // Trigger mode
 	uint8_t controlMode; // PWM, PWM & UART or UART only
-  float firmVersion;   
+	float firmVersion;   
 } rxSettings;
-
-// Defining struct to hold setting values while remote is turned on.
-// Defining varibales for FLash
-FlashStorage(triggerMode, uint8_t);
-FlashStorage(batteryType, uint8_t);
-FlashStorage(batteryCells, uint8_t);
-FlashStorage(motorPoles, uint8_t);
-FlashStorage(motorPulley, uint8_t);
-FlashStorage(wheelPulley, uint8_t);
-FlashStorage(wheelDiameter, uint8_t);
-FlashStorage(controlMode, uint8_t);
-FlashStorage(minHallValue, short);
-FlashStorage(centerHallValue, short);
-FlashStorage(maxHallValue, short);
-FlashStorage(firmVersion, float);
 
 const uint8_t numOfSettings = 3;
 // Setting rules format: default, min, max.
@@ -107,9 +98,12 @@ const short settingRules[numOfSettings][3] {
 #define RFM69_RST   4
 #define RF69_FREQ   433.0
 #define MY_ADDRESS     1
-uint8_t encryptionKey[] = {1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8};
+
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
+
+uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 
 // Current mode of receiver - 0: Connected | 1: Timeout | 2: Updating settings
 #define CONNECTED 0
@@ -183,16 +177,16 @@ void setup()
 // --------------------------------------------------------------------------------------
 void loop()
 {
-  // check if message is avaible
+  // check if message is available
   if (rf69_manager.available()) {
-    if (remPackage.type = 0) { // join normal transmissions
+    if (remPackage.type = 0) { // join normal transmission
 	  analyseMessage();
 	} else {
 	  analyseSettingsMessage(); // join settings transmission
   }
 }
 
-// check message
+// check transmission
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseMessage() {
@@ -228,14 +222,12 @@ void analyseMessage() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void analyseSettingsMessage() {
+	
 	Serial.println("join analyseSettingsMessage EncryptionKey: ");
-	for(int i = 1; i < sizeof(customEncryptionKey); i++)
-	{
-		Serial.print(customEncryptionKey[i]);
-	}
-	Serial.println("");
+	
     uint8_t from;
-    if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, sizeof(rxSettings), &from)) {
+    
+	if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, sizeof(rxSettings), &from)) {
   
       #ifdef DEBUG
         Serial.print("Received valid transmission from remote with ID: "); Serial.print(from);
@@ -248,18 +240,25 @@ void analyseSettingsMessage() {
         Serial.print("boardID: ");Serial.println(rxSettings.boardID);
       #endif
       
-      if (!rf69_manager.sendtoWait((uint8_t*)&rxSettings, sizeof(rxSettings), from))
+      if (!rf69_manager.sendtoWait((uint8_t*)&remPackage, sizeof(remPackage), from)) {
+		  
       #ifdef DEBUG
         Serial.println("Sending failed (no ack)");
       #endif
-	remPackage.type = 0; // go back to normal transmissions type
-	Serial.println("exit analyseSettingsMessage EncryptionKey: ");
-	for(int i = 1; i < sizeof(customEncryptionKey); i++)
-	{
-		Serial.print(customEncryptionKey[i]);
-	}
+	  
+	  }
+	  Serial.println("exit analyseSettingsMessage EncryptionKey: ");
+	
+	  for(int i = 1; i < sizeof(customEncryptionKey); i++) {
+		
+		  Serial.print(customEncryptionKey[i]);
+	
+	  }
+	
 	Serial.println("");
-    }
+	
+    remPackage.type = 0;
+	}
 }
 
 // set status
@@ -317,13 +316,6 @@ void controlStatusLed(){
   }  
 }
 
-// control status LED TIMEOUT | COMPLETE | FAIL
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-void acquireSetting() {
-
-}
-
 // initiate receiver radio 
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -338,16 +330,20 @@ void initiateReceiver(){
     while (1);
   }  
   
-  DEBUG_PRINT( F("RFM69 radio init OK!") );
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module), no encryption
+  DEBUG_PRINT( F("RFM69 radio init ok") );
+  
   if (!rf69.setFrequency(RF69_FREQ)) {
     DEBUG_PRINT( F("setFrequency failed") );
   }
+  Serial.print("Receiver set frequency to: "); Serial.println(RF69_FREQ);
   
   rf69.setTxPower(20, true);
-  rf69.setEncryptionKey(encryptionKey);
-  DEBUG_PRINT(F("setFrequency to:"));
-  DEBUG_PRINT((int)RF69_FREQ);
+  rf69.setEncryptionKey(rxSettings.customEncryptionKey);
+  Serial.print("Receiver set customEncryptionKey to: ");
+	for(int i = 1; i < 16); i++) {
+		Serial.print(rxSettings.customEncryptionKey[i]);
+	}
+	Serial.println("");
 }
 
 // update a single setup value
@@ -511,12 +507,15 @@ void getUartData() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setDefaultFlashSettings() {
-	for ( int i = 0; i < numOfSettings; i++ )
-	{
+	for ( int i = 0; i < numOfSettings; i++ ) {
 		setSettingValue(i, settingRules[i][0]);
 	}
 
   	rxSettings.firmVersion = VERSION;
+	for (int i = 0; i < 16; i++) {
+		rxSettings.customEncryptionKey[i] = encryptionKey[i];
+	}
+	
 	#ifdef DEBUG
 		DEBUG_PRINT("Default settings loaded, update settings...");
 	#endif
@@ -527,8 +526,8 @@ void setDefaultFlashSettings() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loadFlashSettings(){
-   rxSettings.triggerMode   = triggerMode.read();	// 0
-   rxSettings.controlMode   = controlMode.read();   // 7
+	
+   rxSettings = flash_RxSettings.read();
 
 	#ifdef DEBUG
 		DEBUG_PRINT("Settings loaded");
@@ -546,8 +545,7 @@ void loadFlashSettings(){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
-    triggerMode.write(rxSettings.triggerMode);
-    controlMode.write(rxSettings.controlMode);   
+    flash_RxSettings.write(rxSettings);
     
     #ifdef DEBUG
 		DEBUG_PRINT("Settings updated");

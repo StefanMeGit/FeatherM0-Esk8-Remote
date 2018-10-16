@@ -53,12 +53,13 @@ typedef struct{
   float firmVersion;                // 11
   uint8_t customEncryptionKey[16];  // 12
   uint8_t boardID;                  // 13
+  uint8_t transmissionPower			// 14
 } TxSettings;
 
 TxSettings txSettings;
 
 // Defining flash storage
-FlashStorage(my_flash_store, TxSettings);
+FlashStorage(flash_TxSettings, TxSettings);
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -85,7 +86,7 @@ struct package {    // | Normal   | Setting   | Dummy
   uint8_t type;   // | 0      | 1     | 2
   uint16_t throttle;  // | Throttle   |       | 
   uint8_t trigger;  // | Trigger  |       | 
-  bool headlight; //       | ON       | OFF         |
+  uint8_t headlight; //       | ON       | OFF         |
 } remPackage;
 
 // Define package to transmit settings
@@ -112,34 +113,35 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 14;
+const uint8_t numOfSettings = 15;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
-  {0, 0, 1},        // 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},        // 0: Li-ion      | 1: LiPo
-  {10, 0, 12},      // Cell count
-  {14, 0, 250},     // Motor poles
-  {14, 0, 250},     // Motor pully
-  {38, 0, 250},     // Wheel pulley
-  {80, 0, 250},     // Wheel diameter
-  {1, 0, 2},        // 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},    // Min hall value
-  {500, 300, 700},  // Center hall value
-  {800, 700, 1023}, // Max hall value
-  {-1, 0, 0},       // firmware
-  {-1,0,0},          // key
-  {1,0,9}           // boardID
+  {0, 0, 1},       	 	// 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},       	 	// 0: Li-ion      | 1: LiPo
+  {10, 0, 12},     	 	// Cell count
+  {14, 0, 250},     	// Motor poles
+  {14, 0, 250},     	// Motor pully
+  {38, 0, 250},     	// Wheel pulley
+  {80, 0, 250},     	// Wheel diameter
+  {1, 0, 2},        	// 0: PPM only   | 1: PPM and UART | 2: UART only
+  {200, 0, 300},   	 	// Min hall value
+  {500, 300, 700},  	// Center hall value
+  {800, 700, 1023}, 	// Max hall value
+  {1, 1, 9}           	// boardID
+  {18, 14, 20}			// transmission power 
+  {-1, 0, 0},      		// firmware
+  {-1, 0 ,0},         	// encryptionKey
 };
 
 const char titles[numOfSettings][17] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Settings"
+  "Throttle max", "Board ID", "Transmission Power", "Settings", "Encryption Key"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
@@ -147,7 +149,7 @@ const char stringValues[3][3][13] = {
   {"PPM", "PPM and UART", "UART only"},
 };
 
-const char settingUnits[3][3] = {"S", "T", "mm"};
+const char settingUnits[4][3] = {"S", "T", "mm", "#", "dBm"};
 const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
@@ -166,14 +168,13 @@ const uint8_t vibrationActuatorPin = 6;
 #define RF69_FREQ   433.0
 #define DEST_ADDRESS   1 // where the packages goes to
 #define MY_ADDRESS     2 // own address
+
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 
-unsigned long counterCalled = 0;
-unsigned long  counterSent = 0;
 unsigned long  counterRecived = 0;
 
 // Dont put this on the stack:
@@ -298,7 +299,7 @@ void loop() {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-    remPackage.headlight = false;
+    remPackage.headlight = 0;
 	
     transmitToReceiver();
   }
@@ -344,7 +345,7 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-  Serial.println("Check for default encruption key");  
+  Serial.println("Check for default encription key");  
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
     Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
@@ -602,7 +603,7 @@ void loadFlashSettings(){
 
   Serial.println("Load flash settings");
 
-   txSettings = my_flash_store.read();
+   txSettings = flash_TxSettings.read();
    
   if(txSettings.firmVersion != VERSION){
     setDefaultFlashSettings();
@@ -622,7 +623,7 @@ void updateFlashSettings() {
 
     Serial.println("Update flash settings");
 
-    my_flash_store.write(txSettings);
+    flash_TxSettings.write(txSettings);
    
     calculateRatios();
 }
@@ -1014,11 +1015,11 @@ void mediumbuttonPress() {
 	
     if ( returnData.headlightActive = 1 ) {
 		
-      remPackage.headlight = false;
+      remPackage.headlight = 0;
 	  
     } else {
 	
-      remPackage.headlight = true;
+      remPackage.headlight = 1;
     }
 	
 }
@@ -1219,7 +1220,7 @@ void drawHeadlightStatus() {
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
   u8g2.drawLine(x -1 , y -3, x -1, y +3);
   
-  if (remPackage.headlight == true) {
+  if (remPackage.headlight == 1) {
     u8g2.drawLine(x -3 , y, x -5, y);
     u8g2.drawLine(x -3 , y + 3, x -5, y + 4);
     u8g2.drawLine(x -3 , y - 3, x -5, y - 4);
