@@ -273,7 +273,7 @@ void setup() {
   checkEncryptionKey();
   
   //select board
-  //selectBoard(); //TODO for multiple Boards
+  //  selectBoard(); //TODO for multiple Boards
   
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -391,14 +391,8 @@ void createCustomKey(){
      Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
-  
-	remPackage.type = 1; // tell receiver, next package are settings
-	transmitSafeToReceiver(); // try 60 times ever 500ms
-	
+  	
 	transmitSettingsToReceiver(); //TODO make shure receiver got message
-	
-	remPackage.type = 0; // tell the receiver next package are normals
-	transmitSafeToReceiver(); // try 60 times ever 500ms
 	
 	initiateTransmitter(); // restart receiver with new key
 }
@@ -407,23 +401,25 @@ void createCustomKey(){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void selectBoard() {
+
+	txSettings.customEncryptionKey[16] = txSettings.boardID;
 	
-//	uint8_t customEncryptionKeyBoard[16] = customEncryptionKey.read()
-//	customEncryptionKeyBoard[16] = value;
-//	customEncryptionKey.write(customEncryptionKeyBoard);
+	initiateTransmitter(); // restart receiver with new key
+
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void transmitToReceiver(){ 
-counterCalled++;
+
 transmissionTimeStart = millis();
+
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
-    uint8_t from;   
-      counterSent++;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
+    uint8_t from;
+	
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -433,7 +429,6 @@ transmissionTimeStart = millis();
       Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
       Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
 
-      //calculating and counting transmissions
       counterRecived++;
       transmissionTimeFinish = millis();
       transmissionTimeDuration = transmissionTimeFinish - transmissionTimeStart;
@@ -443,59 +438,55 @@ transmissionTimeStart = millis();
       Serial.print(" period: "); Serial.print(transmissionTimeDuration); Serial.print("ms");
       Serial.print(" [RSSI :"); Serial.print(rf69.lastRssi());
       Serial.println("]");
-      
+	  
+	  return true;
                 
     } else {
+		
       DEBUG_PRINT( F("No reply, is anyone listening?") );
+	  return false;
     }
   } else {
+	  
     DEBUG_PRINT( F("Sending failed (no ack)") );
+	return false;
   }
-}
-
-//Function used to transmit the remPackage and receive auto acknowledgement
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-void transmitSafeToReceiver() { 
-  
-  Serial.println("Transmit SAFE to receiver");
-  
-  if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
-    
-    uint8_t len = sizeof(returnData);
-    uint8_t from;   
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 1000, &from)) {
-        
-	  Serial.println("Safe transmission OK");
-   
-    } else {
-      
-      Serial.println("No one there?");
-    }
-    
-  } else {
-    
-    Serial.println("Sending safe transmission failed, no ack");
-  }
-  
 }
 
 //Function used to transmit settings to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void transmitSettingsToReceiver() {
-
-   if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
-      uint8_t len = sizeof(txSettings);
-      uint8_t from;   
-        if (rf69_manager.recvfromAckTimeout((uint8_t*)&txSettings, &len, 1000, &from)) {
-                  
-      } else {
-        DEBUG_PRINT( F("No reply, is anyone listening?") );
-      }
-    } else {
-      DEBUG_PRINT( F("Sending failed (no ack)") );
-    }
+	
+	remPackage.type = 1;
+	
+	Serial.println("Try to send receiver next package are settings");
+	
+	if ( transmitToReceiver()) {
+		Serial.println("Sent to receiver next package are settings ");
+		Serial.println("Try to send settings to receiver ");
+		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+			uint8_t len = sizeof(remPackage);
+			uint8_t from;   
+			if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+                Serial.println("Received ack from receiver");
+				Serial.print("Variable remPackage.type: "); Serial.println(remPackage.type);
+			} else {
+			Serial.println("Sending settings failed, no ack");
+			remPackage.type = 0;
+			return false;
+			}
+		} else {
+			Serial.println("Sending settings failed, no one listening");
+			remPackage.type = 0;
+			return false;
+		}
+	    return true;
+	} else {
+		Serial.println("could not say receiver next package are settings");
+		remPackage.type = 0;
+		return false;
+	}
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -562,7 +553,10 @@ void controlSettingsMenu() {
     if (changeThisSetting == true && triggerFlag == false){
       // Settings that needs to be transmitted to the recevier
       if( currentSetting == TRIGGER || currentSetting == MODE ){
-        if( ! transmitSetting( currentSetting, getSettingValue(currentSetting) ) ){
+		  
+		  if (currentSetting == TRIGGER){txSettings.triggerMode = currentSetting;
+		  } else if {(currentSetting == MODE){txSettings.controlMode = currentSetting; }
+        if( ! transmitSettingsToReceiver()){
           // Error! Load the old setting
           loadFlashSettings();
         }
@@ -729,91 +723,6 @@ bool triggerActive() {
     return false;
 }
 
-// Transmit a specific setting to the receiver, so both devices has same configuration
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-bool transmitSetting(uint8_t setting, uint64_t value){
-  
-//  uint64_t returnedValue;
-//  unsigned long beginTime = millis(); 
-//  bool payloadSend = false;
-//  bool ackRecieved = false;
-// 
-//  // Lets clear the ack-buffer (so it can be used to confirm the new setting).
-//  while ( radio.isAckPayloadAvailable() && settingWaitDelay >= ( millis() - beginTime) ) {
-//    radio.read( &returnData, sizeof(returnData) );
-//    delay(100);
-//  }
-//
-//  // Feed the setPackage with the new setting
-//  setPackage.setting = setting;
-//  setPackage.value = value;
-//
-//  // Tell the receiver next package will be new settings
-//  remPackage.type = 1;
-//
-//  beginTime = millis(); 
-//  
-//  while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
-//    if( radio.write( &remPackage, sizeof(remPackage)) ){
-//      payloadSend = true;
-//    }
-//  }
-//
-//  // ** Begin transmitting new setting **
-//
-//  if(payloadSend == true){
-//    DEBUG_PRINT( F("TX --> New setting") );
-//    // Transmit setPackage to receiver
-//    beginTime = millis(); 
-//
-//    while ( !ackRecieved && settingWaitDelay >= ( millis() - beginTime) ){
-//      // Write setPackage until an acknowledgement is received (or timeout is reached)
-//      if( radio.write( &setPackage, sizeof(setPackage) ) ){
-//
-//        delay(100);
-//
-//        while( radio.isAckPayloadAvailable() && !ackRecieved ){
-//          DEBUG_PRINT( F("TX <-- Acknowledgement") );
-//          radio.read( &setPackage, sizeof(setPackage) );
-//          ackRecieved = true;
-//        }
-//      }
-//    }
-//
-//  // Check if the receiver Acknowledgement data is matching
-//  if( ackRecieved && setPackage.setting == setting && setPackage.value == value ){
-//
-//    payloadSend = false;
-//
-//    // Wait a little
-//    delay(500);
-//
-//    // Send confirmation to the receiver
-//    beginTime = millis(); 
-//
-//    while ( !payloadSend && settingWaitDelay >= (millis() - beginTime) ){
-//
-//      remPackage.type = 2;
-//
-//      if(radio.write( &remPackage, sizeof(remPackage))){
-//        payloadSend = true;
-//        DEBUG_PRINT( F("TX --> Confirmation") );
-//      }
-//
-//      delay(100);
-//    }
-//
-//    if( payloadSend == true) {
-//      // Success
-//      DEBUG_PRINT( F("Setting done") );
-//      return true;
-//    }
-//  }
-//
-//  return false;
-//
-}
 
 // Update the OLED for each loop
 // To-Do: Only update display when needed
@@ -831,7 +740,7 @@ void updateMainDisplay()
     else
     {
     drawThrottle();
-    //drawBatteryLevel();
+    drawBatteryLevel();
     drawHeadlightStatus();
     drawPage();
     }
@@ -1090,23 +999,28 @@ void buttonRelease() {
 
 // called when key goes from not pressed to pressed
 void buttonPress() {
+	
     buttonPressCount = 0;
 }
  
  // called when button is kept pressed for less than .5 seconds
 void shortbuttonPress() {
+	
     displayView++;
 }
 
 // called when button is kept pressed for more than 2 seconds
 void mediumbuttonPress() {
+	
     if ( returnData.headlightActive = 1 ) {
+		
       remPackage.headlight = false;
+	  
     } else {
+	
       remPackage.headlight = true;
     }
-    // Transmit to receiver
-    transmitToReceiver();
+	
 }
 
 // called when button is kept pressed for 2 seconds or more
