@@ -133,8 +133,8 @@ const short rules[numOfSettings][3] {
   {500, 300, 700},  	// Center hall value
   {800, 700, 1023}, 	// Max hall value
   {1, 1, 9},          // boardID
+  {18, 14, 20},       // transmission power
   {-1, 0, 0},         // pair new board
-  {18, 14, 20},			  // transmission power
   { -1, 0, 0},        // Key
   { -1, 0, 0},        // Set default key
   { -1, 0, 0},        // Settings
@@ -145,11 +145,11 @@ const short rules[numOfSettings][3] {
 const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Pair new Board", "Transmission Power", "Key", "Reset Key", "Settings", "Exit"
+  "Throttle max", "Board ID", "Transmission Power", "Pair new Board", "Show key", "Reset Key", "Reset settings", "Exit"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,0,4,5,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,5,5,4,4};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
@@ -699,6 +699,9 @@ void controlSettingsMenu() {
         pairNewBoard();
       } else if (currentSetting == KEY) {
         //TODO
+      } else if (currentSetting == RESET) {
+        setDefaultFlashSettings();
+        drawMessage("Default settings loaded!", 1000);
       }
       updateFlashSettings();
     }
@@ -836,6 +839,7 @@ uint8_t getSettingValue(uint8_t index) {
     case 10:    value = txSettings.maxHallValue;    break;
     case 11:    value = txSettings.boardID;         break;
     case 12:    value = txSettings.transmissionPower; break;
+    case 16:    value = 0;                          break;
 
     default: /* Do nothing */ break;
   }
@@ -1071,14 +1075,6 @@ void drawSettingsMenu() {
 
   // Get current setting value
   switch (currentSetting) {
-    case KEY:
-      Serial.println("Went in to KEY");
-      break;
-
-    case RESET:
-      Serial.println("Went in to RESET KEY");
-      break;
-
     default:
       value = getSettingValue(currentSetting);
       break;
