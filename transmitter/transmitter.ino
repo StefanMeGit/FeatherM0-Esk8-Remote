@@ -1,4 +1,4 @@
-// FeatherFly Transmitter - eSk8 Remote 
+// FeatherFly Transmitter - eSk8 Remote
 //
 // basic code by SolidGeek | https://github.com/SolidGeek/nRF24-Esk8-Remote
 // modified to run on an Feather M0 with RFM69 | https://github.com/StefanMeGit/FeatherM0-Esk8-Remote
@@ -18,27 +18,27 @@
 #define VERSION 0.1
 
 #ifdef DEBUG
-  #define DEBUG_PRINT(x)  Serial.println (x)
-  #include "printf.h"
+#define DEBUG_PRINT(x)  Serial.println (x)
+#include "printf.h"
 #else
-  #define DEBUG_PRINT(x)
+#define DEBUG_PRINT(x)
 #endif
 
 // Defining the type of display used (128x32)
 U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
-const unsigned char logo[] PROGMEM = { 
+const unsigned char logo[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x80, 0x3c, 0x01,
   0xe0, 0x00, 0x07, 0x70, 0x18, 0x0e, 0x30, 0x18, 0x0c, 0x98, 0x99, 0x19,
   0x80, 0xff, 0x01, 0x04, 0xc3, 0x20, 0x0c, 0x99, 0x30, 0xec, 0xa5, 0x37,
   0xec, 0xa5, 0x37, 0x0c, 0x99, 0x30, 0x04, 0xc3, 0x20, 0x80, 0xff, 0x01,
   0x98, 0x99, 0x19, 0x30, 0x18, 0x0c, 0x70, 0x18, 0x0e, 0xe0, 0x00, 0x07,
-  0x80, 0x3c, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 
+  0x80, 0x3c, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 
 // Defining struct to hold setting values while remote is turned on.
-typedef struct{
+typedef struct {
   uint8_t triggerMode;              // 0
   uint8_t batteryType;              // 1
   uint8_t batteryCells;             // 2
@@ -51,7 +51,7 @@ typedef struct{
   short centerHallValue;            // 9
   short maxHallValue;               // 10
   uint8_t boardID;                  // 11
-  uint8_t transmissionPower;		// 12
+  uint8_t transmissionPower;		    // 12
   float firmVersion;                // 13
   uint8_t customEncryptionKey[16];  // 14
 } TxSettings;
@@ -73,29 +73,29 @@ struct callback {
   float dutyCycleNow;
 } returnData;
 
-// defining button data 
-  unsigned long buttonPrevMillis = 0;
-  const unsigned long buttonSampleIntervalsMs = 25;
-  byte longbuttonPressCountMax = 80;    // 80 * 25 = 2000 ms
-  byte mediumbuttonPressCountMin = 20;    // 20 * 25 = 500 ms
-  byte buttonPressCount = 0;
-  byte prevButtonState = HIGH;         // button is active low
+// defining button data
+unsigned long buttonPrevMillis = 0;
+const unsigned long buttonSampleIntervalsMs = 25;
+byte longbuttonPressCountMax = 80;    // 80 * 25 = 2000 ms
+byte mediumbuttonPressCountMin = 20;    // 20 * 25 = 500 ms
+byte buttonPressCount = 0;
+byte prevButtonState = HIGH;         // button is active low
 
 // Transmit and receive package
 struct package {    // | Normal   | Setting   | Dummy
   uint8_t type;   // | 0      | 1     | 2
-  uint16_t throttle;  // | Throttle   |       | 
-  uint8_t trigger;  // | Trigger  |       | 
+  uint16_t throttle;  // | Throttle   |       |
+  uint8_t trigger;  // | Trigger  |       |
   uint8_t headlight; //       | ON       | OFF         |
 } remPackage;
 
 // Define package to transmit settings
 struct settingPackage {
   uint8_t setting;
-  uint64_t value; 
+  uint64_t value;
 } setPackage;
 
-// Defining struct to hold stats 
+// Defining struct to hold stats
 struct stats {
   float minVoltage;
   float maxVoltage;
@@ -104,10 +104,11 @@ struct stats {
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER 0
 #define MODE    7
+#define BOARDID 11
 #define TxPower 12
-#define KEY		14
+#define KEY		  14
 #define RESET 	15
-#define EXIT 	16
+#define EXIT 	  16
 
 // Defining variables to hold values for speed and distance calculation
 float gearRatio;
@@ -115,13 +116,13 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 17;
+const uint8_t numOfSettings = 16;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
   {0, 0, 1},       	 	// 0: Killswitch  | 1: Cruise control
   {1, 0, 1},       	 	// 0: Li-ion      | 1: LiPo
-  {10, 0, 12},     	 	// Cell count
+  {10, 6, 12},     	 	// Cell count
   {14, 0, 250},     	// Motor poles
   {14, 0, 250},     	// Motor pully
   {38, 0, 250},     	// Wheel pulley
@@ -130,31 +131,30 @@ const short rules[numOfSettings][3] {
   {200, 0, 300},   	 	// Min hall value
   {500, 300, 700},  	// Center hall value
   {800, 700, 1023}, 	// Max hall value
-  {1, 1, 9},           	// boardID
-  {18, 14, 20},			// transmission power 
-  {-1, 0, 0},      		// firmware
-  {-1, 0 ,0},	     	// encryptionKey
-  {-1, 0 ,0},         	// Reset
-  {-1, 0 ,0}         	// Exit
-  
+  {1, 1, 9},          // boardID
+  {18, 14, 20},			  // transmission power
+  { -1, 0, 0},        // Key
+  { -1, 0, 0},        // Set default key
+  { -1, 0, 0}        // Settings
+
 };
 
 const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Transmission Power", "Settings", "Encryption Key", "Reset", "Exit"
+  "Throttle max", "Board ID", "Transmission Power", "Key", "Reset Key", "Settings"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
   {"Li-ion", "LiPo", ""},
   {"PPM", "PPM and UART", "UART only"},
 };
-
 const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
+
 const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
@@ -178,7 +178,8 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+                            };
 
 unsigned long  counterRecived = 0;
 
@@ -200,7 +201,7 @@ uint16_t hallValue, throttle;
 const uint16_t centerThrottle = 512;
 const uint8_t hallNoiseMargin = 10;
 const uint8_t hallMenuMargin = 100;
-uint8_t throttlePosition; 
+uint8_t throttlePosition;
 
 #define TOP 0
 #define MIDDLE 1
@@ -250,22 +251,22 @@ uint8_t useDefaultKeyForTransmission = 0;
 void setup() {
 
   Serial.begin(115200);
-  #ifdef DEBUG
-    while (!Serial){};
-    printf_begin();
-  #endif
-  
+#ifdef DEBUG
+  while (!Serial) {};
+  printf_begin();
+#endif
+
   loadFlashSettings();
-    
+
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(extraButtonPin, INPUT_PULLUP);
   pinMode(hallSensorPin, INPUT);
   pinMode(batteryMeasurePin, INPUT);
   pinMode(vibrationActuatorPin, OUTPUT);
-  
-  pinMode(DiagLED, OUTPUT);     
+
+  pinMode(DiagLED, OUTPUT);
   pinMode(RFM69_RST, OUTPUT);
-  
+
   digitalWrite(RFM69_RST, LOW);
 
   // Start OLED operations
@@ -275,13 +276,13 @@ void setup() {
 
   // Start Radio
   initiateTransmitter();
-  
+
   // check if default encryptionKey is still in use and create custom one if needed
   checkEncryptionKey();
-  
+
   //select board
   //  selectBoard(); //TODO for multiple Boards
-  
+
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
     changeSettings = true;
@@ -293,20 +294,20 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-  
+
   cycleTimeStart = millis();
   calculateThrottlePosition();
   detectButtonPress();
 
   if (changeSettings == true) {
-    DEBUG_PRINT( F("Open setting menu") );
+    //DEBUG_PRINT( F("Open setting menu") );
     controlSettingsMenu();
   } else {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
     remPackage.headlight = 0;
-	
+
     transmitToReceiver();
   }
 
@@ -314,12 +315,12 @@ void loop() {
 
   cycleTimeFinish = millis();
   cycleTimeDuration = cycleTimeFinish - cycleTimeStart;
-  #ifdef DEBUG
-	Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms"); 
-  #endif
+#ifdef DEBUG
+  //Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms");
+#endif
 }
 
-// initiate radio 
+// initiate radio
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void initiateTransmitter() {
@@ -331,26 +332,26 @@ void initiateTransmitter() {
   if (!rf69_manager.init()) {
     DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
-  }  
-  
+  }
+
   DEBUG_PRINT( F("RFM69 radio init OK!") );
   if (!rf69.setFrequency(RF69_FREQ)) {
     DEBUG_PRINT( F("setFrequency failed") );
   }
-  if (useDefaultKeyForTransmission == 1){
-	rf69.setEncryptionKey(txSettings.encryptionKey);
+  if (useDefaultKeyForTransmission == 1) {
+    rf69.setEncryptionKey(encryptionKey);
   } else {
-	rf69.setEncryptionKey(txSettings.customEncryptionKey);
+    rf69.setEncryptionKey(txSettings.customEncryptionKey);
   }
   Serial.print("Set transmitter custom encryptionKey with boardID: ");
   for (uint8_t i = 0; i < 16; i++) {
-     Serial.print(txSettings.customEncryptionKey[i]);
+    Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   rf69_manager.setTimeout(20);
-	Serial.print("Set frequecy to: ");
-	DEBUG_PRINT((int)RF69_FREQ);
+  Serial.print("Set frequecy to: ");
+  DEBUG_PRINT((int)RF69_FREQ);
   delay(500);
 }
 
@@ -359,67 +360,67 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-  Serial.println("Check for default encription key");  
+  Serial.println("Check for default encription key");
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
     Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
-    
+
     if (txSettings.customEncryptionKey[i] == encryptionKey[i]) {
-      
+
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-		drawMessage("Default key detected!", 1000);
+        drawMessage("Default key detected!", 1000);
         createCustomKey();
       }
-    
+
     } else {
-      
-    Serial.println("Custom key detected => setup/loop");   
-    break;
-      
+
+      Serial.println("Custom key detected => setup/loop");
+      break;
+
     }
-    
+
   }
-  
+
 }
 
 // create a new custom encryptionKey and send it to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void createCustomKey(){
-	Serial.print("Create custom encryptionKey");
-	uint8_t generatedCustomEncryptionKey[16];
+void createCustomKey() {
+  Serial.print("Create custom encryptionKey");
+  uint8_t generatedCustomEncryptionKey[16];
 
   Serial.print("Custom encryptionKey: ");
-	for (uint8_t i = 0; i < 16; i++) {
-		generatedCustomEncryptionKey[i] = random(9);
+  for (uint8_t i = 0; i < 16; i++) {
+    generatedCustomEncryptionKey[i] = random(9);
     Serial.print(generatedCustomEncryptionKey[i]);
-	}
- Serial.println("");
-  
-	generatedCustomEncryptionKey[15] = 1;
-  for (uint8_t i = 0; i < 16; i++){
-     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i]; 
-    }
+  }
+  Serial.println("");
+
+  generatedCustomEncryptionKey[15] = 1;
+  for (uint8_t i = 0; i < 16; i++) {
+    txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
+  }
 
   Serial.print("Custom encryptionKey with boardID: ");
   for (uint8_t i = 0; i < 16; i++) {
-     Serial.print(txSettings.customEncryptionKey[i]);
+    Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
   drawMessage("New key generated!", 1000);
-  	
-	transmitSettingsToReceiver(); //TODO make shure receiver got message
-	
-	initiateTransmitter(); // restart receiver with new key
+
+  transmitSettingsToReceiver(); //TODO make shure receiver got message
+
+  initiateTransmitter(); // restart receiver with new key
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool transmitToReceiver(){ 
+bool transmitToReceiver() {
 
-transmissionTimeStart = millis();
+  transmissionTimeStart = millis();
 
   rf69_manager.setRetries(5);
   rf69_manager.setTimeout(20);
@@ -427,10 +428,10 @@ transmissionTimeStart = millis();
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
     uint8_t from;
-	Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
+    Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
     Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
-	
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
+
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -443,24 +444,24 @@ transmissionTimeStart = millis();
       counterRecived++;
       transmissionTimeFinish = millis();
       transmissionTimeDuration = transmissionTimeFinish - transmissionTimeStart;
-      
+
       Serial.print("Got ack and reply from board #"); Serial.print(from);
       Serial.print(" transmission # "); Serial.print(counterRecived);
       Serial.print(" period: "); Serial.print(transmissionTimeDuration); Serial.print("ms");
       Serial.print(" [RSSI :"); Serial.print(rf69.lastRssi());
       Serial.println("]");
-	  
-	  return true;
-                
+
+      return true;
+
     } else {
-		
+
       DEBUG_PRINT( F("No reply, is anyone listening?") );
-	  return false;
+      return false;
     }
   } else {
-	Serial.print("Needed retries NOK: "); Serial.println(rf69_manager.retries());
-    DEBUG_PRINT( F("Sending failed (no ack)") );
-	return false;
+    //Serial.print("Needed retries NOK: "); Serial.println(rf69_manager.retries());
+    //  DEBUG_PRINT( F("Sending failed (no ack)") );
+    return false;
   }
 }
 
@@ -468,133 +469,133 @@ transmissionTimeStart = millis();
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitSettingsToReceiver() {
-	
-	remPackage.type = 1;
-	
-	Serial.println("Try to send receiver next package are settings");
-	drawMessage("Sending settings to receiver...",1000);
-	if ( transmitToReceiver()) {
-		Serial.println("Send settings... ");
-		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
-			uint8_t len = sizeof(remPackage);
-			uint8_t from;   
-			if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+
+  remPackage.type = 1;
+
+  Serial.println("Try to send receiver next package are settings");
+  drawMessage("Sending settings to receiver...", 1000);
+  if ( transmitToReceiver()) {
+    Serial.println("Send settings... ");
+    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      uint8_t len = sizeof(remPackage);
+      uint8_t from;
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
         Serial.print("Received ack for settings from receiver #"); Serial.println(from);
-				Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
-			} else {
-			Serial.println("Sending settings failed, no ack");
-			remPackage.type = 0;
-			return false;
-			}
-		} else {
-			Serial.println("Sending settings failed, no one listening");
-			remPackage.type = 0;
-			return false;
-		}
+        Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
+      } else {
+        Serial.println("Sending settings failed, no ack");
+        remPackage.type = 0;
+        return false;
+      }
+    } else {
+      Serial.println("Sending settings failed, no one listening");
+      remPackage.type = 0;
+      return false;
+    }
     Serial.println("Receiver have new Settings, restart transmitter");
-    drawMessage("Receiver acknowledged Settings!",1000);
-	    return true;
-	} else {
-		Serial.println("Could not tell the receiver next package are settings");
-		remPackage.type = 0;
-		return false;
-	}
+    drawMessage("Receiver acknowledged Settings!", 1000);
+    return true;
+  } else {
+    Serial.println("Could not tell the receiver next package are settings");
+    remPackage.type = 0;
+    return false;
+  }
 }
 
 //Function used to transmit settings to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitKeyToReceiver() {
-	
-	useDefaultKeyForTransmission = 1;
-	
-	initiateTransmitter();
-	
-	remPackage.type = 1;
-	
-	Serial.println("Try to send receiver next package are settings");
-	drawMessage("Sending settings to receiver...",1000);
-	if ( transmitToReceiver()) {
-		Serial.println("Send settings... ");
-		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
-			uint8_t len = sizeof(remPackage);
-			uint8_t from;   
-			if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+
+  useDefaultKeyForTransmission = 1;
+
+  initiateTransmitter();
+
+  remPackage.type = 1;
+
+  Serial.println("Try to send receiver next package are settings");
+  drawMessage("Sending settings to receiver...", 1000);
+  if ( transmitToReceiver()) {
+    Serial.println("Send settings... ");
+    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      uint8_t len = sizeof(remPackage);
+      uint8_t from;
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
         Serial.print("Received ack for settings from receiver #"); Serial.println(from);
-				Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
-			} else {
-			Serial.println("Sending settings failed, no ack");
-			remPackage.type = 0;
-			useDefaultKeyForTransmission = 0;
-			initiateTransmitter();
-			return false;
-			}
-		} else {
-			Serial.println("Sending settings failed, no one listening");
-			remPackage.type = 0;
-			useDefaultKeyForTransmission = 0;
-			initiateTransmitter();
-			return false;
-		}
+        Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
+      } else {
+        Serial.println("Sending settings failed, no ack");
+        remPackage.type = 0;
+        useDefaultKeyForTransmission = 0;
+        initiateTransmitter();
+        return false;
+      }
+    } else {
+      Serial.println("Sending settings failed, no one listening");
+      remPackage.type = 0;
+      useDefaultKeyForTransmission = 0;
+      initiateTransmitter();
+      return false;
+    }
     Serial.println("Receiver have new Settings, restart transmitter");
-    drawMessage("Receiver acknowledged Settings!",1000);
-	useDefaultKeyForTransmission = 0;
-	initiateTransmitter();
-	    return true;
-	} else {
-		Serial.println("Could not tell the receiver next package are settings");
-		remPackage.type = 0;
-		useDefaultKeyForTransmission = 0;
-		initiateTransmitter();
-		return false;
-	}
+    drawMessage("Receiver acknowledged Settings!", 1000);
+    useDefaultKeyForTransmission = 0;
+    initiateTransmitter();
+    return true;
+  } else {
+    Serial.println("Could not tell the receiver next package are settings");
+    remPackage.type = 0;
+    useDefaultKeyForTransmission = 0;
+    initiateTransmitter();
+    return false;
+  }
 }
 
 // write boardID to the encryptionKey
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void selectBoard(uint8_t receiverID) {
-	
-	Serial.print("Join pairNewBoard(receiverID) receiverID: "); Serial.println(receiverID);
 
-	txSettings.customEncryptionKey[15] = receiverID;
-	
-	Serial.print("Custom encryptionKey with boardID: ");
-	for (uint8_t i = 0; i < 16; i++) {
+  Serial.print("Join pairNewBoard(receiverID) receiverID: "); Serial.println(receiverID);
+
+  txSettings.customEncryptionKey[15] = receiverID;
+
+  Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
     Serial.print(txSettings.customEncryptionKey[i]);
-	}
-	Serial.println("");
-	
-	initiateTransmitter(); // restart receiver with new key
-	
-	Serial.print("Exit pairNewBoard(receiverID)")
+  }
+  Serial.println("");
+
+  initiateTransmitter(); // restart receiver with new key
+
+  Serial.print("Exit pairNewBoard(receiverID)");
 
 }
 
-bool pairNewBoard {
-	// set variable to use default key for the next transmissions
-	
-	Serial.print("Join pairNewBoard()");
-	useDefaultKeyForTransmission = 1;
-	
-	txSettings.customEncryptionKey[15] = txSettings.boardID;
-	
-	Serial.print("Custom encryptionKey with boardID: ");
-	for (uint8_t i = 0; i < 16; i++) {
+bool pairNewReceiver() {
+  // set variable to use default key for the next transmissions
+
+  Serial.print("Join pairNewBoard()");
+  useDefaultKeyForTransmission = 1;
+
+  txSettings.customEncryptionKey[15] = txSettings.boardID;
+
+  Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
     Serial.print(txSettings.customEncryptionKey[i]);
-	}
-	Serial.println("");
-	
-	Serial.print("Send custom encryptionKey to receiver by default key");
-	
-	transmitSettingsToReceiver();
-	
-	// set variable to use custom key for the next transmissions
-	useDefaultKeyForTransmission = 0;
-	// reset transmitter to activate custom key
-	initiateTransmitter();
-	
-	Serial.print("Exit pairNewBoard()");
+  }
+  Serial.println("");
+
+  Serial.print("Send custom encryptionKey to receiver by default key");
+
+  transmitSettingsToReceiver();
+
+  // set variable to use custom key for the next transmissions
+  useDefaultKeyForTransmission = 0;
+  // reset transmitter to activate custom key
+  initiateTransmitter();
+
+  Serial.print("Exit pairNewBoard()");
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -603,53 +604,58 @@ bool pairNewBoard {
 void controlSettingsMenu() {
 
   if (changeThisSetting == true) {
+    Serial.print("Change a setting: "); Serial.println(currentSetting);
 
-    if(currentSetting == EXIT){
-      changeSettings = false;  
+    if (currentSetting == EXIT) {
+      changeSettings = false;
     }
-    
-    if (settingsLoopFlag == false && rules[currentSetting][0] != -1){
+
+    if (settingsLoopFlag == false && rules[currentSetting][0] != -1) {
       short value = getSettingValue(currentSetting);
       if ( throttlePosition == TOP ) {
         value++;
-      }else if( throttlePosition == BOTTOM ) {
+      } else if ( throttlePosition == BOTTOM ) {
         value--;
       }
-      
+
       if (inRange(value, rules[currentSetting][1], rules[currentSetting][2])) {
         setSettingValue(currentSetting, value);
-        if(settingChangeMillis == 0){
+        if (settingChangeMillis == 0) {
           settingChangeMillis = millis();
         }
       }
 
-      if(settingScrollFlag == true){
+      if (settingScrollFlag == true) {
         settingsLoopFlag = false;
         delay(20);
-      }else{
-        settingsLoopFlag = true;  
-      }
-    }
-    // If the throttle is at top or bottom for more than "settingScrollWait" allow the setting to change fast
-    if( millis() - settingChangeMillis >= settingScrollWait && settingChangeMillis != 0 ){
-      settingScrollFlag = true;
-      settingsLoopFlag = false;
-    }else{
-      settingScrollFlag = false;
-    }
-    
-  } else {
-    
-    if (settingsLoopFlag == false){
-      if (throttlePosition == TOP && currentSetting != 0) {
-        currentSetting--;
-        settingsLoopFlag = true;        
-      }else if(throttlePosition == BOTTOM && currentSetting < (numOfSettings - 1)) {
-        currentSetting++;
+      } else {
         settingsLoopFlag = true;
       }
     }
-  } 
+    // If the throttle is at top or bottom for more than "settingScrollWait" allow the setting to change fast
+    if ( millis() - settingChangeMillis >= settingScrollWait && settingChangeMillis != 0 ) {
+      settingScrollFlag = true;
+      settingsLoopFlag = false;
+    } else {
+      settingScrollFlag = false;
+    }
+
+  } else {
+
+    if (settingsLoopFlag == false) {
+      if (throttlePosition == TOP && currentSetting != 0) {
+        Serial.print("Current Setting before currentSetting++ : "); Serial.println(currentSetting);
+        currentSetting--;
+        Serial.print("Current Setting after currentSetting-- : "); Serial.println(currentSetting);
+        settingsLoopFlag = true;
+      } else if (throttlePosition == BOTTOM && currentSetting < (numOfSettings - 1)) {
+        Serial.print("Current Setting before currentSetting++ : "); Serial.println(currentSetting);
+        currentSetting++;
+        Serial.print("Current Setting after currentSetting++ : "); Serial.println(currentSetting);
+        settingsLoopFlag = true;
+      }
+    }
+  }
 
   // If thumbwheel is in middle position
   if ( throttlePosition == MIDDLE ) {
@@ -657,32 +663,40 @@ void controlSettingsMenu() {
     settingChangeMillis = 0;
   }
 
-  if ( triggerActive() ){ 
-    if (changeThisSetting == true && triggerFlag == false){
+  if ( triggerActive() ) {
+    if (changeThisSetting == true && triggerFlag == false) {
       // Settings that needs to be transmitted to the recevier
-		if (currentSetting == TRIGGER) {
-			txSettings.triggerMode = currentSetting;
-			if( ! transmitSettingsToReceiver()){loadFlashSettings();}
-		} else if (currentSetting == MODE) {
-			txSettings.controlMode = currentSetting;
-			if( ! transmitSettingsToReceiver()){loadFlashSettings();}
-		} else if (currentSetting == TxPower) {
-			txSettings.transmissionPower = TxPower;
-			if( ! transmitSettingsToReceiver()){loadFlashSettings();} else {initiateTransmitter();}
-		} else if (currentSetting == boardID) {
-			selectBoard(currentSetting);
-		} else if (currentSetting == Key){
-			pairNewReceiver();
-		}
+      if (currentSetting == TRIGGER) {
+        txSettings.triggerMode = currentSetting;
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+        }
+      } else if (currentSetting == MODE) {
+        txSettings.controlMode = currentSetting;
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+        }
+      } else if (currentSetting == TxPower) {
+        txSettings.transmissionPower = TxPower;
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+        } else {
+          initiateTransmitter();
+        }
+      } else if (currentSetting == BOARDID) {
+        selectBoard(currentSetting);
+      } else if (currentSetting == KEY) {
+        pairNewReceiver();
+      }
       updateFlashSettings();
     }
 
-    if(triggerFlag == false){
+    if (triggerFlag == false) {
       changeThisSetting = !changeThisSetting;
       triggerFlag = true;
     }
-  } 
-  else 
+  }
+  else
   {
     triggerFlag = false;
   }
@@ -697,13 +711,29 @@ void setDefaultFlashSettings() {
   for ( uint8_t i = 0; i < numOfSettings; i++ )
   {
     setSettingValue( i, rules[i][0] );
+    Serial.println(rules[i][0]);
   }
   Serial.print("Default encryptionKey: ");
-  for ( uint8_t i = 0; i < 16 ; i++){
-      txSettings.customEncryptionKey[i] = encryptionKey[i];
-      Serial.print(encryptionKey[i]);
+  for ( uint8_t i = 0; i < 16 ; i++) {
+    txSettings.customEncryptionKey[i] = encryptionKey[i];
+    Serial.print(encryptionKey[i]);
   }
   Serial.println("");
+
+  Serial.print("Killswitch: "); Serial.println(txSettings.triggerMode);
+  Serial.print("Battery: "); Serial.println(txSettings.batteryType);
+  Serial.print("Cell count: "); Serial.println(txSettings.batteryCells);
+  Serial.print("Motor poles: "); Serial.println(txSettings.motorPoles);
+  Serial.print("Motor pulley: "); Serial.println(txSettings.motorPulley);
+  Serial.print("Wheel Pulley"); Serial.println(txSettings.wheelPulley);
+  Serial.print("Wheel diameter: "); Serial.println(txSettings.wheelDiameter);
+  Serial.print("Control mode: "); Serial.println(txSettings.controlMode);
+  Serial.print("Min hall: "); Serial.println(txSettings.minHallValue);
+  Serial.print("Center hall: "); Serial.println(txSettings.centerHallValue);
+  Serial.print("Max hall: "); Serial.println(txSettings.maxHallValue);
+  Serial.print("BoardID: "); Serial.println(txSettings.boardID);
+  Serial.print("Transmission power: "); Serial.println(txSettings.transmissionPower);
+
   txSettings.firmVersion = VERSION;
   updateFlashSettings();
 }
@@ -711,21 +741,21 @@ void setDefaultFlashSettings() {
 // load settings from flash
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void loadFlashSettings(){
+void loadFlashSettings() {
 
   Serial.println("Load flash settings");
 
-   txSettings = flash_TxSettings.read();
-   
-  if(txSettings.firmVersion != VERSION){
+  txSettings = flash_TxSettings.read();
+
+  if (txSettings.firmVersion != VERSION) {
     setDefaultFlashSettings();
   }
   else {
     updateFlashSettings();
   }
-  
-   calculateRatios();
-  
+
+  calculateRatios();
+
 }
 
 // write/update settings to flash
@@ -733,11 +763,11 @@ void loadFlashSettings(){
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
 
-    Serial.println("Update flash settings");
+  Serial.println("Update flash settings");
 
-    flash_TxSettings.write(txSettings);
-   
-    calculateRatios();
+  flash_TxSettings.write(txSettings);
+
+  calculateRatios();
 }
 
 // Detect button press
@@ -745,21 +775,21 @@ void updateFlashSettings() {
 // --------------------------------------------------------------------------------------
 void detectButtonPress() {
   if (millis() - buttonPrevMillis >= buttonSampleIntervalsMs) {
-      buttonPrevMillis = millis();
-      byte currButtonState = digitalRead(extraButtonPin);
-      if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
-          buttonPress();
+    buttonPrevMillis = millis();
+    byte currButtonState = digitalRead(extraButtonPin);
+    if ((prevButtonState == HIGH) && (currButtonState == LOW)) {
+      buttonPress();
+    }
+    else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
+      buttonRelease();
+    }
+    else if (currButtonState == LOW) {
+      buttonPressCount++;
+      if (buttonPressCount >= longbuttonPressCountMax) {
+        longbuttonPress();
       }
-      else if ((prevButtonState == LOW) && (currButtonState == HIGH)) {
-          buttonRelease();
-      }
-      else if (currButtonState == LOW) {
-          buttonPressCount++;
-  if (buttonPressCount >= longbuttonPressCountMax) {
-      longbuttonPress();
-  }
-      }
-      prevButtonState = currButtonState;
+    }
+    prevButtonState = currButtonState;
   }
 }
 
@@ -768,18 +798,18 @@ void detectButtonPress() {
 // --------------------------------------------------------------------------------------
 void calculateRatios() {
   // Gearing ratio
-  gearRatio = (float)txSettings.motorPulley / (float)txSettings.wheelPulley; 
+  gearRatio = (float)txSettings.motorPulley / (float)txSettings.wheelPulley;
   // ERPM to Km/h
-  ratioRpmSpeed = (gearRatio * 60 * (float)txSettings.wheelDiameter * 3.14156) / (((float)txSettings.motorPoles / 2) * 1000000); 
+  ratioRpmSpeed = (gearRatio * 60 * (float)txSettings.wheelDiameter * 3.14156) / (((float)txSettings.motorPoles / 2) * 1000000);
   // Pulses to km travelled
-  ratioPulseDistance = (gearRatio * (float)txSettings.wheelDiameter * 3.14156) / (((float)txSettings.motorPoles * 3) * 1000000); 
+  ratioPulseDistance = (gearRatio * (float)txSettings.wheelDiameter * 3.14156) / (((float)txSettings.motorPoles * 3) * 1000000);
 }
- 
+
 // Get settings value by index (usefull when iterating through settings)
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-short getSettingValue(uint8_t index) {
-  short value;
+uint8_t getSettingValue(uint8_t index) {
+  uint8_t value;
   switch (index) {
     case TRIGGER:   value = txSettings.triggerMode; break;
     case 1:     value = txSettings.batteryType;     break;
@@ -792,12 +822,14 @@ short getSettingValue(uint8_t index) {
     case 8:     value = txSettings.minHallValue;    break;
     case 9:     value = txSettings.centerHallValue; break;
     case 10:    value = txSettings.maxHallValue;    break;
+    case 11:    value = txSettings.boardID;         break;
+    case 12:    value = txSettings.transmissionPower; break;
 
     default: /* Do nothing */ break;
   }
   return value;
 }
- 
+
 // Set a value of a specific setting by index.
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -814,19 +846,22 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 8:         txSettings.minHallValue = value;    break;
     case 9:         txSettings.centerHallValue = value; break;
     case 10:        txSettings.maxHallValue = value;    break;
+    case 11:        txSettings.boardID = value;    break;
+    case 12:        txSettings.transmissionPower = value; break;
+
 
     default: /* Do nothing */ break;
   }
 }
 
-// Check if an integer is within a min and max value 
+// Check if an integer is within a min and max value
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool inRange(short val, short minimum, short maximum) {
   return ((minimum <= val) && (val <= maximum));
 }
- 
-// Return true if trigger is activated, false otherwise 
+
+// Return true if trigger is activated, false otherwise
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool triggerActive() {
@@ -844,20 +879,20 @@ bool triggerActive() {
 void updateMainDisplay()
 {
   u8g2.firstPage();
- 
- do {
+
+  do {
     if ( changeSettings == true )
     {
       drawSettingsMenu();
     }
     else
     {
-    drawThrottle();
-    //drawBatteryLevel();
-    drawHeadlightStatus();
-    drawPage();
+      drawThrottle();
+      //drawBatteryLevel();
+      drawHeadlightStatus();
+      drawPage();
     }
-  } while ( u1qq8g2.nextPage() );
+  } while ( u8g2.nextPage() );
 }
 
 // Measure the hall sensor output and calculate throttle posistion
@@ -875,7 +910,7 @@ void calculateThrottlePosition()
   }
 
   hallValue = total / samples;
-  
+
   if ( hallValue >= txSettings.centerHallValue )
   {
     throttle = constrain( map(hallValue, txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, 1023), centerThrottle, 1023 );
@@ -889,7 +924,7 @@ void calculateThrottlePosition()
     throttle = centerThrottle;
   }
 
-  Serial.println(throttle);
+  //Serial.print("Throttle: "); Serial.println(throttle);
 
   // Find the throttle positions
   if (throttle >= (centerThrottle + hallMenuMargin)) {
@@ -902,7 +937,7 @@ void calculateThrottlePosition()
     throttlePosition = MIDDLE;
   }
 }
- 
+
 // Calculate the remotes battery level
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
@@ -921,22 +956,22 @@ uint8_t batteryLevel() {
     return 0;
   } else if (voltage >= maxVoltage) {
     return 100;
-  } 
-  
+  }
+
   return (voltage - minVoltage) * 100 / (maxVoltage - minVoltage);
 }
 
 // Calculate the battery level of the board based on the telemetry voltage
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-float batteryPackPercentage( float voltage ){
+float batteryPackPercentage( float voltage ) {
 
   float maxCellVoltage = 4.2;
   float minCellVoltage;
 
-  if(txSettings.batteryType == 0){
+  if (txSettings.batteryType == 0) {
     // Li-ion
-    minCellVoltage = 3.1; 
+    minCellVoltage = 3.1;
   }
   else
   {
@@ -944,16 +979,16 @@ float batteryPackPercentage( float voltage ){
     minCellVoltage = 3.4;
   }
 
-  float percentage = (100 - ( (maxCellVoltage - voltage / txSettings.batteryCells)/((maxCellVoltage - minCellVoltage)) ) * 100);
+  float percentage = (100 - ( (maxCellVoltage - voltage / txSettings.batteryCells) / ((maxCellVoltage - minCellVoltage)) ) * 100);
 
-  if(percentage > 100.0){
-    return 100.0;  
-  }else if (percentage < 0.0){
+  if (percentage > 100.0) {
+    return 100.0;
+  } else if (percentage < 0.0) {
     return 0.0;
   }
-  
+
   return percentage;
-  
+
 }
 
 // check battery level and set alarm - 120 seconds blocked(not implemented yet)
@@ -963,7 +998,7 @@ void checkBatteryLevel() {
   float boardBattery;
   uint16_t remoteBattery;
   uint16_t boardBatteryAbs;
-  
+
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
@@ -972,7 +1007,7 @@ void checkBatteryLevel() {
       alarmBlink = !alarmBlink;
       lastAlarmBlink = millis();
     }
-    
+
     if (alarmBlink == true) {
       alarmTriggered = true;
       alarmActivated();
@@ -984,7 +1019,7 @@ void checkBatteryLevel() {
   if (batteryAlarmBlocked = true) {
     if (millis() - lastBlockBlink > 120000) {
       blockBlink = !blockBlink;
-     lastBlockBlink = millis();
+      lastBlockBlink = millis();
     }
     if (blockBlink == true) {
       batteryAlarmBlocked = true;
@@ -996,16 +1031,16 @@ void checkBatteryLevel() {
 
 // Vibrate every 500ms for 500ms as long as function is called
 void alarmActivated() {
-    if (millis() - lastVibrationBlink > 500) {
-      vibrationBlink = !vibrationBlink;
-      lastVibrationBlink = millis();
-    }
+  if (millis() - lastVibrationBlink > 500) {
+    vibrationBlink = !vibrationBlink;
+    lastVibrationBlink = millis();
+  }
 
-    if (vibrationBlink == true) {
-      digitalWrite(vibrationActuatorPin, HIGH);
-    } else {
-      digitalWrite(vibrationActuatorPin, LOW);
-    }
+  if (vibrationBlink == true) {
+    digitalWrite(vibrationActuatorPin, HIGH);
+  } else {
+    digitalWrite(vibrationActuatorPin, LOW);
+  }
 }
 
 // Prints the settings menu on the OLED display
@@ -1017,31 +1052,48 @@ void drawSettingsMenu() {
 
   x = 0;
   y = 10;
-  
+
   // Print setting title
   u8g2.setFont(u8g2_font_profont12_tr);
   u8g2.drawStr(x, y, titles[ currentSetting ] );
 
   // Get current setting value
-  switch(currentSetting){
+  switch (currentSetting) {
+    case KEY:
+      Serial.println("Went in to KEY");
+      break;
+
+    case RESET:
+      Serial.println("Went in to RESET KEY");
+      break;
+
     default:
       value = getSettingValue(currentSetting);
-    break;
+      break;
+
   }
 
   // Check if there is a text string for the setting value
-  if( valueIdentifier[currentSetting] != 0 )
+  if ( valueIdentifier[currentSetting] != 0 )
   {
     uint8_t index = valueIdentifier[ currentSetting ] - 1;
-    tString = stringValues[ index ][ value ]; 
+    tString = stringValues[ index ][ value ];
+  }
+  else
+  {
+    if (currentSetting == KEY || currentSetting == RESET) {
+      //tString = uint64ToAddress(value);
+    } else {
+      tString = uint64ToString(value);
+    }
   }
 
-  if( unitIdentifier[ currentSetting ] != 0 ){
+  if ( unitIdentifier[ currentSetting ] != 0 ) {
     tString += settingUnits[ unitIdentifier[ currentSetting ] - 1 ];
   }
 
-  if( currentSetting == EXIT ){
-    tString = F("Exit");  
+  if ( currentSetting == EXIT ) {
+    tString = F("Exit");
   }
 
   if ( changeThisSetting == true )
@@ -1049,7 +1101,7 @@ void drawSettingsMenu() {
     drawString(tString, tString.length(), x + 10, y + 20, u8g2_font_10x20_tr );
 
     // If setting has something to do with the hallValue
-    if( inRange(currentSetting, 8, 10) ){
+    if ( inRange(currentSetting, 8, 10) ) {
       tString = "(" + String(hallValue) + ")";
       drawString(tString, tString.length(), x + 92, y + 20, u8g2_font_profont12_tr );
     }
@@ -1060,14 +1112,15 @@ void drawSettingsMenu() {
   }
 }
 
-// Print the startup screen 
+
+// Print the startup screen
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawStartScreen() {
   u8g2.firstPage();
- 
+
   do {
-    
+
     u8g2.drawXBMP( 4, 4, 24, 24, logo);
 
     u8g2.setFont(u8g2_font_10x20_tr);
@@ -1085,7 +1138,7 @@ void drawStartScreen() {
 //---------------------------------------------------------------------------------------
 void drawTitle(String title, uint16_t duration) {
   u8g2.firstPage();
- 
+
   do {
 
     drawString(title, 20, 12, 30, u8g2_font_10x20_tr );
@@ -1100,7 +1153,7 @@ void drawTitle(String title, uint16_t duration) {
 //---------------------------------------------------------------------------------------
 void drawMessage(String message, uint16_t duration) {
   u8g2.firstPage();
- 
+
   do {
 
     drawString(message, 20, 5, 20, u8g2_font_7x14_tf);
@@ -1114,52 +1167,52 @@ void drawMessage(String message, uint16_t duration) {
 // called when key goes from pressed to not pressed
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void buttonRelease() {    
-    if (buttonPressCount < longbuttonPressCountMax && buttonPressCount >= mediumbuttonPressCountMin) {
-        mediumbuttonPress();
+void buttonRelease() {
+  if (buttonPressCount < longbuttonPressCountMax && buttonPressCount >= mediumbuttonPressCountMin) {
+    mediumbuttonPress();
+  }
+  else {
+    if (buttonPressCount < mediumbuttonPressCountMin) {
+      shortbuttonPress();
     }
-    else {
-      if (buttonPressCount < mediumbuttonPressCountMin) {
-        shortbuttonPress();
-      }
-    }
+  }
 }
 
 // called when key goes from not pressed to pressed
 void buttonPress() {
-	
-    buttonPressCount = 0;
+
+  buttonPressCount = 0;
 }
- 
- // called when button is kept pressed for less than .5 seconds
+
+// called when button is kept pressed for less than .5 seconds
 void shortbuttonPress() {
-	
-    displayView++;
+
+  displayView++;
 }
 
 // called when button is kept pressed for more than 2 seconds
 void mediumbuttonPress() {
-	
-    if ( returnData.headlightActive = 1 ) {
-		
-      remPackage.headlight = 0;
-	  
-    } else {
-	
-      remPackage.headlight = 1;
-    }
-	
+
+  if ( returnData.headlightActive = 1 ) {
+
+    remPackage.headlight = 0;
+
+  } else {
+
+    remPackage.headlight = 1;
+  }
+
 }
 
 // called when button is kept pressed for 2 seconds or more
 void longbuttonPress() {
 }
- 
+
 // draw main page
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawPage() {
-  
+
   uint8_t decimalsMain, decimalsSecond, decimalsThird;
   float valueMain, valueSecond, valueThird;
   int unitMain, unitSecond, unitThird;
@@ -1168,12 +1221,12 @@ void drawPage() {
   x = 0;
   y = 15;
 
-// handle rotation of different views
-// - first view: Speed, voltage, distance
-// - second view; voltage, battery amps, motor amps
-    if (displayView > 1) {
-      displayView = 0;
-    }
+  // handle rotation of different views
+  // - first view: Speed, voltage, distance
+  // - second view; voltage, battery amps, motor amps
+  if (displayView > 1) {
+    displayView = 0;
+  }
 
   switch (displayView) {
     case 0:
@@ -1200,15 +1253,15 @@ void drawPage() {
       break;
   }
 
-// Display prefix (title)
+  // Display prefix (title)
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr(x, y-1, dataPrefix[ displayView ] );
+  u8g2.drawStr(x, y - 1, dataPrefix[ displayView ] );
 
   // Split up the float value: a number, b decimals.
   first = abs( floor(valueMain) );
-  last = (valueMain - first) * pow(10,decimalsMain);
-  
-  // Draw main decimals 
+  last = (valueMain - first) * pow(10, decimalsMain);
+
+  // Draw main decimals
   tString = last;
   drawString(tString, decimalsMain, x + 35, y + 12, u8g2_font_profont12_tr);
 
@@ -1220,19 +1273,19 @@ void drawPage() {
   }
   // Display main numbers
   drawString(tString, 10, x, y + 29, u8g2_font_logisoso26_tn );
-  
+
   // Display decimals
   tString = ".";
   if ( last <= 9 && decimalsMain > 1) {
     tString += "0";
-  } 
-  
+  }
+
   // Display main units
   u8g2.setFont(u8g2_font_profont12_tr);
   u8g2.drawStr( x + 35, y + 29, dataSuffix[unitMain]);
 
 
-// Convert valueSecond to string
+  // Convert valueSecond to string
   firstSecond = abs( floor(valueSecond) );
   // Display second numbers
   if ( firstSecond <= 9 ) {
@@ -1246,7 +1299,7 @@ void drawPage() {
   u8g2.drawStr( x + 55 + 25, y + 29, dataSuffix[unitSecond]);
 
 
-// Convert valueThird to string
+  // Convert valueThird to string
   firstThird = abs( floor(valueThird) );
   if ( firstThird <= 9 ) {
     tString = "0" + String(firstThird);
@@ -1257,13 +1310,13 @@ void drawPage() {
   drawString(tString, 10, x + 55, y + 29 - 20, u8g2_font_logisoso18_tn );
   // Display main units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 55 + 25, y + 29 - 20, dataSuffix[unitThird]);  
+  u8g2.drawStr( x + 55 + 25, y + 29 - 20, dataSuffix[unitThird]);
 }
 
 /*
- * Prepare a string to be displayed on the OLED 
- */
-void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8_t *font){
+   Prepare a string to be displayed on the OLED
+*/
+void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8_t *font) {
 
   static char cache[40];
 
@@ -1275,15 +1328,15 @@ void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8
 }
 
 /*
- * Print the throttle value as a bar on the OLED
- */
+   Print the throttle value as a bar on the OLED
+*/
 void drawThrottle() {
-  
+
   x = 0;
   y = 55;
 
   uint8_t width;
-  
+
   // Draw throttle
   u8g2.drawHLine(x, y, 126);
   u8g2.drawVLine(x, y, 10);
@@ -1305,7 +1358,7 @@ void drawThrottle() {
     }
   } else {
     width = map(throttle, 0, 511, 62, 0);
-   
+
     for (uint8_t i = 0; i < width; i++)
     {
       u8g2.drawVLine(x + 63 + i, y + 4, 4);
@@ -1314,11 +1367,11 @@ void drawThrottle() {
 }
 
 /*
- * Print the remotes battery level as a battery on the OLED
- */
+   Print the remotes battery level as a battery on the OLED
+*/
 void drawBatteryLevel() {
 
-  x = 108; 
+  x = 108;
   y = 4;
 
   uint8_t level = batteryLevel();
@@ -1336,8 +1389,8 @@ void drawBatteryLevel() {
 }
 
 /*
- * Print status of the extra output from board on the OLED
- */
+   Print status of the extra output from board on the OLED
+*/
 void drawHeadlightStatus() {
 
   x = 122;
@@ -1345,12 +1398,12 @@ void drawHeadlightStatus() {
 
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_RIGHT);
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
-  u8g2.drawLine(x -1 , y -3, x -1, y +3);
-  
+  u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
+
   if (remPackage.headlight == 1) {
-    u8g2.drawLine(x -3 , y, x -5, y);
-    u8g2.drawLine(x -3 , y + 3, x -5, y + 4);
-    u8g2.drawLine(x -3 , y - 3, x -5, y - 4);
+    u8g2.drawLine(x - 3 , y, x - 5, y);
+    u8g2.drawLine(x - 3 , y + 3, x - 5, y + 4);
+    u8g2.drawLine(x - 3 , y - 3, x - 5, y - 4);
   }
 }
 
@@ -1359,26 +1412,26 @@ String uint64ToString(uint64_t number)
   unsigned long part1 = (unsigned long)((number >> 32)); // Bitwise Right Shift
   unsigned long part2 = (unsigned long)((number));
 
-  if(part1 == 0){
+  if (part1 == 0) {
     return String(part2, DEC);
   }
   return String(part1, DEC) + String(part2, DEC);
 }
 
-/* 
- * Convert hex String to uint64_t: http://forum.arduino.cc/index.php?topic=233813.0
- */
-uint64_t StringToUint64( char * string ){
+/*
+   Convert hex String to uint64_t: http://forum.arduino.cc/index.php?topic=233813.0
+*/
+uint64_t StringToUint64( char * string ) {
   uint64_t x = 0;
   char c;
-  
+
   do {
     c = hexCharToBin( *string++ );
     if (c < 0)
       break;
     x = (x << 4) | c;
   } while (1);
-  
+
   return x;
 }
 
