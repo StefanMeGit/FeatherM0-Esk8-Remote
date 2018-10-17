@@ -421,11 +421,15 @@ bool transmitToReceiver(){
 
 transmissionTimeStart = millis();
 
+  rf69_manager.setRetries(5);
+  rf69_manager.setTimeout(20);
+
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
-    
     uint8_t len = sizeof(returnData);
     uint8_t from;
-      Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
+	Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
+    Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
+	
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
@@ -454,7 +458,7 @@ transmissionTimeStart = millis();
 	  return false;
     }
   } else {
-	  
+	Serial.print("Needed retries NOK: "); Serial.println(rf69_manager.retries());
     DEBUG_PRINT( F("Sending failed (no ack)") );
 	return false;
   }
