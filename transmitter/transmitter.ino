@@ -105,10 +105,11 @@ struct stats {
 #define TRIGGER 0
 #define MODE    7
 #define BOARDID 11
-#define TxPower 12
-#define KEY		  14
-#define RESET 	15
-#define EXIT 	  16
+#define PAIR    12
+#define TxPower 13
+#define KEY		  15
+#define RESET 	16
+#define EXIT 	  17
 
 // Defining variables to hold values for speed and distance calculation
 float gearRatio;
@@ -116,7 +117,7 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 16;
+const uint8_t numOfSettings = 18;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
@@ -132,21 +133,23 @@ const short rules[numOfSettings][3] {
   {500, 300, 700},  	// Center hall value
   {800, 700, 1023}, 	// Max hall value
   {1, 1, 9},          // boardID
+  {-1, 0, 0},         // pair new board
   {18, 14, 20},			  // transmission power
   { -1, 0, 0},        // Key
   { -1, 0, 0},        // Set default key
-  { -1, 0, 0}        // Settings
+  { -1, 0, 0},        // Settings
+  { -1, 0, 0}         // Exit
 
 };
 
 const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Transmission Power", "Key", "Reset Key", "Settings"
+  "Throttle max", "Board ID", "Pair new Board", "Transmission Power", "Key", "Reset Key", "Settings", "Exit"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,0,4,5,0,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
@@ -572,7 +575,7 @@ void selectBoard(uint8_t receiverID) {
 
 }
 
-bool pairNewReceiver() {
+bool pairNewBoard() {
   // set variable to use default key for the next transmissions
 
   Serial.print("Join pairNewBoard()");
@@ -586,7 +589,9 @@ bool pairNewReceiver() {
   }
   Serial.println("");
 
-  Serial.print("Send custom encryptionKey to receiver by default key");
+  Serial.println("Send custom encryptionKey to receiver by default key");
+
+  initiateTransmitter();
 
   transmitSettingsToReceiver();
 
@@ -667,26 +672,33 @@ void controlSettingsMenu() {
     if (changeThisSetting == true && triggerFlag == false) {
       // Settings that needs to be transmitted to the recevier
       if (currentSetting == TRIGGER) {
-        txSettings.triggerMode = currentSetting;
+        txSettings.triggerMode = getSettingValue(currentSetting);
+        Serial.println("Settings menu - TRIGGER");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
         }
       } else if (currentSetting == MODE) {
-        txSettings.controlMode = currentSetting;
+        txSettings.controlMode = getSettingValue(currentSetting);
+        Serial.println("Settings menu - MODE");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
         }
       } else if (currentSetting == TxPower) {
-        txSettings.transmissionPower = TxPower;
+        txSettings.transmissionPower = getSettingValue(currentSetting);
+        Serial.println("Settings menu - TxPower");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
         } else {
           initiateTransmitter();
         }
       } else if (currentSetting == BOARDID) {
-        selectBoard(currentSetting);
+        Serial.println("Settings menu - BOARDID");
+        selectBoard(getSettingValue(currentSetting));
+      } else if (currentSetting == PAIR) {
+        Serial.println("Settings menu - PAIR");
+        pairNewBoard();
       } else if (currentSetting == KEY) {
-        pairNewReceiver();
+        //TODO
       }
       updateFlashSettings();
     }
