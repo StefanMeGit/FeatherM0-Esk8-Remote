@@ -51,7 +51,7 @@ typedef struct{
   short centerHallValue;            // 9
   short maxHallValue;               // 10
   uint8_t boardID;                  // 11
-  uint8_t transmissionPower;			  // 12
+  uint8_t transmissionPower;		// 12
   float firmVersion;                // 13
   uint8_t customEncryptionKey[16];  // 14
 } TxSettings;
@@ -104,8 +104,10 @@ struct stats {
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER 0
 #define MODE    7
-#define RESET 12
-#define EXIT 13
+#define TxPower 12
+#define KEY		14
+#define RESET 	15
+#define EXIT 	16
 
 // Defining variables to hold values for speed and distance calculation
 float gearRatio;
@@ -113,7 +115,7 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 15;
+const uint8_t numOfSettings = 17;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
@@ -131,17 +133,20 @@ const short rules[numOfSettings][3] {
   {1, 1, 9},           	// boardID
   {18, 14, 20},			// transmission power 
   {-1, 0, 0},      		// firmware
-  {-1, 0 ,0}         	// encryptionKey
+  {-1, 0 ,0},	     	// encryptionKey
+  {-1, 0 ,0},         	// Reset
+  {-1, 0 ,0}         	// Exit
+  
 };
 
 const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Transmission Power", "Settings", "Encryption Key"
+  "Throttle max", "Board ID", "Transmission Power", "Settings", "Encryption Key", "Reset", "Exit"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
@@ -237,6 +242,8 @@ unsigned short cycleTimeStart = 0;
 unsigned short cycleTimeFinish = 0;
 unsigned short cycleTimeDuration = 0;
 
+uint8_t useDefaultKeyForTransmission = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -278,7 +285,7 @@ void setup() {
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
     changeSettings = true;
-    drawTitleScreen("Settings");
+    drawTitle("Settings", 1000);
   }
 }
 
@@ -330,8 +337,11 @@ void initiateTransmitter() {
   if (!rf69.setFrequency(RF69_FREQ)) {
     DEBUG_PRINT( F("setFrequency failed") );
   }
-
-  rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  if (useDefaultKeyForTransmission == 1){
+	rf69.setEncryptionKey(txSettings.encryptionKey);
+  } else {
+	rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  }
   Serial.print("Set transmitter custom encryptionKey with boardID: ");
   for (uint8_t i = 0; i < 16; i++) {
      Serial.print(txSettings.customEncryptionKey[i]);
@@ -357,7 +367,8 @@ void checkEncryptionKey() {
     if (txSettings.customEncryptionKey[i] == encryptionKey[i]) {
       
       if (i == 15 ) {
-        Serial.println("Default key detected => createCustomKey();");  
+        Serial.println("Default key detected => createCustomKey()");
+		drawMessage("Default key detected!", 1000);
         createCustomKey();
       }
     
@@ -396,21 +407,11 @@ void createCustomKey(){
      Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
+  drawMessage("New key generated!", 1000);
   	
 	transmitSettingsToReceiver(); //TODO make shure receiver got message
 	
 	initiateTransmitter(); // restart receiver with new key
-}
-
-// write boardID to the encryptionKey
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-void selectBoard() {
-
-	txSettings.customEncryptionKey[16] = txSettings.boardID;
-	
-	initiateTransmitter(); // restart receiver with new key
-
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
@@ -467,7 +468,7 @@ bool transmitSettingsToReceiver() {
 	remPackage.type = 1;
 	
 	Serial.println("Try to send receiver next package are settings");
-	
+	drawMessage("Sending settings to receiver...",1000);
 	if ( transmitToReceiver()) {
 		Serial.println("Send settings... ");
 		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
@@ -486,14 +487,110 @@ bool transmitSettingsToReceiver() {
 			remPackage.type = 0;
 			return false;
 		}
-    Serial.println("Reciever have new Settings, restart transmitter");
-    //initiateTransmitter();
+    Serial.println("Receiver have new Settings, restart transmitter");
+    drawMessage("Receiver acknowledged Settings!",1000);
 	    return true;
 	} else {
 		Serial.println("Could not tell the receiver next package are settings");
 		remPackage.type = 0;
 		return false;
 	}
+}
+
+//Function used to transmit settings to receiver
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+bool transmitKeyToReceiver() {
+	
+	useDefaultKeyForTransmission = 1;
+	
+	initiateTransmitter();
+	
+	remPackage.type = 1;
+	
+	Serial.println("Try to send receiver next package are settings");
+	drawMessage("Sending settings to receiver...",1000);
+	if ( transmitToReceiver()) {
+		Serial.println("Send settings... ");
+		if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+			uint8_t len = sizeof(remPackage);
+			uint8_t from;   
+			if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+        Serial.print("Received ack for settings from receiver #"); Serial.println(from);
+				Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
+			} else {
+			Serial.println("Sending settings failed, no ack");
+			remPackage.type = 0;
+			useDefaultKeyForTransmission = 0;
+			initiateTransmitter();
+			return false;
+			}
+		} else {
+			Serial.println("Sending settings failed, no one listening");
+			remPackage.type = 0;
+			useDefaultKeyForTransmission = 0;
+			initiateTransmitter();
+			return false;
+		}
+    Serial.println("Receiver have new Settings, restart transmitter");
+    drawMessage("Receiver acknowledged Settings!",1000);
+	useDefaultKeyForTransmission = 0;
+	initiateTransmitter();
+	    return true;
+	} else {
+		Serial.println("Could not tell the receiver next package are settings");
+		remPackage.type = 0;
+		useDefaultKeyForTransmission = 0;
+		initiateTransmitter();
+		return false;
+	}
+}
+
+// write boardID to the encryptionKey
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void selectBoard(uint8_t receiverID) {
+	
+	Serial.print("Join pairNewBoard(receiverID) receiverID: "); Serial.println(receiverID);
+
+	txSettings.customEncryptionKey[15] = receiverID;
+	
+	Serial.print("Custom encryptionKey with boardID: ");
+	for (uint8_t i = 0; i < 16; i++) {
+    Serial.print(txSettings.customEncryptionKey[i]);
+	}
+	Serial.println("");
+	
+	initiateTransmitter(); // restart receiver with new key
+	
+	Serial.print("Exit pairNewBoard(receiverID)")
+
+}
+
+bool pairNewBoard {
+	// set variable to use default key for the next transmissions
+	
+	Serial.print("Join pairNewBoard()");
+	useDefaultKeyForTransmission = 1;
+	
+	txSettings.customEncryptionKey[15] = txSettings.boardID;
+	
+	Serial.print("Custom encryptionKey with boardID: ");
+	for (uint8_t i = 0; i < 16; i++) {
+    Serial.print(txSettings.customEncryptionKey[i]);
+	}
+	Serial.println("");
+	
+	Serial.print("Send custom encryptionKey to receiver by default key");
+	
+	transmitSettingsToReceiver();
+	
+	// set variable to use custom key for the next transmissions
+	useDefaultKeyForTransmission = 0;
+	// reset transmitter to activate custom key
+	initiateTransmitter();
+	
+	Serial.print("Exit pairNewBoard()");
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -559,15 +656,20 @@ void controlSettingsMenu() {
   if ( triggerActive() ){ 
     if (changeThisSetting == true && triggerFlag == false){
       // Settings that needs to be transmitted to the recevier
-      if( currentSetting == TRIGGER || currentSetting == MODE ){
-		  
-		  if (currentSetting == TRIGGER) {txSettings.triggerMode = currentSetting;
-		  } else if (currentSetting == MODE) {txSettings.controlMode = currentSetting;}
-        if( ! transmitSettingsToReceiver()){
-          // Error! Load the old setting
-          loadFlashSettings();
-        }
-      }
+		if (currentSetting == TRIGGER) {
+			txSettings.triggerMode = currentSetting;
+			if( ! transmitSettingsToReceiver()){loadFlashSettings();}
+		} else if (currentSetting == MODE) {
+			txSettings.controlMode = currentSetting;
+			if( ! transmitSettingsToReceiver()){loadFlashSettings();}
+		} else if (currentSetting == TxPower) {
+			txSettings.transmissionPower = TxPower;
+			if( ! transmitSettingsToReceiver()){loadFlashSettings();} else {initiateTransmitter();}
+		} else if (currentSetting == boardID) {
+			selectBoard(currentSetting);
+		} else if (currentSetting == Key){
+			pairNewReceiver();
+		}
       updateFlashSettings();
     }
 
@@ -974,19 +1076,34 @@ void drawStartScreen() {
   delay(1000);
 }
 
-// Print a title on the OLED display
+// Print a title on the OLED
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void drawTitleScreen(String title) {
+void drawTitle(String title, uint16_t duration) {
   u8g2.firstPage();
  
   do {
 
-    drawString(title, 20, 12, 20, u8g2_font_10x20_tr );
+    drawString(title, 20, 12, 30, u8g2_font_10x20_tr );
 
   } while ( u8g2.nextPage() );
 
-  delay(1000);
+  delay(duration);
+}
+
+// Print a message on OLED
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawMessage(String message, uint16_t duration) {
+  u8g2.firstPage();
+ 
+  do {
+
+    drawString(message, 20, 5, 20, u8g2_font_7x14_tf);
+
+  } while ( u8g2.nextPage() );
+
+  delay(duration);
 }
 
 // Extra button handling
@@ -1144,7 +1261,7 @@ void drawPage() {
  */
 void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8_t *font){
 
-  static char cache[20];
+  static char cache[40];
 
   string.toCharArray(cache, lenght + 1);
 
