@@ -19,9 +19,9 @@
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
-#include "printf.h"
+	#include "printf.h"
 #else
-#define DEBUG_PRINT(x)
+	#define DEBUG_PRINT(x)
 #endif
 
 // Defining the type of display used (128x32)
@@ -51,7 +51,7 @@ typedef struct {
   short centerHallValue;            // 9
   short maxHallValue;               // 10
   uint8_t boardID;                  // 11
-  uint8_t transmissionPower;		    // 12
+  uint8_t transmissionPower;	    // 12
   float firmVersion;                // 13
   uint8_t customEncryptionKey[16];  // 14
 } TxSettings;
@@ -60,6 +60,51 @@ TxSettings txSettings;
 
 // Defining flash storage
 FlashStorage(flash_TxSettings, TxSettings);
+
+uint8_t currentSetting = 0;
+const uint8_t numOfSettings = 18;
+
+// Setting rules format: default, min, max.
+const short rules[numOfSettings][3] {
+  {0, 0, 1},       	 	// 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},       	 	// 0: Li-ion      | 1: LiPo
+  {10, 6, 12},     	 	// Cell count
+  {14, 0, 250},     	// Motor poles
+  {14, 0, 250},     	// Motor pully
+  {38, 0, 250},     	// Wheel pulley
+  {80, 0, 250},     	// Wheel diameter
+  {1, 0, 2},        	// 0: PPM only   | 1: PPM and UART | 2: UART only
+  {200, 0, 300},   	 	// Min hall value
+  {500, 300, 700},  	// Center hall value
+  {800, 700, 1023}, 	// Max hall value
+  {1, 0, 9},          // boardID
+  {18, 14, 20},       // transmission power
+  {-1, 0, 0},         // pair new board
+  { -1, 0, 0},        // Key
+  { -1, 0, 0},        // Set default key
+  { -1, 0, 0},        // Settings
+  { -1, 0, 0}         // Exit
+
+};
+
+const char titles[numOfSettings][19] = {
+  "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
+  "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
+  "Throttle max", "Board ID", "Transmission Power", "Pair new Board", "Show key", "Reset Key", "Reset settings", "Exit"
+};
+
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0,0};
+const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0};
+
+const char stringValues[3][3][13] = {
+  {"Killswitch", "Cruise", ""},
+  {"Li-ion", "LiPo", ""},
+  {"PPM", "PPM and UART", "UART only"},
+};
+const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
+
+const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
+const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -107,59 +152,14 @@ struct stats {
 #define BOARDID 11
 #define PAIR    12
 #define TxPower 13
-#define KEY		  15
+#define KEY		15
 #define RESET 	16
-#define EXIT 	  17
+#define EXIT 	17
 
 // Defining variables to hold values for speed and distance calculation
 float gearRatio;
 float ratioRpmSpeed;
 float ratioPulseDistance;
-
-uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 18;
-
-// Setting rules format: default, min, max.
-const short rules[numOfSettings][3] {
-  {0, 0, 1},       	 	// 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},       	 	// 0: Li-ion      | 1: LiPo
-  {10, 6, 12},     	 	// Cell count
-  {14, 0, 250},     	// Motor poles
-  {14, 0, 250},     	// Motor pully
-  {38, 0, 250},     	// Wheel pulley
-  {80, 0, 250},     	// Wheel diameter
-  {1, 0, 2},        	// 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},   	 	// Min hall value
-  {500, 300, 700},  	// Center hall value
-  {800, 700, 1023}, 	// Max hall value
-  {1, 1, 9},          // boardID
-  {18, 14, 20},       // transmission power
-  {-1, 0, 0},         // pair new board
-  { -1, 0, 0},        // Key
-  { -1, 0, 0},        // Set default key
-  { -1, 0, 0},        // Settings
-  { -1, 0, 0}         // Exit
-
-};
-
-const char titles[numOfSettings][19] = {
-  "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
-  "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Transmission Power", "Pair new Board", "Show key", "Reset Key", "Reset settings", "Exit"
-};
-
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,5,5,4,4};
-
-const char stringValues[3][3][13] = {
-  {"Killswitch", "Cruise", ""},
-  {"Li-ion", "LiPo", ""},
-  {"PPM", "PPM and UART", "UART only"},
-};
-const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
-
-const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
-const char dataPrefix[2][9] = {"SPEED", "POWER"};
 
 // Pin defination
 const uint8_t triggerPin = 6;
