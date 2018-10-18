@@ -15,7 +15,7 @@
 // Uncomment DEBUG if you need to debug the remote
 //#define DEBUG
 
-#define VERSION 0.1
+#define VERSION 1
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
@@ -258,13 +258,13 @@ uint8_t useDefaultKeyForTransmission = 0;
 // --------------------------------------------------------------------------------------
 void setup() {
 
-  Serial.begin(115200);
-#ifdef DEBUG
-  while (!Serial) {};
-  printf_begin();
-#endif
+  #ifdef DEBUG
+    Serial.begin(115200);
+    while (!Serial){};
+    printf_begin();
+  #endif
 
-  loadFlashSettings();
+  delay(500);
 
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(extraButtonPin, INPUT_PULLUP);
@@ -277,19 +277,19 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
-  // Start OLED operations
   u8g2.begin();
   Serial.println("Draw start screen");
   drawStartScreen();
 
+  loadFlashSettings();
+
   // Start Radio
   initiateTransmitter();
 
+  Serial.println(txSettings.firmVersion);
+
   // check if default encryptionKey is still in use and create custom one if needed
   checkEncryptionKey();
-
-  //select board
-  //  selectBoard(); //TODO for multiple Boards
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -357,9 +357,7 @@ void initiateTransmitter() {
   }
   Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
-  rf69_manager.setTimeout(20);
-  Serial.print("Set frequecy to: ");
-  DEBUG_PRINT((int)RF69_FREQ);
+  Serial.print("Set frequecy to: "); Serial.println(RF69_FREQ);
   delay(500);
 }
 
@@ -739,6 +737,7 @@ void setDefaultFlashSettings() {
     txSettings.customEncryptionKey[i] = encryptionKey[i];
     Serial.print(encryptionKey[i]);
   }
+  txSettings.firmVersion = VERSION;
   Serial.println("");
 
   Serial.print("Killswitch: "); Serial.println(txSettings.triggerMode);
@@ -755,7 +754,6 @@ void setDefaultFlashSettings() {
   Serial.print("BoardID: "); Serial.println(txSettings.boardID);
   Serial.print("Transmission power: "); Serial.println(txSettings.transmissionPower);
 
-  txSettings.firmVersion = VERSION;
   updateFlashSettings();
 }
 
@@ -844,8 +842,28 @@ uint8_t getSettingValue(uint8_t index) {
     case 9:     value = txSettings.centerHallValue; break;
     case 10:    value = txSettings.maxHallValue;    break;
     case 11:    value = txSettings.boardID;         break;
-    case 12:    value = txSettings.transmissionPower; break;
-    case 16:    value = 0;                          break;
+    case 12:    value = 0;                          break;
+    case 13:    value = txSettings.transmissionPower; break;
+    case 14:    value = 0;                          break;
+    case 15:    value = txSettings.firmVersion;      break;
+
+
+  uint8_t triggerMode;              // 0
+  uint8_t batteryType;              // 1
+  uint8_t batteryCells;             // 2
+  uint8_t motorPoles;               // 3
+  uint8_t motorPulley;              // 4
+  uint8_t wheelPulley;              // 5
+  uint8_t wheelDiameter;            // 6
+  uint8_t controlMode;              // 7
+  short minHallValue;               // 8
+  short centerHallValue;            // 9
+  short maxHallValue;               // 10
+  uint8_t boardID;                  // 11
+  uint8_t pairNewBoard;             // 12
+  uint8_t transmissionPower;        // 13
+  uint8_t customEncryptionKey[16];  // 14
+  float firmVersion;                // 15
 
     default: /* Do nothing */ break;
   }
@@ -868,9 +886,10 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 8:         txSettings.minHallValue = value;    break;
     case 9:         txSettings.centerHallValue = value; break;
     case 10:        txSettings.maxHallValue = value;    break;
-    case 11:        txSettings.boardID = value;    break;
-    case 12:        txSettings.transmissionPower = value; break;
-
+    case 11:        txSettings.boardID = value;         break;
+    case 12:        txSettings.transmissionPower = value;break;
+    case 13:        txSettings.transmissionPower = value;break;
+    case 15:        txSettings.firmVersion = value;     break;
 
     default: /* Do nothing */ break;
   }
