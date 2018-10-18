@@ -13,7 +13,7 @@
 #include <RHReliableDatagram.h>
 
 // Uncomment DEBUG if you need to debug the remote
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 0.1
 
@@ -51,9 +51,10 @@ typedef struct {
   short centerHallValue;            // 9
   short maxHallValue;               // 10
   uint8_t boardID;                  // 11
-  uint8_t transmissionPower;	    // 12
-  float firmVersion;                // 13
+  uint8_t pairNewBoard;             // 12
+  uint8_t transmissionPower;	      // 13
   uint8_t customEncryptionKey[16];  // 14
+  float firmVersion;                // 15
 } TxSettings;
 
 TxSettings txSettings;
@@ -62,38 +63,40 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 18;
+const uint8_t numOfSettings = 19;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
-  {0, 0, 1},       	 	// 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},       	 	// 0: Li-ion      | 1: LiPo
-  {10, 6, 12},     	 	// Cell count
-  {14, 0, 250},     	// Motor poles
-  {14, 0, 250},     	// Motor pully
-  {38, 0, 250},     	// Wheel pulley
-  {80, 0, 250},     	// Wheel diameter
-  {1, 0, 2},        	// 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},   	 	// Min hall value
-  {500, 300, 700},  	// Center hall value
-  {800, 700, 1023}, 	// Max hall value
-  {1, 0, 9},          // boardID
-  {18, 14, 20},       // transmission power
-  {-1, 0, 0},         // pair new board
-  { -1, 0, 0},        // Key
-  { -1, 0, 0},        // Set default key
-  { -1, 0, 0},        // Settings
-  { -1, 0, 0}         // Exit
+  {0, 0, 1},       	 	//0 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},       	 	//1 0: Li-ion      | 1: LiPo
+  {10, 6, 12},     	 	//2 Cell count
+  {14, 0, 250},     	//3 Motor poles
+  {14, 0, 250},     	//4 Motor pully
+  {38, 0, 250},     	//5 Wheel pulley
+  {80, 0, 250},     	//6 Wheel diameter
+  {1, 0, 2},        	//7 0: PPM only   | 1: PPM and UART | 2: UART only
+  {200, 0, 300},   	 	//8 Min hall value
+  {500, 300, 700},  	//9 Center hall value
+  {800, 700, 1023}, 	//10 Max hall value
+  {1, 0, 9},          //11 boardID
+  { -1, 0, 0},        //12 pair new board
+  {18, 14, 20},       //13 transmission power  
+  { -1, 0, 0},        //14 show Key
+  { -1, 0 ,0},        //15 Firmware
+  { -1, 0, 0},        //16 Set default key
+  { -1, 0, 0},        //17 Settings
+  { -1, 0, 0}         //18 Exit
 
 };
 
 const char titles[numOfSettings][19] = {
   "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Transmission Power", "Pair new Board", "Show key", "Reset Key", "Reset settings", "Exit"
+  "Throttle max", "Board ID", "Pair new Board", "Transmission Power", "Encyption key",
+  "Firmware Version", "Set default key", "Settings", "Exit"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,5,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,0,5,0,0,0,0};
 const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0};
 
 const char stringValues[3][3][13] = {
@@ -105,6 +108,18 @@ const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
 
 const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
 const char dataPrefix[2][9] = {"SPEED", "POWER"};
+
+// Defining constants to hold the special settings, so it's easy changed though the code
+#define TRIGGER     0
+#define MODE        7
+#define BOARDID     11
+#define PAIR        12
+#define TxPower     13
+#define KEY         14
+#define FIRMWARE    15
+#define DEFAULTKEY  16
+#define SETTINGS    17
+#define EXIT        18
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -146,24 +161,14 @@ struct stats {
   float maxVoltage;
 };
 
-// Defining constants to hold the special settings, so it's easy changed though the code
-#define TRIGGER 0
-#define MODE    7
-#define BOARDID 11
-#define PAIR    12
-#define TxPower 13
-#define KEY		15
-#define RESET 	16
-#define EXIT 	17
-
 // Defining variables to hold values for speed and distance calculation
 float gearRatio;
 float ratioRpmSpeed;
 float ratioPulseDistance;
 
 // Pin defination
-const uint8_t triggerPin = 6;
-const uint8_t extraButtonPin = 5;
+const uint8_t triggerPin = 5;
+const uint8_t extraButtonPin = 6;
 const uint8_t batteryMeasurePin = 9;
 const uint8_t hallSensorPin = A3;
 const uint8_t vibrationActuatorPin = 6;
@@ -372,7 +377,6 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        drawMessage("Default key detected!", 1000);
         createCustomKey();
       }
 
@@ -411,7 +415,6 @@ void createCustomKey() {
     Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
-  drawMessage("New key generated!", 1000);
 
   transmitSettingsToReceiver(); //TODO make shure receiver got message
 
@@ -476,7 +479,6 @@ bool transmitSettingsToReceiver() {
   remPackage.type = 1;
 
   Serial.println("Try to send receiver next package are settings");
-  drawMessage("Sending settings to receiver...", 1000);
   if ( transmitToReceiver()) {
     Serial.println("Send settings... ");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
@@ -496,7 +498,6 @@ bool transmitSettingsToReceiver() {
       return false;
     }
     Serial.println("Receiver have new Settings, restart transmitter");
-    drawMessage("Receiver acknowledged Settings!", 1000);
     return true;
   } else {
     Serial.println("Could not tell the receiver next package are settings");
@@ -517,7 +518,6 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
 
   Serial.println("Try to send receiver next package are settings");
-  drawMessage("Sending settings to receiver...", 1000);
   if ( transmitToReceiver()) {
     Serial.println("Send settings... ");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
@@ -541,7 +541,6 @@ bool transmitKeyToReceiver() {
       return false;
     }
     Serial.println("Receiver have new Settings, restart transmitter");
-    drawMessage("Receiver acknowledged Settings!", 1000);
     useDefaultKeyForTransmission = 0;
     initiateTransmitter();
     return true;
@@ -599,6 +598,13 @@ bool pairNewBoard() {
   useDefaultKeyForTransmission = 0;
   // reset transmitter to activate custom key
   initiateTransmitter();
+  delay(500);
+
+  if (transmitToReceiver()) {
+    drawMessage("New board paired!", 1000);
+    } else {
+      drawMessage("Pairing failed!", 1000);
+      }
 
   Serial.print("Exit pairNewBoard()");
 }
@@ -699,7 +705,7 @@ void controlSettingsMenu() {
         pairNewBoard();
       } else if (currentSetting == KEY) {
         //TODO
-      } else if (currentSetting == RESET) {
+      } else if (currentSetting == SETTINGS) {
         setDefaultFlashSettings();
         drawMessage("Default settings loaded!", 1000);
       }
@@ -904,7 +910,7 @@ void updateMainDisplay()
     else
     {
       drawThrottle();
-      //drawBatteryLevel();
+      drawBatteryLevel();
       drawHeadlightStatus();
       drawPage();
     }
@@ -1089,11 +1095,11 @@ void drawSettingsMenu() {
   }
   else
   {
-    if (currentSetting == KEY || currentSetting == RESET) {
+ //   if (currentSetting == KEY || currentSetting == RESET) {
       //tString = uint64ToAddress(value);
-    } else {
+ //   } else {
       tString = uint64ToString(value);
-    }
+//    }
   }
 
   if ( unitIdentifier[ currentSetting ] != 0 ) {
@@ -1102,6 +1108,18 @@ void drawSettingsMenu() {
 
   if ( currentSetting == EXIT ) {
     tString = F("Exit");
+  }
+
+  if ( currentSetting == PAIR ) {
+    tString = F("Pair now");
+  }
+
+  if ( currentSetting == DEFAULTKEY ) {
+    tString = F("Restore");
+  }
+
+  if ( currentSetting == SETTINGS ) {
+    tString = F("Reset");
   }
 
   if ( changeThisSetting == true )
