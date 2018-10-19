@@ -19,9 +19,9 @@
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
-  #include "printf.h"
+#include "printf.h"
 #else
-  #define DEBUG_PRINT(x)
+#define DEBUG_PRINT(x)
 #endif
 
 // Defining the type of display used (128x32)
@@ -80,9 +80,9 @@ const short rules[numOfSettings][3] {
   {800, 700, 1023},   //10 Max hall value
   {1, 0, 9},          //11 boardID
   { -1, 0, 0},        //12 pair new board
-  {18, 14, 20},       //13 transmission power  
+  {18, 14, 20},       //13 transmission power
   { -1, 0, 0},        //14 show Key
-  { -1, 0 ,0},        //15 Firmware
+  { -1, 0 , 0},       //15 Firmware
   { -1, 0, 0},        //16 Set default key
   { -1, 0, 0},        //17 Settings
   { -1, 0, 0}         //18 Exit
@@ -96,8 +96,8 @@ const char titles[numOfSettings][19] = {
   "Firmware Version", "Set default key", "Settings", "Exit"
 };
 
-const uint8_t unitIdentifier[numOfSettings]  = {0,0,1,0,2,2,3,0,0,0,0,4,0,5,0,0,0,0};
-const uint8_t valueIdentifier[numOfSettings] = {1,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0};
+const uint8_t unitIdentifier[numOfSettings]  = {0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 4, 0, 5, 0, 0, 0, 0};
+const uint8_t valueIdentifier[numOfSettings] = {1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 const char stringValues[3][3][13] = {
   {"Killswitch", "Cruise", ""},
@@ -258,11 +258,11 @@ uint8_t useDefaultKeyForTransmission = 0;
 // --------------------------------------------------------------------------------------
 void setup() {
 
-  #ifdef DEBUG
-    Serial.begin(115200);
-    while (!Serial){};
-    printf_begin();
-  #endif
+#ifdef DEBUG
+  Serial.begin(115200);
+  while (!Serial) {};
+  printf_begin();
+#endif
 
   delay(500);
 
@@ -302,10 +302,9 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-
+  detectButtonPress();
   cycleTimeStart = millis();
   calculateThrottlePosition();
-  detectButtonPress();
 
   if (changeSettings == true) {
     //DEBUG_PRINT( F("Open setting menu") );
@@ -572,8 +571,10 @@ void selectBoard(uint8_t receiverID) {
 
 }
 
+// pair with new board
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 bool pairNewBoard() {
-  // set variable to use default key for the next transmissions
 
   Serial.print("Join pairNewBoard()");
   useDefaultKeyForTransmission = 1;
@@ -600,9 +601,9 @@ bool pairNewBoard() {
 
   if (transmitToReceiver()) {
     drawMessage("Complete", "New board paired!", 2000);
-    } else {
-      drawMessage("Fail", "Board not paired", 2000);
-      }
+  } else {
+    drawMessage("Fail", "Board not paired", 2000);
+  }
 
   Serial.print("Exit pairNewBoard()");
 }
@@ -680,42 +681,42 @@ void controlSettingsMenu() {
         Serial.println("Settings menu - TRIGGER");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
-      drawMessage("Failed","No communication to receiver", 2000);
+          drawMessage("Failed", "No communication to receiver", 2000);
         } else {
-      drawMessage("Complete","Trigger mode changed", 2000); 
-    }
+          drawMessage("Complete", "Trigger mode changed", 2000);
+        }
       } else if (currentSetting == MODE) {
         txSettings.controlMode = getSettingValue(currentSetting);
         Serial.println("Settings menu - MODE");
-    // needed?? TODO
+        // needed?? TODO
       } else if (currentSetting == TxPower) {
         txSettings.transmissionPower = getSettingValue(currentSetting);
         Serial.println("Settings menu - TxPower");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
-      drawMessage("Failed","No communication to receiver", 2000);
+          drawMessage("Failed", "No communication to receiver", 2000);
         } else {
-      updateFlashSettings();  
+          updateFlashSettings();
           initiateTransmitter();
-      drawMessage("Complete","Transmission power changed", 2000);
+          drawMessage("Complete", "Transmission power changed", 2000);
         }
       } else if (currentSetting == BOARDID) {
         Serial.println("Settings menu - BOARDID");
         selectBoard(getSettingValue(currentSetting));
-    drawMessage("Complete","New board selected!", 2000);
+        drawMessage("Complete", "New board selected!", 2000);
       } else if (currentSetting == PAIR) {
         Serial.println("Settings menu - PAIR");
         pairNewBoard();
       } else if (currentSetting == KEY) {
-    for (uint8_t i = 0; i < 16; i++){
-      txSettings.customEncryptionKey[i] = encryptionKey[1];
-    }
-    updateFlashSettings();
-    initiateTransmitter();
-    drawMessage("Complete","Default encryption Key loaded!", 2000);
+        for (uint8_t i = 0; i < 16; i++) {
+          txSettings.customEncryptionKey[i] = encryptionKey[1];
+        }
+        updateFlashSettings();
+        initiateTransmitter();
+        drawMessage("Complete", "Default encryption Key loaded!", 2000);
       } else if (currentSetting == SETTINGS) {
         setDefaultFlashSettings();
-        drawMessage("Complete","Default settings loaded!", 2000);
+        drawMessage("Complete", "Default settings loaded!", 2000);
       }
       updateFlashSettings();
     }
@@ -878,8 +879,8 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 9:         txSettings.centerHallValue = value; break;
     case 10:        txSettings.maxHallValue = value;    break;
     case 11:        txSettings.boardID = value;         break;
-    case 12:        txSettings.transmissionPower = value;break;
-    case 13:        txSettings.transmissionPower = value;break;
+    case 12:        txSettings.transmissionPower = value; break;
+    case 13:        txSettings.transmissionPower = value; break;
 
     default: /* Do nothing */ break;
   }
@@ -1107,7 +1108,7 @@ void drawSettingsMenu() {
     //if (currentSetting == KEY || currentSetting == RESET) {
     //  tString = uint64ToAddress(value);
     //} else {
-      tString = uint64ToString(value);
+    tString = uint64ToString(value);
     //}
   }
 
@@ -1128,15 +1129,15 @@ void drawSettingsMenu() {
   }
 
   if ( currentSetting == KEY ) {
-    for (uint8_t i = 7; i < 16; i++){
+    for (uint8_t i = 7; i < 16; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
-      }
-  }  
-  
+    }
+  }
+
   if ( currentSetting == SETTINGS ) {
     tString = F("Reset");
   }
-  
+
   if ( currentSetting == FIRMWARE ) {
     tString = String(txSettings.firmVersion);
   }
@@ -1201,8 +1202,8 @@ void drawMessage(String title, String details, uint16_t duration) {
 
   do {
 
-    drawString(title, 20, 5, 10, u8g2_font_10x20_tr);
-  drawString(details, 30, 10, 40, u8g2_font_7x14_tf);
+    drawString(title, 20, 1, 20, u8g2_font_10x20_tr);
+    drawString(details, 30, 5, 30, u8g2_font_7x14_tf);
 
   } while ( u8g2.nextPage() );
 
