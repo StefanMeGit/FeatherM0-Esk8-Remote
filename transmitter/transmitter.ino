@@ -15,13 +15,13 @@
 // Uncomment DEBUG if you need to debug the remote
 //#define DEBUG
 
-#define VERSION 1
+#define VERSION 1.1
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
-	#include "printf.h"
+  #include "printf.h"
 #else
-	#define DEBUG_PRINT(x)
+  #define DEBUG_PRINT(x)
 #endif
 
 // Defining the type of display used (128x32)
@@ -52,7 +52,7 @@ typedef struct {
   short maxHallValue;               // 10
   uint8_t boardID;                  // 11
   uint8_t pairNewBoard;             // 12
-  uint8_t transmissionPower;	      // 13
+  uint8_t transmissionPower;        // 13
   uint8_t customEncryptionKey[16];  // 14
   float firmVersion;                // 15
 } TxSettings;
@@ -67,17 +67,17 @@ const uint8_t numOfSettings = 19;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
-  {0, 0, 1},       	 	//0 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},       	 	//1 0: Li-ion      | 1: LiPo
-  {10, 6, 12},     	 	//2 Cell count
-  {14, 0, 250},     	//3 Motor poles
-  {14, 0, 250},     	//4 Motor pully
-  {38, 0, 250},     	//5 Wheel pulley
-  {80, 0, 250},     	//6 Wheel diameter
-  {1, 0, 2},        	//7 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},   	 	//8 Min hall value
-  {500, 300, 700},  	//9 Center hall value
-  {800, 700, 1023}, 	//10 Max hall value
+  {0, 0, 1},          //0 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},          //1 0: Li-ion      | 1: LiPo
+  {10, 6, 12},        //2 Cell count
+  {14, 0, 250},       //3 Motor poles
+  {14, 0, 250},       //4 Motor pully
+  {38, 0, 250},       //5 Wheel pulley
+  {80, 0, 250},       //6 Wheel diameter
+  {1, 0, 2},          //7 0: PPM only   | 1: PPM and UART | 2: UART only
+  {200, 0, 300},      //8 Min hall value
+  {500, 300, 700},    //9 Center hall value
+  {800, 700, 1023},   //10 Max hall value
   {1, 0, 9},          //11 boardID
   { -1, 0, 0},        //12 pair new board
   {18, 14, 20},       //13 transmission power  
@@ -599,9 +599,9 @@ bool pairNewBoard() {
   delay(500);
 
   if (transmitToReceiver()) {
-    drawMessage("New board paired!", 1000);
+    drawMessage("Complete", "New board paired!", 2000);
     } else {
-      drawMessage("Pairing failed!", 1000);
+      drawMessage("Fail", "Board not paired", 2000);
       }
 
   Serial.print("Exit pairNewBoard()");
@@ -680,32 +680,42 @@ void controlSettingsMenu() {
         Serial.println("Settings menu - TRIGGER");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
-        }
+      drawMessage("Failed","No communication to receiver", 2000);
+        } else {
+      drawMessage("Complete","Trigger mode changed", 2000); 
+    }
       } else if (currentSetting == MODE) {
         txSettings.controlMode = getSettingValue(currentSetting);
         Serial.println("Settings menu - MODE");
-        if ( ! transmitSettingsToReceiver()) {
-          loadFlashSettings();
-        }
+    // needed?? TODO
       } else if (currentSetting == TxPower) {
         txSettings.transmissionPower = getSettingValue(currentSetting);
         Serial.println("Settings menu - TxPower");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
+      drawMessage("Failed","No communication to receiver", 2000);
         } else {
+      updateFlashSettings();  
           initiateTransmitter();
+      drawMessage("Complete","Transmission power changed", 2000);
         }
       } else if (currentSetting == BOARDID) {
         Serial.println("Settings menu - BOARDID");
         selectBoard(getSettingValue(currentSetting));
+    drawMessage("Complete","New board selected!", 2000);
       } else if (currentSetting == PAIR) {
         Serial.println("Settings menu - PAIR");
         pairNewBoard();
       } else if (currentSetting == KEY) {
-        //TODO
+    for (uint8_t i = 0; i < 16; i++){
+      txSettings.customEncryptionKey[i] = encryptionKey[1];
+    }
+    updateFlashSettings();
+    initiateTransmitter();
+    drawMessage("Complete","Default encryption Key loaded!", 2000);
       } else if (currentSetting == SETTINGS) {
         setDefaultFlashSettings();
-        drawMessage("Default settings loaded!", 1000);
+        drawMessage("Complete","Default settings loaded!", 2000);
       }
       updateFlashSettings();
     }
@@ -845,25 +855,6 @@ uint8_t getSettingValue(uint8_t index) {
     case 12:    value = 0;                          break;
     case 13:    value = txSettings.transmissionPower; break;
     case 14:    value = 0;                          break;
-    case 15:    value = txSettings.firmVersion;      break;
-
-
-  uint8_t triggerMode;              // 0
-  uint8_t batteryType;              // 1
-  uint8_t batteryCells;             // 2
-  uint8_t motorPoles;               // 3
-  uint8_t motorPulley;              // 4
-  uint8_t wheelPulley;              // 5
-  uint8_t wheelDiameter;            // 6
-  uint8_t controlMode;              // 7
-  short minHallValue;               // 8
-  short centerHallValue;            // 9
-  short maxHallValue;               // 10
-  uint8_t boardID;                  // 11
-  uint8_t pairNewBoard;             // 12
-  uint8_t transmissionPower;        // 13
-  uint8_t customEncryptionKey[16];  // 14
-  float firmVersion;                // 15
 
     default: /* Do nothing */ break;
   }
@@ -889,7 +880,6 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 11:        txSettings.boardID = value;         break;
     case 12:        txSettings.transmissionPower = value;break;
     case 13:        txSettings.transmissionPower = value;break;
-    case 15:        txSettings.firmVersion = value;     break;
 
     default: /* Do nothing */ break;
   }
@@ -1114,11 +1104,11 @@ void drawSettingsMenu() {
   }
   else
   {
- //   if (currentSetting == KEY || currentSetting == RESET) {
-      //tString = uint64ToAddress(value);
- //   } else {
+    //if (currentSetting == KEY || currentSetting == RESET) {
+    //  tString = uint64ToAddress(value);
+    //} else {
       tString = uint64ToString(value);
-//    }
+    //}
   }
 
   if ( unitIdentifier[ currentSetting ] != 0 ) {
@@ -1137,8 +1127,18 @@ void drawSettingsMenu() {
     tString = F("Restore");
   }
 
+  if ( currentSetting == KEY ) {
+    for (uint8_t i = 7; i < 16; i++){
+      tString += String(txSettings.customEncryptionKey[i]);
+      }
+  }  
+  
   if ( currentSetting == SETTINGS ) {
     tString = F("Reset");
+  }
+  
+  if ( currentSetting == FIRMWARE ) {
+    tString = String(txSettings.firmVersion);
   }
 
   if ( changeThisSetting == true )
@@ -1186,7 +1186,7 @@ void drawTitle(String title, uint16_t duration) {
 
   do {
 
-    drawString(title, 20, 12, 30, u8g2_font_10x20_tr );
+    drawString(title, 20, 5, 30, u8g2_font_10x20_tr );
 
   } while ( u8g2.nextPage() );
 
@@ -1196,12 +1196,13 @@ void drawTitle(String title, uint16_t duration) {
 // Print a message on OLED
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void drawMessage(String message, uint16_t duration) {
+void drawMessage(String title, String details, uint16_t duration) {
   u8g2.firstPage();
 
   do {
 
-    drawString(message, 20, 5, 20, u8g2_font_7x14_tf);
+    drawString(title, 20, 5, 10, u8g2_font_10x20_tr);
+  drawString(details, 30, 10, 40, u8g2_font_7x14_tf);
 
   } while ( u8g2.nextPage() );
 
@@ -1478,6 +1479,14 @@ uint64_t StringToUint64( char * string ) {
   } while (1);
 
   return x;
+}
+
+String uint64ToAddress(uint64_t number)
+{
+  unsigned long part1 = (unsigned long)((number >> 32)); // Bitwise Right Shift
+  unsigned long part2 = (unsigned long)((number));
+
+  return String(part1, HEX) + String(part2, HEX);
 }
 
 char hexCharToBin(char c) {
