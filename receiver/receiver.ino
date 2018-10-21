@@ -55,21 +55,22 @@ struct callback {
 
 // Defining struct to hold setting values while remote is turned on.
 typedef struct {
-  uint8_t triggerMode;  		// 0
-  uint8_t batteryType;  		// 1
-  uint8_t batteryCells;   		// 2
-  uint8_t motorPoles;   		// 3
-  uint8_t motorPulley;  		// 4
-  uint8_t wheelPulley;  		// 5
-  uint8_t wheelDiameter;  		// 6
-  uint8_t controlMode;  		// 7
-  short minHallValue;     		// 8
-  short centerHallValue; 		// 9
-  short maxHallValue;     		// 10
-  uint8_t boardID; 				// 11
-  uint8_t transmissionPower;			// 12
-  float firmVersion;          // 13
-  uint8_t customEncryptionKey[16];   // 14
+  uint8_t triggerMode;              // 0
+  uint8_t batteryType;              // 1
+  uint8_t batteryCells;             // 2
+  uint8_t motorPoles;               // 3
+  uint8_t motorPulley;              // 4
+  uint8_t wheelPulley;              // 5
+  uint8_t wheelDiameter;            // 6
+  uint8_t controlMode;              // 7
+  short minHallValue;               // 8
+  short centerHallValue;            // 9
+  short maxHallValue;               // 10
+  uint8_t boardID;                  // 11
+  uint8_t pairNewBoard;             // 12
+  uint8_t transmissionPower;        // 13
+  uint8_t customEncryptionKey[16];  // 14
+  float firmVersion;                // 15
 } RxSettings;
 
 RxSettings rxSettings;
@@ -175,7 +176,9 @@ void loop()
     if (remPackage.type == 0) { // join normal transmission
       
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
-	    analyseMessage();
+	    if (analyseMessage()){
+	      Serial.println("Test");
+	    }
 	  } else {
       Serial.print("Setting package remPackage.type: "); Serial.println(remPackage.type);
 	    analyseSettingsMessage(); // join settings transmission
@@ -186,7 +189,7 @@ void loop()
 // check transmission
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void analyseMessage() {
+bool analyseMessage() {
 	Serial.print("Join analyseMessage: ");
 	for(int i = 0; i < 16; i++)
 	{
@@ -209,10 +212,11 @@ void analyseMessage() {
         Serial.print("Headlight: ");Serial.println(remPackage.headlight);
       #endif
       
-      if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from))
-      #ifdef DEBUG
+      if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
         Serial.println("Sending failed (no ack)");
-      #endif
+        } else {
+          return true;
+        }
 	  
     }
 }

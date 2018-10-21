@@ -36,6 +36,13 @@ const unsigned char logo[] PROGMEM = {
   0x80, 0x3c, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+// Transmit and receive package
+struct debug { 
+  unsigned long cycleTime;
+  unsigned long transmissionTime;
+  uint8_t rssi;
+} debugData;
+
 
 // Defining struct to hold setting values while remote is turned on.
 typedef struct {
@@ -106,8 +113,8 @@ const char stringValues[3][3][13] = {
 };
 const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
 
-const char dataSuffix[4][4] = {"V", "KMH", "KM", "A"};
-const char dataPrefix[2][9] = {"SPEED", "POWER"};
+const char dataSuffix[6][4] = {"V", "KMH", "KM", "A","ms","dBm"};
+const char dataPrefix[3][9] = {"SPEED", "POWER", "DEBUG"};
 
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER     0
@@ -135,9 +142,9 @@ struct callback {
 
 // defining button data
 unsigned long buttonPrevMillis = 0;
-const unsigned long buttonSampleIntervalsMs = 25;
-byte longbuttonPressCountMax = 80;    // 80 * 25 = 2000 ms
-byte mediumbuttonPressCountMin = 20;    // 20 * 25 = 500 ms
+const unsigned long buttonSampleIntervalsMs = 200;
+byte longbuttonPressCountMax = 8;    // 80 * 25 = 2000 ms
+byte mediumbuttonPressCountMin = 1;    // 20 * 25 = 500 ms
 byte buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low
 
@@ -167,8 +174,8 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 // Pin defination
-const uint8_t triggerPin = 5;
-const uint8_t extraButtonPin = 6;
+const uint8_t triggerPin = 6;
+const uint8_t extraButtonPin = 5;
 const uint8_t batteryMeasurePin = 9;
 const uint8_t hallSensorPin = A3;
 const uint8_t vibrationActuatorPin = 6;
@@ -313,7 +320,6 @@ void loop() {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-    remPackage.headlight = 0;
 
     transmitToReceiver();
   }
@@ -321,9 +327,9 @@ void loop() {
   updateMainDisplay();
 
   cycleTimeFinish = millis();
-  cycleTimeDuration = cycleTimeFinish - cycleTimeStart;
+  debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
 #ifdef DEBUG
-  //Serial.print("CycleTime: "); Serial.print(cycleTimeDuration); Serial.println("ms");
+  Serial.print("CycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
 #endif
 }
 
@@ -425,8 +431,8 @@ bool transmitToReceiver() {
 
   transmissionTimeStart = millis();
 
-  rf69_manager.setRetries(5);
-  rf69_manager.setTimeout(20);
+  rf69_manager.setRetries(1);
+  rf69_manager.setTimeout(15);
 
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
@@ -446,11 +452,12 @@ bool transmitToReceiver() {
 
       counterRecived++;
       transmissionTimeFinish = millis();
-      transmissionTimeDuration = transmissionTimeFinish - transmissionTimeStart;
+      debugData.transmissionTime = transmissionTimeFinish - transmissionTimeStart;
+      debugData.rssi = rf69.lastRssi();
 
       Serial.print("Got ack and reply from board #"); Serial.print(from);
       Serial.print(" transmission # "); Serial.print(counterRecived);
-      Serial.print(" period: "); Serial.print(transmissionTimeDuration); Serial.print("ms");
+      Serial.print(" period: "); Serial.print(debugData.transmissionTime); Serial.print("ms");
       Serial.print(" [RSSI :"); Serial.print(rf69.lastRssi());
       Serial.println("]");
 
@@ -614,7 +621,6 @@ bool pairNewBoard() {
 void controlSettingsMenu() {
 
   if (changeThisSetting == true) {
-    Serial.print("Change a setting: "); Serial.println(currentSetting);
 
     if (currentSetting == EXIT) {
       changeSettings = false;
@@ -681,7 +687,7 @@ void controlSettingsMenu() {
         Serial.println("Settings menu - TRIGGER");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
-          drawMessage("Failed", "No communication to receiver", 2000);
+          drawMessage("Failed", "No communication", 2000);
         } else {
           drawMessage("Complete", "Trigger mode changed", 2000);
         }
@@ -694,11 +700,11 @@ void controlSettingsMenu() {
         Serial.println("Settings menu - TxPower");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
-          drawMessage("Failed", "No communication to receiver", 2000);
+          drawMessage("Failed", "No communication", 2000);
         } else {
           updateFlashSettings();
           initiateTransmitter();
-          drawMessage("Complete", "Transmission power changed", 2000);
+          drawMessage("Complete", "Power changed", 2000);
         }
       } else if (currentSetting == BOARDID) {
         Serial.println("Settings menu - BOARDID");
@@ -713,7 +719,7 @@ void controlSettingsMenu() {
         }
         updateFlashSettings();
         initiateTransmitter();
-        drawMessage("Complete", "Default encryption Key loaded!", 2000);
+        drawMessage("Complete", "Default encryption Key!", 2000);
       } else if (currentSetting == SETTINGS) {
         setDefaultFlashSettings();
         drawMessage("Complete", "Default settings loaded!", 2000);
@@ -815,6 +821,7 @@ void detectButtonPress() {
     }
     else if (currButtonState == LOW) {
       buttonPressCount++;
+      Serial.print("buttonPressCount: "); Serial.println(buttonPressCount);
       if (buttonPressCount >= longbuttonPressCountMax) {
         longbuttonPress();
       }
@@ -838,8 +845,8 @@ void calculateRatios() {
 // Get settings value by index (usefull when iterating through settings)
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-uint8_t getSettingValue(uint8_t index) {
-  uint8_t value;
+short getSettingValue(uint8_t index) {
+  short value;
   switch (index) {
     case TRIGGER:   value = txSettings.triggerMode; break;
     case 1:     value = txSettings.batteryType;     break;
@@ -921,6 +928,7 @@ void updateMainDisplay()
     {
       drawThrottle();
       drawBatteryLevel();
+      drawSignal();
       drawHeadlightStatus();
       drawPage();
     }
@@ -1102,15 +1110,10 @@ void drawSettingsMenu() {
   {
     uint8_t index = valueIdentifier[ currentSetting ] - 1;
     tString = stringValues[ index ][ value ];
-  }
-  else
-  {
-    //if (currentSetting == KEY || currentSetting == RESET) {
-    //  tString = uint64ToAddress(value);
-    //} else {
+  } else { // else normal value from txSettings
     tString = uint64ToString(value);
-    //}
   }
+  
 
   if ( unitIdentifier[ currentSetting ] != 0 ) {
     tString += settingUnits[ unitIdentifier[ currentSetting ] - 1 ];
@@ -1142,8 +1145,7 @@ void drawSettingsMenu() {
     tString = String(txSettings.firmVersion);
   }
 
-  if ( changeThisSetting == true )
-  {
+  if ( changeThisSetting == true ) {
     drawString(tString, tString.length(), x + 10, y + 20, u8g2_font_10x20_tr );
 
     // If setting has something to do with the hallValue
@@ -1151,9 +1153,7 @@ void drawSettingsMenu() {
       tString = "(" + String(hallValue) + ")";
       drawString(tString, tString.length(), x + 92, y + 20, u8g2_font_profont12_tr );
     }
-  }
-  else
-  {
+  } else {
     drawString(tString, tString.length(), x, y + 20, u8g2_font_10x20_tr );
   }
 }
@@ -1170,13 +1170,13 @@ void drawStartScreen() {
     u8g2.drawXBMP( 4, 4, 24, 24, logo);
 
     u8g2.setFont(u8g2_font_10x20_tr);
-    u8g2.drawStr(35, 26, "Firefly");
+    u8g2.drawStr(20, 26, "Firefly");
     u8g2.setFont(u8g2_font_t0_12_tr);
-    u8g2.drawStr(45, 41, "mod by StefanMe");
+    u8g2.drawStr(30, 41, "mod by StefanMe");
 
   } while ( u8g2.nextPage() );
 
-  delay(1000);
+  delay(200);
 }
 
 // Print a title on the OLED
@@ -1203,7 +1203,7 @@ void drawMessage(String title, String details, uint16_t duration) {
   do {
 
     drawString(title, 20, 1, 20, u8g2_font_10x20_tr);
-    drawString(details, 30, 5, 30, u8g2_font_7x14_tf);
+    drawString(details, 30, 5, 35, u8g2_font_t0_12_tr);
 
   } while ( u8g2.nextPage() );
 
@@ -1239,20 +1239,21 @@ void shortbuttonPress() {
 
 // called when button is kept pressed for more than 2 seconds
 void mediumbuttonPress() {
-
-  if ( returnData.headlightActive = 1 ) {
+  if ( returnData.headlightActive == 1 ) {
 
     remPackage.headlight = 0;
-
+    Serial.println("Lights OFF");
   } else {
 
     remPackage.headlight = 1;
+    Serial.println("Lights ON");
   }
 
 }
 
 // called when button is kept pressed for 2 seconds or more
 void longbuttonPress() {
+  changeSettings = true;
 }
 
 // draw main page
@@ -1271,7 +1272,7 @@ void drawPage() {
   // handle rotation of different views
   // - first view: Speed, voltage, distance
   // - second view; voltage, battery amps, motor amps
-  if (displayView > 1) {
+  if (displayView > 2) {
     displayView = 0;
   }
 
@@ -1297,6 +1298,17 @@ void drawPage() {
       valueThird = returnData.avgMotorCurrent;
       decimalsThird = 1;
       unitThird = 3;
+      break;
+    case 2:
+      valueMain = debugData.rssi;
+      decimalsMain = 1;
+      unitMain = 5;
+      valueSecond = debugData.transmissionTime;
+      decimalsSecond = 1;
+      unitSecond = 4;
+      valueThird = debugData.cycleTime;
+      decimalsThird = 1;
+      unitThird = 4;
       break;
   }
 
@@ -1411,6 +1423,20 @@ void drawThrottle() {
       u8g2.drawVLine(x + 63 + i, y + 4, 4);
     }
   }
+}
+
+void drawSignal() {
+
+  x = 125;
+  y = 23;
+
+  u8g2.drawCircle(x, y, 2);
+
+  if (transmissionTimeDuration > 200) {
+    } else {
+      
+      }
+  
 }
 
 /*
