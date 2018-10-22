@@ -886,7 +886,6 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 9:         txSettings.centerHallValue = value; break;
     case 10:        txSettings.maxHallValue = value;    break;
     case 11:        txSettings.boardID = value;         break;
-    case 12:        txSettings.transmissionPower = value; break;
     case 13:        txSettings.transmissionPower = value; break;
 
     default: /* Do nothing */ break;
