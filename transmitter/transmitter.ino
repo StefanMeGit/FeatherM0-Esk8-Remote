@@ -41,6 +41,12 @@ struct debug {
   unsigned long cycleTime;
   unsigned long transmissionTime;
   uint8_t rssi;
+  unsigned long counterJoined;
+  unsigned long counterSend;
+  unsigned long counterReceived;
+  unsigned long differenceJoinedSend;
+  unsigned long differenceSendReceived;
+  unsigned long longestCycleTime;
 } debugData;
 
 
@@ -113,7 +119,7 @@ const char stringValues[3][3][13] = {
 };
 const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
 
-const char dataSuffix[6][4] = {"V", "KMH", "KM", "A","ms","dBm"};
+const char dataSuffix[7][4] = {"V", "KMH", "KM", "A","ms","dBm", ""};
 const char dataPrefix[3][9] = {"SPEED", "POWER", "DEBUG"};
 
 // Defining constants to hold the special settings, so it's easy changed though the code
@@ -197,6 +203,9 @@ uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             };
 
 unsigned long  counterRecived = 0;
+unsigned long  counterSent = 0;
+unsigned long  counterJoined = 0;
+
 
 // Dont put this on the stack:
 uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
@@ -224,7 +233,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 2;
+uint8_t displayView = 3;
 uint8_t x, y;
 
 // Defining variables for alarm
@@ -254,11 +263,12 @@ unsigned short transmissionTimeStart = 0;
 unsigned short transmissionTimeFinish = 0;
 unsigned short transmissionTimeDuration = 0;
 
-unsigned short cycleTimeStart = 0;
-unsigned short cycleTimeFinish = 0;
-unsigned short cycleTimeDuration = 0;
+unsigned long cycleTimeStart = 0;
+unsigned long cycleTimeFinish = 0;
+unsigned long cycleTimeDuration = 0;
 
 uint8_t useDefaultKeyForTransmission = 0;
+
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -321,13 +331,24 @@ void loop() {
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
 
-    transmitToReceiver();
+    if (transmitToReceiver()) {
+      updateMainDisplay();
+      } else if (changeSettings == true) {
+        updateMainDisplay();
+        }
+    debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
+    debugData.differenceSendReceived = debugData.counterSend - debugData.counterReceived;
   }
-
-  updateMainDisplay();
 
   cycleTimeFinish = millis();
   debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
+  if (debugData.cycleTime > debugData.longestCycleTime) {
+      debugData.longestCycleTime = debugData.cycleTime;
+    }
+    Serial.println(cycleTimeStart);
+    Serial.println(cycleTimeFinish);
+    Serial.println(debugData.cycleTime); 
+    Serial.println(debugData.longestCycleTime);
 #ifdef DEBUG
   Serial.print("CycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
 #endif
@@ -432,7 +453,9 @@ bool transmitToReceiver() {
   transmissionTimeStart = millis();
 
   rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(15);
+  rf69_manager.setTimeout(50);
+
+  debugData.counterJoined++;
 
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
@@ -440,7 +463,9 @@ bool transmitToReceiver() {
     Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
     Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
 
-    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
+    debugData.counterSend++;
+
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -450,7 +475,8 @@ bool transmitToReceiver() {
       Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
       Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
 
-      counterRecived++;
+
+      debugData.counterReceived++;
       transmissionTimeFinish = millis();
       debugData.transmissionTime = transmissionTimeFinish - transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
@@ -1271,7 +1297,7 @@ void drawPage() {
   // handle rotation of different views
   // - first view: Speed, voltage, distance
   // - second view; voltage, battery amps, motor amps
-  if (displayView > 2) {
+  if (displayView > 3) {
     displayView = 0;
   }
 
@@ -1308,6 +1334,17 @@ void drawPage() {
       valueThird = debugData.cycleTime;
       decimalsThird = 1;
       unitThird = 4;
+      break;
+    case 3:
+      valueMain = debugData.cycleTime;
+      decimalsMain = 1;
+      unitMain = 4;
+      valueSecond = debugData.differenceJoinedSend;
+      decimalsSecond = 1;
+      unitSecond = 6;
+      valueThird = debugData.longestCycleTime;
+      decimalsThird = 1;
+      unitThird = 6;
       break;
   }
 

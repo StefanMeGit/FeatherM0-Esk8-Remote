@@ -16,12 +16,12 @@
 
 #define VERSION 0.1
 
-//#ifdef DEBUG
+#ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
-//  #include "printf.h"
-//#else
-//  #define DEBUG_PRINT(x)
-//#endif
+  #include "printf.h"
+#else
+  #define DEBUG_PRINT(x)
+#endif
 
 // Transmit and receive package
 struct package {        // | Normal   | Setting   | Confirm
@@ -47,7 +47,7 @@ struct callback {
   float inpVoltage;
   long rpm;
   long tachometerAbs;
-  uint8_t headlight;
+  uint8_t headlightActive;
   float avgInputCurrent;
   float avgMotorCurrent;
   float dutyCycleNow;
@@ -250,6 +250,9 @@ bool analyseMessage() {
     Serial.print("Trigger: "); Serial.println(remPackage.trigger);
     Serial.print("Headlight: "); Serial.println(remPackage.headlight);
 #endif
+
+  rf69_manager.setRetries(1);
+  rf69_manager.setTimeout(10);
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       Serial.println("Sending failed (no ack)");
