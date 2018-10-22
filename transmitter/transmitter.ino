@@ -174,8 +174,8 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 // Pin defination
-const uint8_t triggerPin = 6;
-const uint8_t extraButtonPin = 5;
+const uint8_t triggerPin = 5;
+const uint8_t extraButtonPin = 6;
 const uint8_t batteryMeasurePin = 9;
 const uint8_t hallSensorPin = A3;
 const uint8_t vibrationActuatorPin = 6;
@@ -224,7 +224,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 0;
+uint8_t displayView = 2;
 uint8_t x, y;
 
 // Defining variables for alarm

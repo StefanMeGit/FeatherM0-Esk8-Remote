@@ -43,14 +43,14 @@ struct settingPackage {
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
-	float ampHours = 11.11;
-	float inpVoltage = 22.22;
-	long rpm  = 33333;
-	long tachometerAbs = 4000;
-	uint8_t headlight = 5;
-	float avgInputCurrent = 6.6;
-	float avgMotorCurrent = 7.7;
-	float dutyCycleNow = 8.8;
+	float ampHours;
+	float inpVoltage;
+	long rpm;
+	long tachometerAbs;
+	uint8_t headlight;
+	float avgInputCurrent;
+	float avgMotorCurrent;
+	float dutyCycleNow;
 } returnData;
 
 // Defining struct to hold setting values while remote is turned on.
@@ -62,7 +62,7 @@ typedef struct {
   uint8_t motorPulley;              // 4
   uint8_t wheelPulley;              // 5
   uint8_t wheelDiameter;            // 6
-  uint8_t controlMode;              // 7
+  uint8_t controlMode = 0;              // 7
   short minHallValue;               // 8
   short centerHallValue;            // 9
   short maxHallValue;               // 10
@@ -129,7 +129,7 @@ const short timeoutMax = 500;
 
 // Defining receiver pins
 const uint8_t statusLedPin = 13;
-const uint8_t throttlePin = 5;
+const uint8_t throttlePin = 10;
 
 // Initiate Servo class
 Servo esc;
@@ -145,7 +145,7 @@ void setup()
 	#ifdef DEBUG
     	UART.setDebugPort(&Serial);
 		Serial.begin(115200);
-		 while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+		 //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 		printf_begin();
 	#endif
 
@@ -177,9 +177,9 @@ void loop()
       
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	    if (analyseMessage()){
-	      Serial.println("Test");
 	    }
-	  } else {
+      speedControl( remPackage.throttle, remPackage.trigger );
+	  } else if (remPackage.type   == 1) {
       Serial.print("Setting package remPackage.type: "); Serial.println(remPackage.type);
 	    analyseSettingsMessage(); // join settings transmission
     }
@@ -312,11 +312,11 @@ void controlStatusLed(){
     
   }
 
-  if(statusCode == CONNECTED){
-    analogWrite(statusLedPin, map(remPackage.throttle, 0, 1023, 0, 255)); 
-  }else{
-    digitalWrite(statusLedPin, statusLedState);
-  }  
+//  if(TRUE){
+//    analogWrite(statusLedPin, map(remPackage.throttle, 0, 1023, 0, 255)); 
+//  }else{
+//    digitalWrite(statusLedPin, statusLedState);
+//  }  
 }
 
 // initiate receiver radio 
@@ -406,25 +406,26 @@ void setCruise ( bool cruise = true, uint16_t setPoint = defaultThrottle ){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setThrottle( uint16_t throttle ) {
-  if( rxSettings.controlMode == 0 ){
+//  if( rxSettings.controlMode == 0 ){
     
     esc.attach(throttlePin);
     esc.writeMicroseconds( map(throttle, 0, 1023, 1000, 2000) );  
-  }
-  else if( rxSettings.controlMode == 1 ){
-
-    esc.attach(throttlePin);
-    esc.writeMicroseconds( map(throttle, 0, 1023, 1000, 2000) ); 
-
-  }
-  else if( rxSettings.controlMode == 2 ){
-    
-    UART.nunchuck.valueY = map(throttle, 0, 1023, 0, 255);
-    UART.nunchuck.lowerButton = false;
-    esc.detach();
-    UART.setNunchuckValues();
-
-  }
+    Serial.print("Throttle..."); Serial.print(throttle);
+//  }
+//  else if( rxSettings.controlMode == 1 ){
+//
+//    esc.attach(throttlePin);
+//    esc.writeMicroseconds( map(throttle, 0, 1023, 1000, 2000) ); /
+//
+//  }
+//  else if( rxSettings.controlMode == 2 ){
+//    
+//    UART.nunchuck.valueY = map(throttle, 0, 1023, 0, 255);
+//    UART.nunchuck.lowerButton = false;
+//    esc.detach();
+//    UART.setNunchuckValues();
+//
+//  }
 }
 
 // speed control
@@ -432,32 +433,35 @@ void setThrottle( uint16_t throttle ) {
 // --------------------------------------------------------------------------------------
 void speedControl( uint16_t throttle , bool trigger ) {
 	// Kill switch
-	if( rxSettings.triggerMode == 0 ){
-		if ( trigger == true || throttle < 512 ){
+  Serial.println("SpeedControl");
+	//if( rxSettings.triggerMode == 0 ){
+    Serial.println("TriggerMode 0");
+		//if ( trigger == true || throttle < 512 ){
 			setThrottle( throttle );
-		}
-		else{
-			setThrottle( defaultThrottle );
-		}
-	}
+      Serial.println("SetThrottle");
+		//}
+		//else{
+		//	setThrottle( defaultThrottle );
+		//}
+	//}
 
 	// Cruise control
-	else if( rxSettings.triggerMode == 1 ){ 
-    if( trigger == true ){
-      
-      if( cruising == false ){
-        cruiseThrottle = throttle;
-        cruiseRPM = returnData.rpm;
-        cruising = true;
-      }
-
-      setCruise( true, cruiseThrottle );
-      
-    }else{
-      cruising = false;
-      setThrottle( throttle );
-    }
-	}
+//	else if( rxSettings.triggerMode == 1 ){ 
+//    if( trigger == true ){
+//      
+//      if( cruising == false ){
+//        cruiseThrottle = throttle;
+//        cruiseRPM = returnData.rpm;
+//        cruising = true;
+//      }
+//
+//      setCruise( true, cruiseThrottle );
+//      
+//    }else{
+//      cruising = false;
+//      setThrottle( throttle );
+//    }
+//	}
 } 
 
 // Uart handling
