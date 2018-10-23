@@ -12,17 +12,9 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-// Uncomment DEBUG if you need to debug the remote
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.1
-
-#ifdef DEBUG
-#define DEBUG_PRINT(x)  Serial.println (x)
-#include "printf.h"
-#else
-#define DEBUG_PRINT(x)
-#endif
 
 // Defining the type of display used (128x32)
 U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -277,11 +269,8 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(115200);
-  while (!Serial) {};
-  printf_begin();
+  while (!Serial) { delay(1);};
 #endif
-
-  delay(500);
 
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(extraButtonPin, INPUT_PULLUP);
@@ -319,12 +308,12 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
+	
+	cycleTimeStart = millis();
   detectButtonPress();
-  cycleTimeStart = millis();
   calculateThrottlePosition();
 
   if (changeSettings == true) {
-    //DEBUG_PRINT( F("Open setting menu") );
     controlSettingsMenu();
   } else {
     remPackage.type = 0;
@@ -345,10 +334,12 @@ void loop() {
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
+	#ifdef DEBUG
     Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
     Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
     Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
     Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");
+	#endif
 }
 
 // initiate radio
@@ -359,15 +350,11 @@ void initiateTransmitter() {
   delay(10);
   digitalWrite(RFM69_RST, LOW);
   delay(10);
-  Serial.println("Restart transmitter");
   if (!rf69_manager.init()) {
-    DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
   }
 
-  DEBUG_PRINT( F("RFM69 radio init OK!") );
   if (!rf69.setFrequency(RF69_FREQ)) {
-    DEBUG_PRINT( F("setFrequency failed") );
   }
   if (useDefaultKeyForTransmission == 1) {
     rf69.setEncryptionKey(encryptionKey);
@@ -457,44 +444,47 @@ bool transmitToReceiver() {
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
     uint8_t from;
+	#ifdef DEBUG
     Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
     Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
-
+	#endif
     debugData.counterSend++;
 
-//    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) { // TEST!
-    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) { // TEST!
+//    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
 
-      Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
+#ifdef DEBUG
+	Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
       Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
       Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
       Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
       Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
       Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
-
+#endif
 
       debugData.counterReceived++;
       transmissionTimeFinish = millis();
       debugData.transmissionTime = transmissionTimeFinish - transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
 
+	  #ifdef DEBUG
       Serial.print("Got ack and reply from board #"); Serial.print(from);
       Serial.print(" transmission # "); Serial.print(counterRecived);
       Serial.print(" period: "); Serial.print(debugData.transmissionTime); Serial.print("ms");
       Serial.print(" [RSSI :"); Serial.print(rf69.lastRssi());
       Serial.println("]");
-
+		#endif
       return true;
 
     } else {
-
-      DEBUG_PRINT( F("No reply, is anyone listening?") );
+		#ifdef DEBUG
+		Serial.println("No reply, is anyone listening?")
+      #endif
       return false;
     }
   } else {
-    //Serial.print("Needed retries NOK: "); Serial.println(rf69_manager.retries());
-    //  DEBUG_PRINT( F("Sending failed (no ack)") );
+	  
     return false;
   }
 }
@@ -845,7 +835,9 @@ void detectButtonPress() {
     }
     else if (currButtonState == LOW) {
       buttonPressCount++;
+	  #ifdef DEBUG
       Serial.print("buttonPressCount: "); Serial.println(buttonPressCount);
+	  #endif
       if (buttonPressCount >= longbuttonPressCountMax) {
         longbuttonPress();
       }
@@ -965,7 +957,7 @@ void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 15;
+  uint8_t samples = 10;
 
   for ( uint8_t i = 0; i < samples; i++ )
   {
@@ -986,8 +978,9 @@ void calculateThrottlePosition()
   {
     throttle = centerThrottle;
   }
-
-  //Serial.print("Throttle: "); Serial.println(throttle);
+#ifdef DEBUG
+  Serial.print("Throttle: "); Serial.println(throttle);
+  #endif
 
   // Find the throttle positions
   if (throttle >= (centerThrottle + hallMenuMargin)) {
@@ -1466,9 +1459,10 @@ void drawSignal() {
 
   u8g2.drawCircle(x, y, 2);
 
-  if (transmissionTimeDuration > 200) {
+  if (debugData.cycleTime > 130) {
     } else {
-      
+      u8g2.drawCircle(x, y, 3);
+	  u8g2.drawCircle(x, y, 4);
       }
   
 }
