@@ -23,6 +23,18 @@
   #define DEBUG_PRINT(x)
 #endif
 
+struct debug { 
+  unsigned long cycleTime;
+  unsigned long transmissionTime;
+  uint8_t rssi;
+  unsigned long counterJoined;
+  unsigned long counterSend;
+  unsigned long counterReceived;
+  unsigned long differenceJoinedSend;
+  unsigned long differenceJoinedReceived;
+  unsigned long longestCycleTime;
+} debugData;
+
 // Transmit and receive package
 struct package {        // | Normal   | Setting   | Confirm
   uint8_t type = 0;       // | 0      | 1     | 2
@@ -155,6 +167,10 @@ Servo esc;
 // Initiate VescUart class for UART communication
 VescUart UART;
 
+unsigned long cycleTimeStart = 0;
+unsigned long cycleTimeFinish = 0;
+unsigned long cycleTimeDuration = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -209,11 +225,13 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-  // check if message is available
+
+  cycleTimeStart = millis();
+
   if (rf69_manager.available()) {
     Serial.println("Package available");
     if (remPackage.type == 0) { // join normal transmission
-
+      getUartData();
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
       if (analyseMessage()) {
       }
@@ -223,12 +241,24 @@ void loop() {
       analyseSettingsMessage(); // join settings transmission
     }
   }
+
+  cycleTimeFinish = millis();
+  debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
+  if (debugData.cycleTime > debugData.longestCycleTime) {
+      debugData.longestCycleTime = debugData.cycleTime;
+    }
+    Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
+    Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
+    Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
+    Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
+   
 }
 
 // check transmission
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool analyseMessage() {
+  
   Serial.print("Join analyseMessage: ");
   for (int i = 0; i < 16; i++)
   {

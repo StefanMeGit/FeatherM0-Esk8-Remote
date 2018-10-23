@@ -45,7 +45,7 @@ struct debug {
   unsigned long counterSend;
   unsigned long counterReceived;
   unsigned long differenceJoinedSend;
-  unsigned long differenceSendReceived;
+  unsigned long differenceJoinedReceived;
   unsigned long longestCycleTime;
 } debugData;
 
@@ -337,7 +337,7 @@ void loop() {
         updateMainDisplay();
         }
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
-    debugData.differenceSendReceived = debugData.counterSend - debugData.counterReceived;
+    debugData.differenceJoinedReceived = debugData.counterJoined - debugData.counterReceived;
   }
 
   cycleTimeFinish = millis();
@@ -345,13 +345,10 @@ void loop() {
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
-    Serial.println(cycleTimeStart);
-    Serial.println(cycleTimeFinish);
-    Serial.println(debugData.cycleTime); 
-    Serial.println(debugData.longestCycleTime);
-#ifdef DEBUG
-  Serial.print("CycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
-#endif
+    Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
+    Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
+    Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
+    Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");
 }
 
 // initiate radio
@@ -453,7 +450,7 @@ bool transmitToReceiver() {
   transmissionTimeStart = millis();
 
   rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(50);
+  rf69_manager.setTimeout(15);
 
   debugData.counterJoined++;
 
@@ -465,7 +462,8 @@ bool transmitToReceiver() {
 
     debugData.counterSend++;
 
-    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) {
+//    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) { // TEST!
+    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
 
       Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -1336,13 +1334,13 @@ void drawPage() {
       unitThird = 4;
       break;
     case 3:
-      valueMain = debugData.cycleTime;
+      valueMain = debugData.longestCycleTime;
       decimalsMain = 1;
       unitMain = 4;
       valueSecond = debugData.differenceJoinedSend;
       decimalsSecond = 1;
       unitSecond = 6;
-      valueThird = debugData.longestCycleTime;
+      valueThird = debugData.differenceJoinedReceived;
       decimalsThird = 1;
       unitThird = 6;
       break;
@@ -1388,10 +1386,10 @@ void drawPage() {
   } else {
     tString = firstSecond;
   }
-  drawString(tString, 10, x + 55, y + 29, u8g2_font_logisoso18_tn );
+  drawString(tString, 10, x + 60, y + 29, u8g2_font_logisoso18_tn );
   // Display second units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 55 + 25, y + 29, dataSuffix[unitSecond]);
+  u8g2.drawStr( x + 60 + 25, y + 29, dataSuffix[unitSecond]);
 
 
   // Convert valueThird to string
@@ -1402,10 +1400,10 @@ void drawPage() {
     tString = firstThird;
   }
   // Display third numbers
-  drawString(tString, 10, x + 55, y + 29 - 20, u8g2_font_logisoso18_tn );
+  drawString(tString, 10, x + 60, y + 29 - 20, u8g2_font_logisoso18_tn );
   // Display main units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 55 + 25, y + 29 - 20, dataSuffix[unitThird]);
+  u8g2.drawStr( x + 60 + 25, y + 29 - 20, dataSuffix[unitThird]);
 }
 
 /*
