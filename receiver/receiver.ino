@@ -229,16 +229,22 @@ void loop() {
   cycleTimeStart = millis();
 
   if (rf69_manager.available()) {
+	#ifdef DEBUG
     Serial.println("Package available");
+	#endif
     if (remPackage.type == 0) { // join normal transmission
       getUartData();
+	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
+	  #endif
       if (analyseMessage()) {
       }
       speedControl( remPackage.throttle, remPackage.trigger );
-    } else if (remPackage.type   == 1) {
+    } else if (remPackage.type   == 1) { // join settings transmission
+	  #ifdef DEBUG
       Serial.print("Setting package remPackage.type: "); Serial.println(remPackage.type);
-      analyseSettingsMessage(); // join settings transmission
+	  #endif
+      analyseSettingsMessage();
     }
   }
 
@@ -247,11 +253,12 @@ void loop() {
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
+	#ifdef DEBUG
     Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
     Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
     Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
     Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
-   
+   #endif
 }
 
 // check transmission
