@@ -438,7 +438,7 @@ bool transmitToReceiver() {
   transmissionTimeStart = millis();
 
   rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(15);
+  rf69_manager.setTimeout(20);
 
   debugData.counterJoined++;
 
@@ -451,7 +451,7 @@ bool transmitToReceiver() {
 	#endif
     debugData.counterSend++;
 
-    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 10, &from)) { // TEST!
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
 //    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
 
 #ifdef DEBUG
