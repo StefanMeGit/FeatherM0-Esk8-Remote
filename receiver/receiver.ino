@@ -10,7 +10,7 @@
 #include <FlashStorage.h>
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
-#include "VescUart.h"
+#include <VescUart.h>
 
 #define DEBUG
 
@@ -18,7 +18,7 @@
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x)  Serial.println (x)
-  #include "printf.h"
+  //#include "printf.h"
 #else
   #define DEBUG_PRINT(x)
 #endif
@@ -179,8 +179,11 @@ void setup() {
   UART.setDebugPort(&Serial);
   Serial.begin(115200);
   while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
-      printf_begin();
+      //printf_begin();
 #endif
+
+//  UART.setSerialPort(&Serial1);
+//  Serial.begin(115200);
 
   loadFlashSettings();
 
