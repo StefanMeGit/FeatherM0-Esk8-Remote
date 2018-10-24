@@ -546,14 +546,8 @@ void getUartData() {
       returnData.avgMotorCurrent  = UART.data.avgMotorCurrent;
       returnData.dutyCycleNow     = UART.data.dutyCycleNow;
 
-      #ifdef DEBUG
-        Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
-        Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
-        Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
-        Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
-        Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
-        Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
-        Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
+	  #ifdef DEBUG
+        Serial.print("UART data received");
       #endif
     }
     else
@@ -565,7 +559,19 @@ void getUartData() {
       returnData.avgInputCurrent    = 0.0;
       returnData.avgMotorCurrent    = 0.0;
       returnData.dutyCycleNow       = 0.0;
+	  #ifdef DEBUG
+        Serial.print("UART data not received");
+      #endif
     }
+	    #ifdef DEBUG
+        Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
+        Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
+        Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
+        Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
+        Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
+        Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
+		#endif
   }
 }
 
