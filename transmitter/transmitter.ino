@@ -16,8 +16,8 @@
 
 #define VERSION 1.1
 
-// Defining the type of display used (128x32)
-U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+// Defining the type of display used (128x64)
+U8G2_SSD1306_128X64_NONAME_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 const unsigned char logo[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x80, 0x3c, 0x01,
@@ -282,6 +282,8 @@ void setup() {
   pinMode(RFM69_RST, OUTPUT);
 
   digitalWrite(RFM69_RST, LOW);
+
+  //u8g2.setClock();
 
   u8g2.begin();
   Serial.println("Draw start screen");
