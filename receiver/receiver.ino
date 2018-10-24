@@ -94,8 +94,8 @@ const uint8_t numOfSettings = 19;
 
 // Setting rules format: default, min, max.
 const short settingRules[numOfSettings][3] {
-  {0, 0, 1},          //0 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},          //1 0: Li-ion      | 1: LiPo
+  {1, 0, 1},          //0 0: Killswitch  | 1: Cruise control
+  {0, 1, 1},          //1 0: Li-ion      | 1: LiPo
   {10, 6, 12},        //2 Cell count
   {14, 0, 250},       //3 Motor poles
   {14, 0, 250},       //4 Motor pully
@@ -178,8 +178,8 @@ void setup() {
 #ifdef DEBUG
   UART.setDebugPort(&Serial);
   Serial.begin(115200);
-  //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
-  //    printf_begin();
+  while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+      printf_begin();
 #endif
 
   loadFlashSettings();
@@ -216,7 +216,7 @@ void setup() {
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print(rxSettings.customEncryptionKey[i]);
   } Serial.println("");
-  Serial.print("rxSettings.firmVersion"); Serial.println(rxSettings.firmVersion);
+  Serial.print("rxSettings.firmVersion: "); Serial.println(rxSettings.firmVersion);
 #endif
 
 }
@@ -254,10 +254,10 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 	#ifdef DEBUG
-    Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
-    Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
-    Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
-    Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
+    //Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
+    //Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
+    //Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
+    //Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
    #endif
 }
 
@@ -265,13 +265,15 @@ void loop() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool analyseMessage() {
-  
+
+  #ifdef DEBUG
   Serial.print("Join analyseMessage: ");
   for (int i = 0; i < 16; i++)
   {
     Serial.print(rxSettings.customEncryptionKey[i]);
   }
   Serial.println("");
+  #endif
 
   uint8_t len = sizeof(remPackage);
   uint8_t from;
@@ -490,9 +492,10 @@ void setThrottle( uint16_t throttle ) {
 // --------------------------------------------------------------------------------------
 void speedControl( uint16_t throttle , bool trigger ) {
   // Kill switch
+  #ifdef DEBUG
   Serial.println("SpeedControl");
+  #endif
   if ( rxSettings.triggerMode == 0 ) {
-    Serial.println("TriggerMode 0");
     if ( trigger == true || throttle < 512 ) {
       setThrottle( throttle );
       Serial.println("SetThrottle");
@@ -530,38 +533,38 @@ void getUartData() {
 
     lastUartPull = millis();
 #ifdef DEBUG
-    DEBUG_PRINT("Getting the DATA");
+    Serial.println("Getting UART data");
 #endif
 
     if ( UART.getVescValues() )
     {
-      returnData.ampHours       = UART.data.ampHours;
+      returnData.ampHours         = UART.data.ampHours;
       returnData.inpVoltage       = UART.data.inpVoltage;
-      returnData.rpm            = UART.data.rpm;
+      returnData.rpm              = UART.data.rpm;
       returnData.tachometerAbs    = UART.data.tachometerAbs;
-      returnData.avgInputCurrent    = UART.data.avgInputCurrent;
-      returnData.avgMotorCurrent    = UART.data.avgMotorCurrent;
+      returnData.avgInputCurrent  = UART.data.avgInputCurrent;
+      returnData.avgMotorCurrent  = UART.data.avgMotorCurrent;
       returnData.dutyCycleNow     = UART.data.dutyCycleNow;
 
-#ifdef DEBUG
-      DEBUG_PRINT(returnData.ampHours);
-      DEBUG_PRINT(returnData.inpVoltage);
-      DEBUG_PRINT(returnData.rpm);
-      DEBUG_PRINT(returnData.tachometerAbs);
-      DEBUG_PRINT(returnData.avgInputCurrent);
-      DEBUG_PRINT(returnData.avgMotorCurrent);
-      DEBUG_PRINT(returnData.dutyCycleNow);
-#endif
+      #ifdef DEBUG
+        Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
+        Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
+        Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
+        Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
+        Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
+        Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
+      #endif
     }
     else
     {
-      returnData.ampHours       = 0.0;
+      returnData.ampHours           = 0.0;
       returnData.inpVoltage         = 0.0;
-      returnData.rpm            = 0;
+      returnData.rpm                = 0;
       returnData.tachometerAbs      = 0;
       returnData.avgInputCurrent    = 0.0;
       returnData.avgMotorCurrent    = 0.0;
-      returnData.dutyCycleNow     = 0.0;
+      returnData.dutyCycleNow       = 0.0;
     }
   }
 }

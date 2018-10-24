@@ -12,7 +12,7 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.1
 
@@ -292,10 +292,8 @@ void setup() {
   // Start Radio
   initiateTransmitter();
 
-  Serial.println(txSettings.firmVersion);
-
   // check if default encryptionKey is still in use and create custom one if needed
-  checkEncryptionKey();
+  // checkEncryptionKey();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -315,6 +313,7 @@ void loop() {
 
   if (changeSettings == true) {
     controlSettingsMenu();
+    updateMainDisplay();
   } else {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
@@ -335,12 +334,14 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 	#ifdef DEBUG
-    Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
-    Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
-    Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
-    Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");
+    Serial.print("cycleTimeStart: "); Serial.print(cycleTimeStart); Serial.println("ms");
+    Serial.print("cycleTimeFinish: "); Serial.print(cycleTimeFinish); Serial.println("ms");
+    Serial.print("cycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
+    Serial.print("longestCycleTime: "); Serial.print(debugData.longestCycleTime); Serial.println("ms");
 	#endif
+
 }
+
 
 // initiate radio
 // --------------------------------------------------------------------------------------
@@ -368,7 +369,7 @@ void initiateTransmitter() {
   Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   Serial.print("Set frequecy to: "); Serial.println(RF69_FREQ);
-  delay(500);
+  delay(250);
 }
 
 // check encryptionKey
@@ -454,7 +455,7 @@ bool transmitToReceiver() {
 //    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
 
 #ifdef DEBUG
-	Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
+	    Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
       Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
       Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
       Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
@@ -479,8 +480,8 @@ bool transmitToReceiver() {
 
     } else {
 		#ifdef DEBUG
-		Serial.println("No reply, is anyone listening?")
-      #endif
+		Serial.println("No reply, is anyone listening?");
+    #endif
       return false;
     }
   } else {
