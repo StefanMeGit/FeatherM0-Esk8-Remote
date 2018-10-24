@@ -249,6 +249,7 @@ void loop() {
 	  #endif
       analyseSettingsMessage();
     }
+    headlight();
   }
 
   cycleTimeFinish = millis();
@@ -619,6 +620,16 @@ void setDefaultFlashSettings() {
 #endif
   updateFlashSettings();
 }
+// headlight
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void headlight(){
+  if (remPackage.headlight == 1) {
+    returnData.headlightActive = 1;
+  } else {
+    returnData.headlightActive = 0;
+    }
+  }
 
 // load flash settings
 // --------------------------------------------------------------------------------------
