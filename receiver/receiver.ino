@@ -17,9 +17,6 @@
 #define VERSION 0.1
 
 #ifdef DEBUG
-#define DEBUG_PRINT(x)  Serial.println (x)
-  //#include "printf.h"
-#else
   #define DEBUG_PRINT(x)
 #endif
 
@@ -177,13 +174,16 @@ unsigned long cycleTimeDuration = 0;
 void setup() {
   
   #ifdef DEBUG
-    //UART.setDebugPort(&Serial);
-    //Serial.begin(9600);
+    UART.setDebugPort(&Serial);
+    Serial.begin(115200);
     while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
     //printf_begin();
   #endif
-  //set serial port for VESC readings... does it work?
+
   UART.setSerialPort(&Serial1);
+  Serial1.begin(115200);
+
+  while (!Serial1) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
   loadFlashSettings();
 
@@ -236,7 +236,7 @@ void loop() {
     Serial.println("Package available");
 	#endif
     if (remPackage.type == 0) { // join normal transmission
-      //getUartData();
+      getUartData();
 	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
@@ -298,7 +298,6 @@ bool analyseMessage() {
   rf69_manager.setTimeout(10);
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
-      Serial.println("Sending failed (no ack)");
     } else {
       return true;
     }
