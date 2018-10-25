@@ -148,9 +148,9 @@ const short rules[numOfSettings][3] {
   {38, 0, 250},       //5 Wheel pulley
   {80, 0, 250},       //6 Wheel diameter
   {1, 0, 2},          //7 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},      //8 Min hall value
-  {500, 300, 700},    //9 Center hall value
-  {800, 700, 1023},   //10 Max hall value
+  {300, 0, 400},      //8 Min hall value
+  {520, 300, 700},    //9 Center hall value
+  {730, 600, 1023},   //10 Max hall value
   {1, 0, 9},          //11 boardID
   { -1, 0, 0},        //12 pair new board
   {20, 14, 20},       //13 transmission power
@@ -209,8 +209,8 @@ struct callback {
 // defining button data
 unsigned long buttonPrevMillis = 0;
 const unsigned long buttonSampleIntervalsMs = 200;
-byte longbuttonPressCountMax = 10;    // 80 * 25 = 2000 ms
-byte mediumbuttonPressCountMin = 2;    // 20 * 25 = 500 ms
+byte longbuttonPressCountMax = 12;    // 80 * 25 = 2000 ms
+byte mediumbuttonPressCountMin = 4;    // 20 * 25 = 500 ms
 byte buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low
 
