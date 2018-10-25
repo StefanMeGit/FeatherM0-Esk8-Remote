@@ -590,6 +590,9 @@ bool transmitSettingsToReceiver() {
 
   remPackage.type = 1;
 
+  rf69_manager.setRetries(10);
+  rf69_manager.setTimeout(50);
+
   Serial.println("Try to send receiver next package are settings");
   if ( transmitToReceiver()) {
     Serial.println("Send settings... ");
@@ -802,7 +805,12 @@ void controlSettingsMenu() {
       } else if (currentSetting == MODE) {
         txSettings.controlMode = getSettingValue(currentSetting);
         Serial.println("Settings menu - MODE");
-        // needed?? TODO
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+          drawMessage("Failed", "No communication", 2000);
+        } else {
+          drawMessage("Complete", "Trigger mode changed", 2000);
+        }
       } else if (currentSetting == TxPower) {
         txSettings.transmissionPower = getSettingValue(currentSetting);
         Serial.println("Settings menu - TxPower");
@@ -1026,8 +1034,8 @@ bool triggerActive() {
 //---------------------------------------------------------------------------------------
 void updateMainDisplay()
 {
-  u8g2.firstPage();
-
+//  u8g2.firstPage();
+u8g2.clearBuffer();
     if ( changeSettings == true )
     {
       drawSettingsMenu();
@@ -1040,8 +1048,8 @@ void updateMainDisplay()
       drawHeadlightStatus();
       drawPage();
     }
-    
-u8g2.nextPage();
+u8g2.sendBuffer();    
+//u8g2.nextPage();
 }
 
 // Measure the hall sensor output and calculate throttle posistion

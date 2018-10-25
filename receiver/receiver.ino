@@ -12,7 +12,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 0.1
 
@@ -177,13 +177,12 @@ void setup() {
     UART.setDebugPort(&Serial);
     Serial.begin(115200);
     while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
-    //printf_begin();
   #endif
 
   UART.setSerialPort(&Serial1);
   Serial1.begin(115200);
 
-  while (!Serial1) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+  //while (!Serial1) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
   loadFlashSettings();
 
@@ -195,9 +194,6 @@ void setup() {
   digitalWrite(RFM69_RST, LOW);
 
   initiateReceiver();
-#ifdef DEBUG
-  DEBUG_PRINT("Setup complete");
-#endif
 
 #ifdef DEBUG
   Serial.println("Setup finished: ");
@@ -260,10 +256,10 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 	#ifdef DEBUG
-    //Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
-    //Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
-    //Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
-    //Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
+    Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
+    Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
+    Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
+    Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
    #endif
 }
 
@@ -297,7 +293,7 @@ bool analyseMessage() {
 #endif
 
   rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(10);
+  rf69_manager.setTimeout(20);
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
     } else {
@@ -312,7 +308,9 @@ bool analyseMessage() {
 // --------------------------------------------------------------------------------------
 void analyseSettingsMessage() {
 
+  #ifdef DEBUG
   Serial.println("join analyseSettingsMessage");
+  #endif
 
   uint8_t len = sizeof(rxSettings);
   uint8_t from;
@@ -332,11 +330,12 @@ void analyseSettingsMessage() {
 
     if (!rf69_manager.sendtoWait((uint8_t*)&remPackage, sizeof(remPackage), from)) {
 
-#ifdef DEBUG
+      #ifdef DEBUG
       Serial.println("Sending failed (no ack)");
-#endif
+      #endif
 
     }
+    #ifdef DEBUG
     Serial.print("Received encryptionKey: ");
     for (int i = 0; i < 16; i++) {
 
@@ -344,9 +343,12 @@ void analyseSettingsMessage() {
 
     }
     Serial.println("");
+    #endif
     remPackage.type = 0;
     initiateReceiver();
+    #ifdef DEBUG
     Serial.println("Exit analyseSettingsMessage");
+    #endif
   }
 }
 
@@ -412,18 +414,24 @@ void initiateReceiver() {
     while (1);
   }
 
-
   if (!rf69.setFrequency(RF69_FREQ)) {
+  #ifdef DEBUG
+  Serial.println("Failed to set requency");
+  #endif  
   }
+  #ifdef DEBUG
   Serial.print("Receiver set frequency to: "); Serial.println(RF69_FREQ);
-
+  #endif
+  
   rf69.setTxPower(20, true);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
+  #ifdef DEBUG
   Serial.print("Receiver set customEncryptionKey to: ");
   for (int i = 0; i < 16; i++) {
     Serial.print(rxSettings.customEncryptionKey[i]);
   }
   Serial.println("");
+  #endif
 }
 
 // cruise control
@@ -471,7 +479,9 @@ void setThrottle( uint16_t throttle ) {
 
     esc.attach(throttlePin);
     esc.writeMicroseconds( map(throttle, 0, 1023, 1000, 2000) );
-    Serial.print("Throttle..."); Serial.print(throttle);
+    #ifdef DEBUG
+    Serial.print("Throttle..."); Serial.println(throttle);
+    #endif
   }
   else if ( rxSettings.controlMode == 1 ) {
 
