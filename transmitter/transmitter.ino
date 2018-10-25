@@ -17,7 +17,7 @@
 #define VERSION 1.1
 
 // Defining the type of display used (128x64)
-U8G2_SSD1306_128X64_NONAME_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 const unsigned char logo[] PROGMEM = {
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -1028,7 +1028,6 @@ void updateMainDisplay()
 {
   u8g2.firstPage();
 
-  do {
     if ( changeSettings == true )
     {
       drawSettingsMenu();
@@ -1041,7 +1040,8 @@ void updateMainDisplay()
       drawHeadlightStatus();
       drawPage();
     }
-  } while ( u8g2.nextPage() );
+    
+u8g2.nextPage();
 }
 
 // Measure the hall sensor output and calculate throttle posistion

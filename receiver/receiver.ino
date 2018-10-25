@@ -236,7 +236,7 @@ void loop() {
     Serial.println("Package available");
 	#endif
     if (remPackage.type == 0) { // join normal transmission
-      getUartData();
+      //getUartData();
 	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
@@ -407,14 +407,11 @@ void initiateReceiver() {
   delay(10);
 
   if (!rf69_manager.init()) {
-    DEBUG_PRINT( F("RFM69 radio init failed") );
     while (1);
   }
 
-  DEBUG_PRINT( F("RFM69 radio init ok") );
 
   if (!rf69.setFrequency(RF69_FREQ)) {
-    DEBUG_PRINT( F("setFrequency failed") );
   }
   Serial.print("Receiver set frequency to: "); Serial.println(RF69_FREQ);
 
