@@ -12,7 +12,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 0.1
 
@@ -236,7 +236,9 @@ void loop() {
     Serial.println("Package available");
 	#endif
     if (remPackage.type == 0) { // join normal transmission
-      getUartData();
+      if (rxSettings.controlMode > 0) {
+        getUartData();
+      }
 	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
