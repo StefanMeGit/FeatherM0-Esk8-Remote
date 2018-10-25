@@ -236,7 +236,7 @@ void loop() {
     Serial.println("Package available");
 	#endif
     if (remPackage.type == 0) { // join normal transmission
-      //getUartData();
+      getUartData();
 	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
