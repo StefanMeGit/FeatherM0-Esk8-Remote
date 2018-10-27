@@ -295,7 +295,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 2;
+uint8_t displayView = 3;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -1435,7 +1435,7 @@ void drawPage() {
       valueSecond = debugData.differenceJoinedSend;
       decimalsSecond = 1;
       unitSecond = 6;
-      valueThird = debugData.differenceJoinedReceived;
+      valueThird = debugData.cycleTime;
       decimalsThird = 1;
       unitThird = 6;
       break;
