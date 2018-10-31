@@ -157,6 +157,7 @@ const short timeoutMax = 500;
 // Defining receiver pins
 const uint8_t statusLedPin = 13;
 const uint8_t throttlePin = 10;
+const uint8_t breakLightPin = 9;
 
 // Initiate Servo class
 Servo esc;
@@ -188,6 +189,8 @@ void setup() {
 
   pinMode(statusLedPin, OUTPUT);
   esc.attach(throttlePin);
+
+  pinMode(breakLightPin, OUTPUT);
 
   pinMode(RFM69_RST, OUTPUT);
 
@@ -247,7 +250,8 @@ void loop() {
 	  #endif
       analyseSettingsMessage();
     }
-    headlight();
+    headLight();
+    breakLight();
   }
 
   cycleTimeFinish = millis();
@@ -536,6 +540,28 @@ void speedControl( uint16_t throttle , bool trigger ) {
   }
 }
 
+// headlight
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void headLight(){
+  if (remPackage.headlight == 1) {
+    returnData.headlightActive = 1;
+  } else {
+    returnData.headlightActive = 0;
+    }
+}
+
+// breakLight
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void breakLight() {
+  if (remPackage.throttle < 400) {
+      analogWrite(breakLightPin, 255);
+    } else {
+      analogWrite(breakLightPin, 127);
+      }
+}
+
 // Uart handling
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -628,16 +654,6 @@ void setDefaultFlashSettings() {
 #endif
   updateFlashSettings();
 }
-// headlight
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-void headlight(){
-  if (remPackage.headlight == 1) {
-    returnData.headlightActive = 1;
-  } else {
-    returnData.headlightActive = 0;
-    }
-  }
 
 // load flash settings
 // --------------------------------------------------------------------------------------
