@@ -30,6 +30,10 @@ struct debug {
   unsigned long differenceJoinedSend;
   unsigned long differenceJoinedReceived;
   unsigned long longestCycleTime;
+  unsigned long lastTransmissionStart;
+  unsigned long lastTransmissionEnd;
+  unsigned long lastTransmissionDuration;
+  uint16_t lastKnewThrottlePos;
 } debugData;
 
 // Transmit and receive package
@@ -172,6 +176,9 @@ unsigned long cycleTimeStart = 0;
 unsigned long cycleTimeFinish = 0;
 unsigned long cycleTimeDuration = 0;
 
+bool eStopActivated = false;
+unsigned long lastSlowDown = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -232,49 +239,74 @@ void setup() {
 void loop() {
 
   cycleTimeStart = millis();
-
+  debugData.lastTransmissionStart = millis();
   if (rf69_manager.available()) {
 	#ifdef DEBUG
     Serial.println("Package available");
 	#endif
     if (remPackage.type == 0) { // join normal transmission
-      if (rxSettings.controlMode > 0) {
-        getUartData();
-      }
 	  #ifdef DEBUG
       Serial.print("Normal package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
       if (analyseMessage()) {
+        if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
+          getUartData();
+        }
       }
       speedControl( remPackage.throttle, remPackage.trigger );
-    } else if (remPackage.type   == 1) { // join settings transmission
+    } else if (remPackage.type == 1) { // join settings transmission
 	  #ifdef DEBUG
       Serial.print("Setting package remPackage.type: "); Serial.println(remPackage.type);
 	  #endif
       analyseSettingsMessage();
     }
-    headLight();
-    breakLight();
   }
+
+  headLight();
+  breakLight();
 
   cycleTimeFinish = millis();
   debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
+
 	#ifdef DEBUG
     Serial.print("cycleTimeStart: "); Serial.println(cycleTimeStart); Serial.println("ms");
     Serial.print("cycleTimeFinish: "); Serial.println(cycleTimeFinish); Serial.println("ms");
     Serial.print("cycleTime: "); Serial.println(debugData.cycleTime); Serial.println("ms");
     Serial.print("longestCycleTime: "); Serial.println(debugData.longestCycleTime); Serial.println("ms");  
    #endif
+
+   debugData.lastTransmissionDuration = debugData.lastTransmissionEnd - debugData.lastTransmissionStart;
+   checkConnection();
 }
 
-// check transmission
+// checkConnection for ESTOP
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void checkConnection() {
+
+  if (debugData.lastTransmissionDuration > 300) {
+    debugData.lastKnewThrottlePos = remPackage.throttle;
+    eStopActivated = true;
+
+    
+    if ( millis() - lastSlowDown >= 100 ) {
+      for (uint16_t lastThrottlePos; lastThrottlePos < rxSettings.centerHallValue; lastThrottlePos = lastThrottlePos - 10) {
+          Serial.print("ESTOP: lastThrottlePos: "); Serial.println(lastThrottlePos); Serial.println("");
+          speedControl( lastThrottlePos, remPackage.trigger );
+        }
+      lastSlowDown = millis();
+      }
+  }
+}
+
+// analyse transmission
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool analyseMessage() {
-
+  
   #ifdef DEBUG
   Serial.print("Join analyseMessage: ");
   for (int i = 0; i < 16; i++)
@@ -308,6 +340,7 @@ bool analyseMessage() {
     }
 
   }
+  debugData.lastTransmissionEnd = millis();
 }
 
 // check settings message
@@ -357,6 +390,7 @@ void analyseSettingsMessage() {
     Serial.println("Exit analyseSettingsMessage");
     #endif
   }
+  debugData.lastTransmissionEnd = millis();
 }
 
 // set status
