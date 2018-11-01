@@ -159,6 +159,9 @@ const uint8_t statusLedPin = 13;
 const uint8_t throttlePin = 10;
 const uint8_t breakLightPin = 9;
 
+// Defining headlight/breaklight
+uint8_t breakLightFlash = 0;
+
 // Initiate Servo class
 Servo esc;
 
@@ -555,11 +558,30 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void breakLight() {
-  if (remPackage.throttle < 400) {
+
+  uint8_t breakLightFlashDuration = 2;
+  uint8_t breakLightFlashDurationCounter = 0;
+  
+  if (remPackage.throttle < rxSettings.minHallValue + 30) {
+      if (breakLightFlash == 0) {
+        analogWrite(breakLightPin, 255); 
+        breakLightFlashDuration++;
+        if (breakLightFlashDurationCounter == breakLightFlashDuration) {
+          breakLightFlashDurationCounter = 0;
+          breakLightFlash = 1;
+          }
+        } else {
+          analogWrite(breakLightPin, 50); 
+          if (breakLightFlashDurationCounter == breakLightFlashDuration) {
+            breakLightFlashDurationCounter = 0;
+            breakLightFlash = 0;
+            }
+          }
+    } else if (remPackage.throttle < rxSettings.centerHallValue - 30) {
       analogWrite(breakLightPin, 255);
-    } else {
-      analogWrite(breakLightPin, 127);
-      }
+      } else {
+        analogWrite(breakLightPin, 127);
+        }
 }
 
 // Uart handling
@@ -728,7 +750,7 @@ void updateFlashSettings() {
 
 void setSettingValue(uint8_t index, uint64_t value) {
   switch (index) {
-    case 0:   		rxSettings.triggerMode = value;     break;
+    case 0:   		  rxSettings.triggerMode = value;     break;
     case 1:         rxSettings.batteryType = value;     break;
     case 2:         rxSettings.batteryCells = value;    break;
     case 3:         rxSettings.motorPoles = value;      break;
