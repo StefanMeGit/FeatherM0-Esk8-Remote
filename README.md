@@ -10,6 +10,7 @@ Features:
 - headlight integration
 - over 16 updates per seconds from throttle position to PWM output (every 60ms)
 
-* Safety Features
+Safety Features
+
 - priority transmission handling! First successfully transmissions -> then scree refresh ect.
 - breaklight integration with adaptive flash warning
