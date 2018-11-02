@@ -13,7 +13,8 @@ Safety Features
 
 - ESTOP automatic slow down until stop - more than 300ms no new values from remote will force the receiver
 		into ESTOPMODE and slow down the trigger value every 50ms by 5 until it raches 25% break trigger to stop the board safe
-- priority transmission handling! Deactivating display refresh and UART pull if no valid transmission is received until ESTOPMODE is triggered, then display is refreshing again for anaysing error
+- priority transmission handling! Deactivating display refresh and UART pull if no valid transmission is received until
+  - ESTOPMODE is triggered, then display is refreshing again for anaysing error
 - breaklight integration with adaptive flash warning
-if trigger is under centerHallValue the breaklight will be bright 
-if trigger is close to minHallValue the breaklight will flash
+  - if trigger is under centerHallValue the breaklight will be bright 
+  - if trigger is close to minHallValue the breaklight will flash
