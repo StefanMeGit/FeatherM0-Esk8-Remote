@@ -1,3 +1,5 @@
+High perfomance remote for ESKATE
+
 Features:
 
 - 0.96inch OLED with 128x64 with high frequently display update rate to have smooth and accurate inforamtions (every 60ms)
@@ -11,8 +13,8 @@ Features:
 
 Safety Features
 
-- ESTOP automatic slow down until stop - more than 300ms no new values from remote will force the receiver
-		into ESTOPMODE and slow down the trigger value every 50ms by 5 until it raches 25% break trigger to stop the board safe
+- ESTOP automatic slow down until stop - more than 300ms no new values from remote will force the receiver into ESTOPMODE and slow down the trigger value every 50ms by 5 until it raches 25% break trigger to stop the board safe
+  - ESTOP will armed automaticly after first valid transmission between remote and receiver
 - priority transmission handling! Deactivating display refresh and UART pull if no valid transmission is received until
   - ESTOPMODE is triggered, then display is refreshing again for anaysing error
 - breaklight integration with adaptive flash warning
