@@ -278,7 +278,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 3;
+uint8_t displayView = 1;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -340,6 +340,8 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
+  u8g2.setDisplayRotation(U8G2_R3);
+
   u8g2.begin();
   Serial.println("Draw start screen");
   drawStartScreen();
@@ -350,7 +352,7 @@ void setup() {
   initiateTransmitter();
 
   // check if default encryptionKey is still in use and create custom one if needed
-  checkEncryptionKey();
+  //checkEncryptionKey();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -1028,7 +1030,7 @@ u8g2.firstPage();
     {
       drawThrottle();
       drawBatteryLevel();
-      drawSignal();
+      //drawSignal();
       drawPage();
       drawHeadlightStatus();
     }
@@ -1247,7 +1249,6 @@ void drawSettingsMenu() {
   }
 
   if ( changeThisSetting == true ) {
-    drawString(tString, tString.length(), x + 10, y + 20, u8g2_font_10x20_tr );
 
     // If setting has something to do with the hallValue
     if ( inRange(currentSetting, 8, 10) ) {
@@ -1268,7 +1269,7 @@ void drawStartScreen() {
 
   do {
 
-    u8g2.drawXBMP( 34, 0, 60, 64, logo);
+    u8g2.drawXBMP( 0, 22, 60, 64, logo);
 
 //    u8g2.setFont(u8g2_font_10x20_tr);
 //    u8g2.drawStr(20, 26, "Firefly");
@@ -1369,8 +1370,8 @@ void drawPage() {
   int unitMain, unitSecond, unitThird;
   uint16_t first, last, firstSecond, lastSecond, firstThird, lastThird;
 
-  x = 0;
-  y = 15;
+  x = 15;
+  y = 10;
 
   // handle rotation of different views
   // - first view: Speed, voltage, distance
@@ -1445,7 +1446,7 @@ void drawPage() {
     tString = first;
   }
   // Display main numbers
-  drawString(tString, 10, x, y + 29, u8g2_font_logisoso26_tn );
+  drawString(tString, 10, x -2, y + 29, u8g2_font_logisoso26_tn );
 
   // Display decimals
   tString = ".";
@@ -1466,10 +1467,10 @@ void drawPage() {
   } else {
     tString = firstSecond;
   }
-  drawString(tString, 10, x + 60, y + 29, u8g2_font_logisoso18_tn );
+  drawString(tString, 10, x, y +55, u8g2_font_logisoso18_tn );
   // Display second units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 60 + 25, y + 29, dataSuffix[unitSecond]);
+  u8g2.drawStr( x + 25, y +55, dataSuffix[unitSecond]);
 
 
   // Convert valueThird to string
@@ -1480,10 +1481,10 @@ void drawPage() {
     tString = firstThird;
   }
   // Display third numbers
-  drawString(tString, 10, x + 60, y + 29 - 20, u8g2_font_logisoso18_tn );
+  drawString(tString, 10, x, y +75, u8g2_font_logisoso18_tn );
   // Display main units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 60 + 25, y + 29 - 20, dataSuffix[unitThird]);
+  u8g2.drawStr( x + 25, y +75, dataSuffix[unitThird]);
 }
 
 /*
@@ -1506,21 +1507,21 @@ void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8
 void drawThrottle() {
 
   x = 0;
-  y = 55;
+  y = 0;
 
   uint8_t width;
 
   // Draw throttle
-  u8g2.drawHLine(x, y, 126);
-  u8g2.drawVLine(x, y, 10);
-  u8g2.drawVLine(x + 15, y, 3);
-  u8g2.drawVLine(x + 31, y, 5);
-  u8g2.drawVLine(x + 46, y, 3);
-  u8g2.drawVLine(x + 63, y, 5);
-  u8g2.drawVLine(x + 78, y, 3);
-  u8g2.drawVLine(x + 94, y, 5);
-  u8g2.drawVLine(x + 110, y, 3);
-  u8g2.drawVLine(x + 126, y, 20);
+  u8g2.drawVLine(x + 5, y , 127);
+  u8g2.drawHLine(x, y, 5);
+  u8g2.drawHLine(x, y +15, 2);
+  u8g2.drawHLine(x, y +31, 4);
+  u8g2.drawHLine(x, y +46, 2);
+  u8g2.drawHLine(x, y +63, 4);
+  u8g2.drawHLine(x, y +78, 2);
+  u8g2.drawHLine(x, y +94, 4);
+  u8g2.drawHLine(x, y +110, 2);
+  u8g2.drawHLine(x, y +127, 6);
 
 
   if (throttle >= 512) {
@@ -1528,22 +1529,22 @@ void drawThrottle() {
 
     for (uint8_t i = 0; i < width; i++)
     {
-      u8g2.drawVLine(x + 63 - i, y + 4, 4);
+      u8g2.drawHLine(x, y + 64 -i, 4);
     }
   } else {
     width = map(throttle, 0, 511, 62, 0);
 
     for (uint8_t i = 0; i < width; i++)
     {
-      u8g2.drawVLine(x + 63 + i, y + 4, 4);
+      u8g2.drawHLine(x, y + 64 + i, 4);
     }
   }
 }
 
 void drawSignal() {
 
-  x = 114;
-  y = 18;
+  x = 26;
+  y = 112;
 
   if (connectionLost == 1) {
 
@@ -1570,8 +1571,8 @@ void drawSignal() {
 */
 void drawBatteryLevel() {
 
-  x = 108;
-  y = 4;
+  x = 43;
+  y = 115;
 
   uint8_t level = batteryLevel();
 
@@ -1592,11 +1593,11 @@ void drawBatteryLevel() {
 */
 void drawHeadlightStatus() {
 
-  x = 122;
-  y = 39;
+  x = 30;
+  y = 117;
 
-  u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_RIGHT);
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
+  u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_LEFT);
   u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
 
   if (remPackage.headlight == 1) {
