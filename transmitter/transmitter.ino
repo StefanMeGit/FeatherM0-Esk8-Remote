@@ -12,9 +12,9 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-//#define DEBUG
+#define DEBUG
 
-#define VERSION 1.1
+#define VERSION 1.0
 
 // Defining the type of display used (128x64)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -360,7 +360,7 @@ void setup() {
   initiateTransmitter();
 
   // check if default encryptionKey is still in use and create custom one if needed
-  //checkEncryptionKey(); TODO
+  checkEncryptionKey();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -368,7 +368,6 @@ void setup() {
       transmitSettingsToReceiver();
       changeSettings = true;
       u8g2.setDisplayRotation(U8G2_R0);
-      u8g2.begin();
       drawTitle("Settings", 1500);
   }
 }
@@ -448,6 +447,7 @@ void initiateTransmitter() {
   if (!rf69.setFrequency(RF69_FREQ)) {
   }
   if (useDefaultKeyForTransmission == 1) {
+    Serial.print("useDefaultKeyForTransmission: "); Serial.println(useDefaultKeyForTransmission);
     rf69.setEncryptionKey(encryptionKey);
   } else {
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
@@ -470,9 +470,9 @@ void checkEncryptionKey() {
   Serial.println("Check for default encription key");
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
-    Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
+    //Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
 
-    if (txSettings.customEncryptionKey[i] == encryptionKey[i]) {
+    if (txSettings.customEncryptionKey[i] == 0) {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
@@ -538,8 +538,8 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
     uint8_t len = sizeof(returnData);
     uint8_t from;
 	#ifdef DEBUG
-    Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
-    Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
+    //Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
+    //Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
 	#endif
     debugData.counterSend++;
 
@@ -547,13 +547,13 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 //    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
 
 #ifdef DEBUG
-	    Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
-      Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
-      Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
-      Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
-      Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
-      Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
-      Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
+	    //Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
+      //Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
+      //Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
+      //Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
+      //Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
+      //Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
+      //Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
 #endif
 
       debugData.counterReceived++;
@@ -562,17 +562,17 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
       debugData.rssi = rf69.lastRssi();
 
 	  #ifdef DEBUG
-      Serial.print("Got ack and reply from board #"); Serial.print(from);
-      Serial.print(" transmission # "); Serial.print(counterRecived);
-      Serial.print(" period: "); Serial.print(debugData.transmissionTime); Serial.print("ms");
-      Serial.print(" [RSSI: "); Serial.print(rf69.lastRssi());
-      Serial.println("]");
+      //Serial.print("Got ack and reply from board #"); Serial.print(from);
+      //Serial.print(" transmission # "); Serial.print(counterRecived);
+      //Serial.print(" period: "); Serial.print(debugData.transmissionTime); Serial.print("ms");
+      //Serial.print(" [RSSI: "); Serial.print(rf69.lastRssi());
+      //Serial.println("]");
 		#endif
       return true;
 
     } else {
 		#ifdef DEBUG
-		Serial.println("No reply, is anyone listening?");
+		//Serial.println("No reply, is anyone listening?");
     #endif
       return false;
     }
@@ -593,7 +593,7 @@ bool transmitSettingsToReceiver() {
   rf69_manager.setTimeout(100);
 
   Serial.println("Try to send receiver next package are settings");
-  if ( transmitToReceiver(5,200)) {
+  if ( transmitToReceiver(5,100)) {
     Serial.println("Send settings... ");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(remPackage);
@@ -632,7 +632,7 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
 
   Serial.println("Try to send receiver next package are settings");
-  if ( transmitToReceiver(5,200)) {
+  if ( transmitToReceiver(5,100)) {
     Serial.println("Send settings... ");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(remPackage);
@@ -690,7 +690,6 @@ void selectBoard(uint8_t receiverID) {
 bool pairNewBoard() {
 
   Serial.print("Join pairNewBoard()");
-  useDefaultKeyForTransmission = 1;
 
   txSettings.customEncryptionKey[15] = txSettings.boardID;
 
@@ -701,18 +700,20 @@ bool pairNewBoard() {
   Serial.println("");
 
   Serial.println("Send custom encryptionKey to receiver by default key");
+  useDefaultKeyForTransmission = 1;
 
-  initiateTransmitter();
-
-  transmitSettingsToReceiver();
+  transmitKeyToReceiver();
 
   // set variable to use custom key for the next transmissions
   useDefaultKeyForTransmission = 0;
   // reset transmitter to activate custom key
-  initiateTransmitter();
-  delay(500);
 
-  if (transmitToReceiver(5,200)) {
+  rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  //initiateTransmitter();
+  
+  delay(50);
+
+  if (transmitToReceiver(5,100)) {
     drawMessage("Complete", "New board paired!", 2000);
   } else {
     drawMessage("Fail", "Board not paired", 2000);
@@ -832,11 +833,13 @@ void controlSettingsMenu() {
         setDefaultFlashSettings();
         drawMessage("Complete", "Default settings loaded!", 2000);
       } else if (currentSetting == KEY) {
-        for (uint8_t i = 0; i < 16; i++) {
+        for (uint8_t i = 0; i <= 15; i++) {
           txSettings.customEncryptionKey[i] = encryptionKey[i];
         }
         updateFlashSettings();
+        loadFlashSettings();
         initiateTransmitter();
+        
         drawMessage("Complete", "Default encryption Key!", 2000);
       } else if (currentSetting == PAIR) {
         Serial.println("Settings menu - PAIR");
@@ -860,15 +863,17 @@ void setDefaultFlashSettings() {
 
   Serial.println("Load default flash settings");
   for ( uint8_t i = 0; i < numOfSettings; i++ )
-  {
+  {  if (rules[i][0] == -1) {
+    } else {
     setSettingValue( i, rules[i][0] );
     Serial.println(rules[i][0]);
+    }
   }
-  Serial.print("Default encryptionKey: ");
-  for ( uint8_t i = 0; i < 16 ; i++) {
-    txSettings.customEncryptionKey[i] = encryptionKey[i];
-    Serial.print(encryptionKey[i]);
-  }
+  //Serial.print("Default encryptionKey: ");
+  //for ( uint8_t i = 0; i < 16 ; i++) {
+    //txSettings.customEncryptionKey[i] = encryptionKey[i];
+  //  Serial.print(encryptionKey[i]);
+  //}
   txSettings.firmVersion = VERSION;
   Serial.println("");
 
@@ -917,6 +922,14 @@ void updateFlashSettings() {
   Serial.println("Update flash settings");
 
   flash_TxSettings.write(txSettings);
+
+  Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
+    Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
+
+  
 
   calculateRatios();
 }
@@ -1268,9 +1281,15 @@ void drawSettingsMenu() {
   }
 
   if ( currentSetting == KEY ) {
-    for (uint8_t i = 8; i < 16; i++) {
+    for (uint8_t i = 10; i < 16; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
     }
+    
+  Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
+    Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
   }
 
   if ( currentSetting == SETTINGS ) {
@@ -1292,7 +1311,6 @@ void drawSettingsMenu() {
     }
   } else {
     drawString(tString, tString.length(), x, y + 30, u8g2_font_10x20_tr );
-    Serial.println(tString);
   }
 }
 
@@ -1391,6 +1409,7 @@ void mediumbuttonPress() {
 void longbuttonPress() {
   txSettings.eStopArmed = false;
   transmitSettingsToReceiver();
+  u8g2.setDisplayRotation(U8G2_R0);
   changeSettings = true;
 }
 

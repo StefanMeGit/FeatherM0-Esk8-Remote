@@ -12,9 +12,9 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
-#define VERSION 0.1
+#define VERSION 1.0
 
 #ifdef DEBUG
   #define DEBUG_PRINT(x)
@@ -209,14 +209,10 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
-  for (uint8_t i = 0; i < 16; i++) {
-     rxSettings.customEncryptionKey[i] = encryptionKey[i];
-     }
-
   initiateReceiver();
 
     Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
+  for (uint8_t i = 0; i <= 15; i++) {
     Serial.print(rxSettings.customEncryptionKey[i]);
   }
   Serial.println("");
@@ -265,7 +261,7 @@ void loop() {
       if (analyseMessage()) {
         if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
           rxSettings.eStopArmed = true;
-          //getUartData();
+          getUartData();
         }
       }
       speedControl( remPackage.throttle, remPackage.trigger );
@@ -278,11 +274,11 @@ void loop() {
   } else { //no valid messaage available 
      //Serial.println("NO Package available");
     //Serial.println(millis() - debugData.lastTransmissionAvaible);
-    if (rxSettings.eStopArmed == true) {
+    if (rxSettings.eStopArmed == true && remPackage.type == 0) {
       if (millis() - debugData.lastTransmissionAvaible >= 300){
         //Serial.println("joinEstop");
         //Serial.println(remPackage.throttle);
-        activateESTOP(remPackage.throttle);
+        //activateESTOP(remPackage.throttle);
         }
       } else {
         returnData.eStopArmed = true;
@@ -317,6 +313,7 @@ void activateESTOP(uint16_t lastThrottlePos) {
           //Serial.println("ESTOP routine started");
           //Serial.print("ESTOP: lastThrottlePos: "); //Serial.print(lastThrottlePos); //Serial.println("");
           speedControl( lastThrottlePos, remPackage.trigger );
+          delay(20);
   }
   delay(100000);
 }
@@ -374,7 +371,6 @@ void analyseSettingsMessage() {
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
 
-    updateFlashSettings();
     #ifdef DEBUG
      //Serial.print("Received settings from remote with ID: ");  //Serial.print(from);
      //Serial.print(" [RSSI :");
@@ -395,15 +391,16 @@ void analyseSettingsMessage() {
 
     }
     #ifdef DEBUG
-     //Serial.print("Received encryptionKey: ");
+     Serial.print("Analyse message received encryptionKey: ");
     for (int i = 0; i < 16; i++) {
 
-       //Serial.print(rxSettings.customEncryptionKey[i]);
-
+       Serial.print(rxSettings.customEncryptionKey[i]);
     }
-     //Serial.println("");
+     Serial.println("");
     #endif
+    
     remPackage.type = 0;
+    updateFlashSettings();
     initiateReceiver();
     #ifdef DEBUG
      //Serial.println("Exit analyseSettingsMessage");
@@ -761,7 +758,7 @@ void loadFlashSettings() {
 	 //Serial.print("VERSION: ");  //Serial.println(VERSION);
   if (rxSettings.firmVersion != VERSION) {
 #ifdef DEBUG
-     //Serial.print("No valid firmware stored in falsh -> load default settings");
+     Serial.println("No valid firmware stored in falsh -> load default settings");
 #endif
     setDefaultFlashSettings();
   }
@@ -790,9 +787,9 @@ void updateFlashSettings() {
    //Serial.print("rxSettings.pairNewBoard: ");  //Serial.println(rxSettings.pairNewBoard);
    //Serial.print("rxSettings.transmissionPower: ");  //Serial.println(rxSettings.transmissionPower);
    //Serial.print("rxSettings.customEncryptionKey: ");
-  for (uint8_t i = 0; i < 16; i++) {
+  //for (uint8_t i = 0; i < 16; i++) {
      //Serial.print(rxSettings.customEncryptionKey[i]);
-  }  //Serial.println("");
+  //}  //Serial.println("");
    //Serial.print("rxSettings.firmVersion");  //Serial.println(rxSettings.firmVersion);
 #endif
 
