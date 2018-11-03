@@ -12,7 +12,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -276,9 +276,9 @@ void loop() {
     //Serial.println(millis() - debugData.lastTransmissionAvaible);
     if (rxSettings.eStopArmed == true && remPackage.type == 0) {
       if (millis() - debugData.lastTransmissionAvaible >= 300){
-        //Serial.println("joinEstop");
-        //Serial.println(remPackage.throttle);
-        //activateESTOP(remPackage.throttle);
+        Serial.println("joinEstop");
+        Serial.println(remPackage.throttle);
+        activateESTOP(remPackage.throttle);
         }
       } else {
         returnData.eStopArmed = true;
@@ -310,8 +310,8 @@ void activateESTOP(uint16_t lastThrottlePos) {
   //Serial.print(lastThrottlePos);
 
       for (lastThrottlePos; lastThrottlePos > rxSettings.centerHallValue - rxSettings.minHallValue; lastThrottlePos = lastThrottlePos - 5) {
-          //Serial.println("ESTOP routine started");
-          //Serial.print("ESTOP: lastThrottlePos: "); //Serial.print(lastThrottlePos); //Serial.println("");
+          Serial.println("ESTOP routine started");
+          Serial.print("ESTOP: lastThrottlePos: "); //Serial.print(lastThrottlePos); //Serial.println("");
           speedControl( lastThrottlePos, remPackage.trigger );
           delay(20);
   }

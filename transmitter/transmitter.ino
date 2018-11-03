@@ -12,7 +12,7 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -588,6 +588,7 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 bool transmitSettingsToReceiver() {
 
   remPackage.type = 1;
+  txSettings.eStopArmed = false;
 
   rf69_manager.setRetries(5);
   rf69_manager.setTimeout(100);
