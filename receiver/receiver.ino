@@ -33,7 +33,6 @@ struct debug {
   unsigned long lastTransmissionStart = 0;
   unsigned long lastTransmissionEnd = 0;
   unsigned long lastTransmissionDuration = 0;
-  uint16_t lastKnewThrottlePos = 0;
   unsigned long lastTransmissionAvaible = 0;
 } debugData;
 
@@ -65,6 +64,7 @@ struct callback {
   float avgInputCurrent;
   float avgMotorCurrent;
   float dutyCycleNow;
+  bool eStopArmed;
 } returnData;
 
 // Defining struct to hold setting values while remote is turned on.
@@ -85,6 +85,7 @@ typedef struct {
   uint8_t transmissionPower;        // 13
   uint8_t customEncryptionKey[16];  // 14
   float firmVersion;                // 15
+  bool eStopArmed;                  // 16
 } RxSettings;
 
 RxSettings rxSettings;
@@ -104,9 +105,9 @@ const short settingRules[numOfSettings][3] {
   {38, 0, 250},       //5 Wheel pulley
   {80, 0, 250},       //6 Wheel diameter
   {1, 0, 2},          //7 0: PPM only   | 1: PPM and UART | 2: UART only
-  {200, 0, 300},      //8 Min hall value
-  {500, 300, 700},    //9 Center hall value
-  {800, 700, 1023},   //10 Max hall value
+  {300, 0, 400},      //8 Min hall value
+  {520, 300, 700},    //9 Center hall value
+  {730, 600, 1023},   //10 Max hall value
   {1, 0, 9},          //11 boardID
   { -1, 0, 0},        //12 pair new board
   {18, 14, 20},       //13 transmission power
@@ -139,7 +140,7 @@ uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
-uint16_t uartPullInterval = 250;
+uint16_t uartPullInterval = 200;
 
 // Cruise control
 uint16_t cruiseThrottle;
@@ -162,10 +163,18 @@ const short timeoutMax = 500;
 // Defining receiver pins
 const uint8_t statusLedPin = 13;
 const uint8_t throttlePin = 10;
-const uint8_t breakLightPin = 9;
+const uint8_t breakLightPin = 11;
 
 // Defining headlight/breaklight
-uint8_t breakLightFlash = 0;
+unsigned long lastBreakLightBlink = 0;
+bool breaklightBlinkOn = false;
+
+// Defining alarm handling
+bool alarmActivated = false;
+
+// Defining eStop handling
+uint8_t safeTransmissionsCounter = 0;
+unsigned long safeTranmissionsTimer = 0;
 
 // Initiate Servo class
 Servo esc;
@@ -173,21 +182,13 @@ Servo esc;
 // Initiate VescUart class for UART communication
 VescUart UART;
 
-unsigned long cycleTimeStart = 0;
-unsigned long cycleTimeFinish = 0;
-unsigned long cycleTimeDuration = 0;
-
-bool eStopActivated = false;
-unsigned long lastSlowDown = 0;
-bool eStopArmed = false;
-
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setup() {
   
   #ifdef DEBUG
-    UART.setDebugPort(&Serial);
+    //UART.setDebugPort(&Serial);
     Serial.begin(115200);
     while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
   #endif
@@ -208,29 +209,39 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
+  for (uint8_t i = 0; i < 16; i++) {
+     rxSettings.customEncryptionKey[i] = encryptionKey[i];
+     }
+
   initiateReceiver();
+
+    Serial.print("Custom encryptionKey with boardID: ");
+  for (uint8_t i = 0; i < 16; i++) {
+    Serial.print(rxSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
 
 #ifdef DEBUG
   //Serial.println("Setup finished: ");
-  //Serial.print("rxSettings.triggerMode: "); //Serial.println(rxSettings.triggerMode);
-  //Serial.print("rxSettings.batteryType: "); //Serial.println(rxSettings.batteryType);
-  //Serial.print("rxSettings.batteryCells: "); //Serial.println(rxSettings.batteryCells);
-  //Serial.print("rxSettings.motorPoles: "); //Serial.println(rxSettings.motorPoles);
-  //Serial.print("rxSettings.motorPulley: "); //Serial.println(rxSettings.motorPulley);
-  //Serial.print("rxSettings.wheelPulley: "); //Serial.println(rxSettings.wheelPulley);
-  //Serial.print("rxSettings.wheelDiameter: "); //Serial.println(rxSettings.wheelDiameter);
-  //Serial.print("rxSettings.controlMode: "); //Serial.println(rxSettings.controlMode);
-  //Serial.print("rxSettings.minHallValue: "); //Serial.println(rxSettings.minHallValue);
-  //Serial.print("rxSettings.centerHallValue: "); //Serial.println(rxSettings.centerHallValue);
-  //Serial.print("rxSettings.maxHallValue: "); //Serial.println(rxSettings.maxHallValue);
-  //Serial.print("rxSettings.boardID: "); //Serial.println(rxSettings.boardID);
-  //Serial.print("rxSettings.pairNewBoard: "); //Serial.println(rxSettings.pairNewBoard);
-  //Serial.print("rxSettings.transmissionPower: "); //Serial.println(rxSettings.transmissionPower);
-  //Serial.print("rxSettings.customEncryptionKey: ");
+   //Serial.print("rxSettings.triggerMode: ");  //Serial.println(rxSettings.triggerMode);
+   //Serial.print("rxSettings.batteryType: ");  //Serial.println(rxSettings.batteryType);
+   //Serial.print("rxSettings.batteryCells: ");  //Serial.println(rxSettings.batteryCells);
+   //Serial.print("rxSettings.motorPoles: ");  //Serial.println(rxSettings.motorPoles);
+   //Serial.print("rxSettings.motorPulley: ");  //Serial.println(rxSettings.motorPulley);
+   //Serial.print("rxSettings.wheelPulley: ");  //Serial.println(rxSettings.wheelPulley);
+   //Serial.print("rxSettings.wheelDiameter: ");  //Serial.println(rxSettings.wheelDiameter);
+   //Serial.print("rxSettings.controlMode: ");  //Serial.println(rxSettings.controlMode);
+   //Serial.print("rxSettings.minHallValue: ");  //Serial.println(rxSettings.minHallValue);
+   //Serial.print("rxSettings.centerHallValue: ");  //Serial.println(rxSettings.centerHallValue);
+   //Serial.print("rxSettings.maxHallValue: ");  //Serial.println(rxSettings.maxHallValue);
+   //Serial.print("rxSettings.boardID: ");  //Serial.println(rxSettings.boardID);
+   //Serial.print("rxSettings.pairNewBoard: ");  //Serial.println(rxSettings.pairNewBoard);
+   //Serial.print("rxSettings.transmissionPower: ");  //Serial.println(rxSettings.transmissionPower);
+   //Serial.print("rxSettings.customEncryptionKey: ");
   for (uint8_t i = 0; i < 16; i++) {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
-  } //Serial.println("");
-  //Serial.print("rxSettings.firmVersion: "); //Serial.println(rxSettings.firmVersion);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
+  }  //Serial.println("");
+   //Serial.print("rxSettings.firmVersion: ");  //Serial.println(rxSettings.firmVersion);
 #endif
 
 }
@@ -240,55 +251,56 @@ void setup() {
 // --------------------------------------------------------------------------------------
 void loop() {
 
-  cycleTimeStart = millis();
   debugData.lastTransmissionStart = millis();
   if (rf69_manager.available()) {
       debugData.lastTransmissionAvaible = millis();
 	#ifdef DEBUG
-    Serial.println("Package available");
-    Serial.println(millis());
+    //Serial.println("Package available");
+    //Serial.println(millis());
 	#endif
-    if (remPackage.type == 0) { // join normal transmission
+    if (remPackage.type == 0) { 
 	  #ifdef DEBUG
-      //Serial.print("Normal package remPackage.type: "); //Serial.println(remPackage.type);
+       //Serial.print("Normal package remPackage.type: ");  es//Serial.println(remPackage.type);
 	  #endif
       if (analyseMessage()) {
         if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
-          eStopArmed = true;
-          getUartData();
+          rxSettings.eStopArmed = true;
+          //getUartData();
         }
       }
       speedControl( remPackage.throttle, remPackage.trigger );
     } else if (remPackage.type == 1) { // join settings transmission
 	  #ifdef DEBUG
-      //Serial.print("Setting package remPackage.type: "); //Serial.println(remPackage.type);
+       //Serial.print("Setting package remPackage.type: ");  //Serial.println(remPackage.type);
 	  #endif
       analyseSettingsMessage();
     }
   } else { //no valid messaage available 
-    //Serial.println("NO Package available");
-    Serial.println(millis() - debugData.lastTransmissionAvaible);
-    if ((millis() - debugData.lastTransmissionAvaible > 300) && (eStopArmed == true)){
-      Serial.println("joinEstop");
-      Serial.println(remPackage.throttle);
+     //Serial.println("NO Package available");
+    //Serial.println(millis() - debugData.lastTransmissionAvaible);
+    if (rxSettings.eStopArmed == true) {
+      if (millis() - debugData.lastTransmissionAvaible >= 300){
+        //Serial.println("joinEstop");
+        //Serial.println(remPackage.throttle);
         activateESTOP(remPackage.throttle);
-      }
+        }
+      } else {
+        returnData.eStopArmed = true;
+        }
     }
 
   headLight();
   breakLight();
 
-  cycleTimeFinish = millis();
-  debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 
 	#ifdef DEBUG
-    //Serial.print("cycleTimeStart: "); //Serial.println(cycleTimeStart); //Serial.println("ms");
-    //Serial.print("cycleTimeFinish: "); //Serial.println(cycleTimeFinish); //Serial.println("ms");
-    //Serial.print("cycleTime: "); //Serial.println(debugData.cycleTime); //Serial.println("ms");
-    //Serial.print("longestCycleTime: "); //Serial.println(debugData.longestCycleTime); //Serial.println("ms");  
+     //Serial.print("cycleTimeStart: ");  //Serial.println(cycleTimeStart);  //Serial.println("ms");
+     //Serial.print("cycleTimeFinish: ");  //Serial.println(cycleTimeFinish);  //Serial.println("ms");
+     //Serial.print("cycleTime: ");  //Serial.println(debugData.cycleTime);  //Serial.println("ms");
+     //Serial.print("longestCycleTime: ");  //Serial.println(debugData.longestCycleTime);  //Serial.println("ms");  
    #endif
 
    debugData.lastTransmissionDuration = debugData.lastTransmissionStart - debugData.lastTransmissionEnd;
@@ -299,15 +311,14 @@ void loop() {
 // --------------------------------------------------------------------------------------
 void activateESTOP(uint16_t lastThrottlePos) {
 
-  Serial.print(lastThrottlePos);
+  //Serial.print(lastThrottlePos);
 
       for (lastThrottlePos; lastThrottlePos > rxSettings.centerHallValue - rxSettings.minHallValue; lastThrottlePos = lastThrottlePos - 5) {
-          Serial.println("ESTOP routine started");
-          Serial.print("ESTOP: lastThrottlePos: "); Serial.print(lastThrottlePos); Serial.println("");
+          //Serial.println("ESTOP routine started");
+          //Serial.print("ESTOP: lastThrottlePos: "); //Serial.print(lastThrottlePos); //Serial.println("");
           speedControl( lastThrottlePos, remPackage.trigger );
-          delay(50);
   }
-  delay(1000000);
+  delay(100000);
 }
 
 // analyse transmission
@@ -316,12 +327,12 @@ void activateESTOP(uint16_t lastThrottlePos) {
 bool analyseMessage() {
   
   #ifdef DEBUG
-  //Serial.print("Join analyseMessage: ");
+   //Serial.print("Join analyseMessage: ");
   for (int i = 0; i < 16; i++)
   {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
   }
-  //Serial.println("");
+   //Serial.println("");
   #endif
 
   uint8_t len = sizeof(remPackage);
@@ -329,14 +340,14 @@ bool analyseMessage() {
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
 
 #ifdef DEBUG
-    //Serial.print("Received valid transmission from remote with ID: "); //Serial.print(from);
-    //Serial.print(" [RSSI :");
-    //Serial.print(rf69.lastRssi());
-    //Serial.println("] : ");
-    //Serial.print("Type: "); //Serial.println(remPackage.type);
-    //Serial.print("Throttle: "); //Serial.println(remPackage.throttle);
-    //Serial.print("Trigger: "); //Serial.println(remPackage.trigger);
-    //Serial.print("Headlight: "); //Serial.println(remPackage.headlight);
+     //Serial.print("Received valid transmission from remote with ID: ");  //Serial.print(from);
+     //Serial.print(" [RSSI :");
+     //Serial.print(rf69.lastRssi());
+     //Serial.println("] : ");
+     //Serial.print("Type: ");  //Serial.println(remPackage.type);
+     //Serial.print("Throttle: ");  //Serial.println(remPackage.throttle);
+     //Serial.print("Trigger: ");  //Serial.println(remPackage.trigger);
+     //Serial.print("Headlight: ");  //Serial.println(remPackage.headlight);
 #endif
 
   rf69_manager.setRetries(1);
@@ -356,45 +367,46 @@ bool analyseMessage() {
 void analyseSettingsMessage() {
 
   #ifdef DEBUG
-  //Serial.println("join analyseSettingsMessage");
+   //Serial.println("join analyseSettingsMessage");
   #endif
 
   uint8_t len = sizeof(rxSettings);
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
 
-#ifdef DEBUG
-    //Serial.print("Received settings from remote with ID: "); //Serial.print(from);
-    //Serial.print(" [RSSI :");
-    //Serial.print(rf69.lastRssi());
-    //Serial.println("] : ");
-    //Serial.print("triggerMode: "); //Serial.println(rxSettings.triggerMode);
-    //Serial.print("controlMode: "); //Serial.println(rxSettings.controlMode);
-    //Serial.print("boardID: "); //Serial.println(rxSettings.boardID);
-#endif
+    updateFlashSettings();
+    #ifdef DEBUG
+     //Serial.print("Received settings from remote with ID: ");  //Serial.print(from);
+     //Serial.print(" [RSSI :");
+     //Serial.print(rf69.lastRssi());
+     //Serial.println("] : ");
+     //Serial.print("triggerMode: ");  //Serial.println(rxSettings.triggerMode);
+     //Serial.print("controlMode: ");  //Serial.println(rxSettings.controlMode);
+     //Serial.print("boardID: ");  //Serial.println(rxSettings.boardID);
+    #endif
 
     remPackage.type = 0;
 
     if (!rf69_manager.sendtoWait((uint8_t*)&remPackage, sizeof(remPackage), from)) {
 
       #ifdef DEBUG
-      //Serial.println("Sending failed (no ack)");
+       //Serial.println("Sending failed (no ack)");
       #endif
 
     }
     #ifdef DEBUG
-    //Serial.print("Received encryptionKey: ");
+     //Serial.print("Received encryptionKey: ");
     for (int i = 0; i < 16; i++) {
 
-      //Serial.print(rxSettings.customEncryptionKey[i]);
+       //Serial.print(rxSettings.customEncryptionKey[i]);
 
     }
-    //Serial.println("");
+     //Serial.println("");
     #endif
     remPackage.type = 0;
     initiateReceiver();
     #ifdef DEBUG
-    //Serial.println("Exit analyseSettingsMessage");
+     //Serial.println("Exit analyseSettingsMessage");
     #endif
   }
 }
@@ -463,21 +475,21 @@ void initiateReceiver() {
 
   if (!rf69.setFrequency(RF69_FREQ)) {
   #ifdef DEBUG
-  //Serial.println("Failed to set requency");
+   //Serial.println("Failed to set requency");
   #endif  
   }
   #ifdef DEBUG
-  //Serial.print("Receiver set frequency to: "); //Serial.println(RF69_FREQ);
+   //Serial.print("Receiver set frequency to: ");  //Serial.println(RF69_FREQ);
   #endif
   
   rf69.setTxPower(20, true);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
   #ifdef DEBUG
-  //Serial.print("Receiver set customEncryptionKey to: ");
+   //Serial.print("Receiver set customEncryptionKey to: ");
   for (int i = 0; i < 16; i++) {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
   }
-  //Serial.println("");
+   //Serial.println("");
   #endif
 }
 
@@ -527,7 +539,7 @@ void setThrottle( uint16_t throttle ) {
     esc.attach(throttlePin);
     esc.writeMicroseconds( map(throttle, 0, 1023, 1000, 2000) );
     #ifdef DEBUG
-    //Serial.print("Throttle..."); //Serial.println(throttle);
+     //Serial.print("Throttle...");  //Serial.println(throttle);
     #endif
   }
   else if ( rxSettings.controlMode == 1 ) {
@@ -552,12 +564,12 @@ void setThrottle( uint16_t throttle ) {
 void speedControl( uint16_t throttle , bool trigger ) {
   // Kill switch
   #ifdef DEBUG
-  //Serial.println("SpeedControl");
+   //Serial.println("SpeedControl");
   #endif
   if ( rxSettings.triggerMode == 0 ) {
     if ( trigger == true || throttle < 512 ) {
       setThrottle( throttle );
-      //Serial.println("SetThrottle");
+       //Serial.println("SetThrottle");
     }
     else {
       setThrottle( defaultThrottle );
@@ -599,29 +611,27 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
-  uint8_t breakLightFlashDuration = 2;
-  uint8_t breakLightFlashDurationCounter = 0;
-  
-  if (remPackage.throttle < rxSettings.minHallValue + 30) {
-      if (breakLightFlash == 0) {
-        analogWrite(breakLightPin, 255); 
-        breakLightFlashDuration++;
-        if (breakLightFlashDurationCounter == breakLightFlashDuration) {
-          breakLightFlashDurationCounter = 0;
-          breakLightFlash = 1;
-          }
-        } else {
-          analogWrite(breakLightPin, 50); 
-          if (breakLightFlashDurationCounter == breakLightFlashDuration) {
-            breakLightFlashDurationCounter = 0;
-            breakLightFlash = 0;
+  if ((remPackage.throttle <= 100) || alarmActivated) {
+    if (breaklightBlinkOn == true) {
+          analogWrite(breakLightPin, 255);
+          if (millis() - lastBreakLightBlink >= 50) {
+            lastBreakLightBlink = millis();
+            breaklightBlinkOn = false;
             }
-          }
-    } else if (remPackage.throttle < rxSettings.centerHallValue - 30) {
-      analogWrite(breakLightPin, 255);
-      } else {
-        analogWrite(breakLightPin, 127);
+      } else if (breaklightBlinkOn == false){
+            analogWrite(breakLightPin, 0);
+            if (millis() - lastBreakLightBlink >= 50) {
+              lastBreakLightBlink = millis();
+              breaklightBlinkOn = true;
+              }
         }
+    
+  } else if (remPackage.throttle <= 450) {
+    analogWrite(breakLightPin, 255);
+    } else {
+      analogWrite(breakLightPin, 100);
+      }
+
 }
 
 // Uart handling
@@ -633,7 +643,7 @@ void getUartData() {
 
     lastUartPull = millis();
 #ifdef DEBUG
-    //Serial.println("Getting UART data");
+     ////Serial.println("Getting UART data");
 #endif
 
     if ( UART.getVescValues() )
@@ -647,7 +657,7 @@ void getUartData() {
       returnData.dutyCycleNow     = UART.data.dutyCycleNow;
 
 	  #ifdef DEBUG
-        //Serial.print("UART data received");
+         //Serial.print("UART data received");
       #endif
     }
     else
@@ -660,17 +670,17 @@ void getUartData() {
       returnData.avgMotorCurrent    = 0.0;
       returnData.dutyCycleNow       = 0.0;
 	  #ifdef DEBUG
-        //Serial.print("UART data not received");
+         //Serial.print("UART data not received");
       #endif
     }
 	    #ifdef DEBUG
-        //Serial.print("Amp hours: "); //Serial.println(returnData.ampHours);
-        //Serial.print("Battery voltage: "); //Serial.println(returnData.inpVoltage);
-        //Serial.print("Tachometer: "); //Serial.println(returnData.tachometerAbs);
-        //Serial.print("Headlight active: "); //Serial.println(returnData.headlightActive);
-        //Serial.print("Battery current: "); //Serial.println(returnData.avgInputCurrent);
-        //Serial.print("Motor current: "); //Serial.println(returnData.avgMotorCurrent);
-        //Serial.print("Duty cycle: "); //Serial.println(returnData.dutyCycleNow);
+         //Serial.print("Amp hours: ");  //Serial.println(returnData.ampHours);
+         //Serial.print("Battery voltage: ");  //Serial.println(returnData.inpVoltage);
+         //Serial.print("Tachometer: ");  //Serial.println(returnData.tachometerAbs);
+         //Serial.print("Headlight active: ");  //Serial.println(returnData.headlightActive);
+         //Serial.print("Battery current: ");  //Serial.println(returnData.avgInputCurrent);
+         //Serial.print("Motor current: ");  //Serial.println(returnData.avgMotorCurrent);
+         //Serial.print("Duty cycle: ");  //Serial.println(returnData.dutyCycleNow);
 		#endif
   }
 }
@@ -690,25 +700,25 @@ void setDefaultFlashSettings() {
 
 #ifdef DEBUG
   DEBUG_PRINT("D");
-  //Serial.print("rxSettings.triggerMode: "); //Serial.println(rxSettings.triggerMode);
-  //Serial.print("rxSettings.batteryType: "); //Serial.println(rxSettings.batteryType);
-  //Serial.print("rxSettings.batteryCells: "); //Serial.println(rxSettings.batteryCells);
-  //Serial.print("rxSettings.motorPoles: "); //Serial.println(rxSettings.motorPoles);
-  //Serial.print("rxSettings.motorPulley: "); //Serial.println(rxSettings.motorPulley);
-  //Serial.print("rxSettings.wheelPulley: "); //Serial.println(rxSettings.wheelPulley);
-  //Serial.print("rxSettings.wheelDiameter: "); //Serial.println(rxSettings.wheelDiameter);
-  //Serial.print("rxSettings.controlMode: "); //Serial.println(rxSettings.controlMode);
-  //Serial.print("rxSettings.minHallValue: "); //Serial.println(rxSettings.minHallValue);
-  //Serial.print("rxSettings.centerHallValue: "); //Serial.println(rxSettings.centerHallValue);
-  //Serial.print("rxSettings.maxHallValue: "); //Serial.println(rxSettings.maxHallValue);
-  //Serial.print("rxSettings.boardID: "); //Serial.println(rxSettings.boardID);
-  //Serial.print("rxSettings.pairNewBoard: "); //Serial.println(rxSettings.pairNewBoard);
-  //Serial.print("rxSettings.transmissionPower: "); //Serial.println(rxSettings.transmissionPower);
-  //Serial.print("rxSettings.customEncryptionKey: ");
+   //Serial.print("rxSettings.triggerMode: ");  //Serial.println(rxSettings.triggerMode);
+   //Serial.print("rxSettings.batteryType: ");  //Serial.println(rxSettings.batteryType);
+   //Serial.print("rxSettings.batteryCells: ");  //Serial.println(rxSettings.batteryCells);
+   //Serial.print("rxSettings.motorPoles: ");  //Serial.println(rxSettings.motorPoles);
+   //Serial.print("rxSettings.motorPulley: ");  //Serial.println(rxSettings.motorPulley);
+   //Serial.print("rxSettings.wheelPulley: ");  //Serial.println(rxSettings.wheelPulley);
+   //Serial.print("rxSettings.wheelDiameter: ");  //Serial.println(rxSettings.wheelDiameter);
+   //Serial.print("rxSettings.controlMode: ");  //Serial.println(rxSettings.controlMode);
+   //Serial.print("rxSettings.minHallValue: ");  //Serial.println(rxSettings.minHallValue);
+   //Serial.print("rxSettings.centerHallValue: ");  //Serial.println(rxSettings.centerHallValue);
+   //Serial.print("rxSettings.maxHallValue: ");  //Serial.println(rxSettings.maxHallValue);
+   //Serial.print("rxSettings.boardID: ");  //Serial.println(rxSettings.boardID);
+   //Serial.print("rxSettings.pairNewBoard: ");  //Serial.println(rxSettings.pairNewBoard);
+   //Serial.print("rxSettings.transmissionPower: ");  //Serial.println(rxSettings.transmissionPower);
+   //Serial.print("rxSettings.customEncryptionKey: ");
   for (uint8_t i = 0; i < 16; i++) {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
-  } //Serial.println("");
-  //Serial.print("rxSettings.firmVersion"); //Serial.println(rxSettings.firmVersion);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
+  }  //Serial.println("");
+   //Serial.print("rxSettings.firmVersion");  //Serial.println(rxSettings.firmVersion);
 #endif
 
 #ifdef DEBUG
@@ -726,32 +736,32 @@ void loadFlashSettings() {
 
 #ifdef DEBUG
   DEBUG_PRINT("Settings loaded");
-  //Serial.print("rxSettings.triggerMode: "); //Serial.println(rxSettings.triggerMode);
-  //Serial.print("rxSettings.batteryType: "); //Serial.println(rxSettings.batteryType);
-  //Serial.print("rxSettings.batteryCells: "); //Serial.println(rxSettings.batteryCells);
-  //Serial.print("rxSettings.motorPoles: "); //Serial.println(rxSettings.motorPoles);
-  //Serial.print("rxSettings.motorPulley: "); //Serial.println(rxSettings.motorPulley);
-  //Serial.print("rxSettings.wheelPulley: "); //Serial.println(rxSettings.wheelPulley);
-  //Serial.print("rxSettings.wheelDiameter: "); //Serial.println(rxSettings.wheelDiameter);
-  //Serial.print("rxSettings.controlMode: "); //Serial.println(rxSettings.controlMode);
-  //Serial.print("rxSettings.minHallValue: "); //Serial.println(rxSettings.minHallValue);
-  //Serial.print("rxSettings.centerHallValue: "); //Serial.println(rxSettings.centerHallValue);
-  //Serial.print("rxSettings.maxHallValue: "); //Serial.println(rxSettings.maxHallValue);
-  //Serial.print("rxSettings.boardID: "); //Serial.println(rxSettings.boardID);
-  //Serial.print("rxSettings.pairNewBoard: "); //Serial.println(rxSettings.pairNewBoard);
-  //Serial.print("rxSettings.transmissionPower: "); //Serial.println(rxSettings.transmissionPower);
-  //Serial.print("rxSettings.customEncryptionKey: ");
+   //Serial.print("rxSettings.triggerMode: ");  //Serial.println(rxSettings.triggerMode);
+   //Serial.print("rxSettings.batteryType: ");  //Serial.println(rxSettings.batteryType);
+   //Serial.print("rxSettings.batteryCells: ");  //Serial.println(rxSettings.batteryCells);
+   //Serial.print("rxSettings.motorPoles: ");  //Serial.println(rxSettings.motorPoles);
+   //Serial.print("rxSettings.motorPulley: ");  //Serial.println(rxSettings.motorPulley);
+   //Serial.print("rxSettings.wheelPulley: ");  //Serial.println(rxSettings.wheelPulley);
+   //Serial.print("rxSettings.wheelDiameter: ");  //Serial.println(rxSettings.wheelDiameter);
+   //Serial.print("rxSettings.controlMode: ");  //Serial.println(rxSettings.controlMode);
+   //Serial.print("rxSettings.minHallValue: ");  //Serial.println(rxSettings.minHallValue);
+   //Serial.print("rxSettings.centerHallValue: ");  //Serial.println(rxSettings.centerHallValue);
+   //Serial.print("rxSettings.maxHallValue: ");  //Serial.println(rxSettings.maxHallValue);
+   //Serial.print("rxSettings.boardID: ");  //Serial.println(rxSettings.boardID);
+   //Serial.print("rxSettings.pairNewBoard: ");  //Serial.println(rxSettings.pairNewBoard);
+   //Serial.print("rxSettings.transmissionPower: ");  //Serial.println(rxSettings.transmissionPower);
+   //Serial.print("rxSettings.customEncryptionKey: ");
   for (uint8_t i = 0; i < 16; i++) {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
-  } //Serial.println("");
-  //Serial.print("rxSettings.firmVersion"); //Serial.println(rxSettings.firmVersion);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
+  }  //Serial.println("");
+   //Serial.print("rxSettings.firmVersion");  //Serial.println(rxSettings.firmVersion);
 #endif
 
-	//Serial.print("rxSettings.firmVersion: "); //Serial.println(rxSettings.firmVersion);
-	//Serial.print("VERSION: "); //Serial.println(VERSION);
+	 //Serial.print("rxSettings.firmVersion: ");  //Serial.println(rxSettings.firmVersion);
+	 //Serial.print("VERSION: ");  //Serial.println(VERSION);
   if (rxSettings.firmVersion != VERSION) {
 #ifdef DEBUG
-    //Serial.print("No valid firmware stored in falsh -> load default settings");
+     //Serial.print("No valid firmware stored in falsh -> load default settings");
 #endif
     setDefaultFlashSettings();
   }
@@ -765,25 +775,25 @@ void updateFlashSettings() {
 
 #ifdef DEBUG
   DEBUG_PRINT("Settings saved to flash");
-  //Serial.print("rxSettings.triggerMode: "); //Serial.println(rxSettings.triggerMode);
-  //Serial.print("rxSettings.batteryType: "); //Serial.println(rxSettings.batteryType);
-  //Serial.print("rxSettings.batteryCells: "); //Serial.println(rxSettings.batteryCells);
-  //Serial.print("rxSettings.motorPoles: "); //Serial.println(rxSettings.motorPoles);
-  //Serial.print("rxSettings.motorPulley: "); //Serial.println(rxSettings.motorPulley);
-  //Serial.print("rxSettings.wheelPulley: "); //Serial.println(rxSettings.wheelPulley);
-  //Serial.print("rxSettings.wheelDiameter: "); //Serial.println(rxSettings.wheelDiameter);
-  //Serial.print("rxSettings.controlMode: "); //Serial.println(rxSettings.controlMode);
-  //Serial.print("rxSettings.minHallValue: "); //Serial.println(rxSettings.minHallValue);
-  //Serial.print("rxSettings.centerHallValue: "); //Serial.println(rxSettings.centerHallValue);
-  //Serial.print("rxSettings.maxHallValue: "); //Serial.println(rxSettings.maxHallValue);
-  //Serial.print("rxSettings.boardID: "); //Serial.println(rxSettings.boardID);
-  //Serial.print("rxSettings.pairNewBoard: "); //Serial.println(rxSettings.pairNewBoard);
-  //Serial.print("rxSettings.transmissionPower: "); //Serial.println(rxSettings.transmissionPower);
-  //Serial.print("rxSettings.customEncryptionKey: ");
+   //Serial.print("rxSettings.triggerMode: ");  //Serial.println(rxSettings.triggerMode);
+   //Serial.print("rxSettings.batteryType: ");  //Serial.println(rxSettings.batteryType);
+   //Serial.print("rxSettings.batteryCells: ");  //Serial.println(rxSettings.batteryCells);
+   //Serial.print("rxSettings.motorPoles: ");  //Serial.println(rxSettings.motorPoles);
+   //Serial.print("rxSettings.motorPulley: ");  //Serial.println(rxSettings.motorPulley);
+   //Serial.print("rxSettings.wheelPulley: ");  //Serial.println(rxSettings.wheelPulley);
+   //Serial.print("rxSettings.wheelDiameter: ");  //Serial.println(rxSettings.wheelDiameter);
+   //Serial.print("rxSettings.controlMode: ");  //Serial.println(rxSettings.controlMode);
+   //Serial.print("rxSettings.minHallValue: ");  //Serial.println(rxSettings.minHallValue);
+   //Serial.print("rxSettings.centerHallValue: ");  //Serial.println(rxSettings.centerHallValue);
+   //Serial.print("rxSettings.maxHallValue: ");  //Serial.println(rxSettings.maxHallValue);
+   //Serial.print("rxSettings.boardID: ");  //Serial.println(rxSettings.boardID);
+   //Serial.print("rxSettings.pairNewBoard: ");  //Serial.println(rxSettings.pairNewBoard);
+   //Serial.print("rxSettings.transmissionPower: ");  //Serial.println(rxSettings.transmissionPower);
+   //Serial.print("rxSettings.customEncryptionKey: ");
   for (uint8_t i = 0; i < 16; i++) {
-    //Serial.print(rxSettings.customEncryptionKey[i]);
-  } //Serial.println("");
-  //Serial.print("rxSettings.firmVersion"); //Serial.println(rxSettings.firmVersion);
+     //Serial.print(rxSettings.customEncryptionKey[i]);
+  }  //Serial.println("");
+   //Serial.print("rxSettings.firmVersion");  //Serial.println(rxSettings.firmVersion);
 #endif
 
 }

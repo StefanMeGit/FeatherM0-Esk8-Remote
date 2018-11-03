@@ -75,6 +75,12 @@ const unsigned char noconnectionIcon[] PROGMEM = {
   0x00, 0x09, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+const unsigned char eStopArmed[] PROGMEM = {
+  0xFF, 0x0F, 0x01, 0x08, 0x7D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B, 
+  0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x09, 0x39, 0x09, 0x32, 0x04, 0x34, 0x02, 
+  0x28, 0x01, 0xB0, 0x00, 0x60, 0x00,
+};
+
 // Transmit and receive package
 struct debug { 
   unsigned long cycleTime;
@@ -107,6 +113,7 @@ typedef struct {
   uint8_t transmissionPower;        // 13
   uint8_t customEncryptionKey[16];  // 14
   float firmVersion;                // 15
+  bool eStopArmed;                  // 16
 } TxSettings;
 
 TxSettings txSettings;
@@ -187,6 +194,7 @@ struct callback {
   float avgInputCurrent;
   float avgMotorCurrent;
   float dutyCycleNow;
+  bool eStopArmed;
 } returnData;
 
 // defining button data
@@ -352,12 +360,16 @@ void setup() {
   initiateTransmitter();
 
   // check if default encryptionKey is still in use and create custom one if needed
-  //checkEncryptionKey();
+  //checkEncryptionKey(); TODO
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
-    changeSettings = true;
-    drawTitle("Settings", 1000);
+      txSettings.eStopArmed = false;
+      transmitSettingsToReceiver();
+      changeSettings = true;
+      u8g2.setDisplayRotation(U8G2_R0);
+      u8g2.begin();
+      drawTitle("Settings", 1500);
   }
 }
 
@@ -400,10 +412,10 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 	#ifdef DEBUG
-    Serial.print("cycleTimeStart: "); Serial.print(cycleTimeStart); Serial.println("ms");
-    Serial.print("cycleTimeFinish: "); Serial.print(cycleTimeFinish); Serial.println("ms");
-    Serial.print("cycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
-    Serial.print("longestCycleTime: "); Serial.print(debugData.longestCycleTime); Serial.println("ms");
+    //Serial.print("cycleTimeStart: "); Serial.print(cycleTimeStart); Serial.println("ms");
+    //Serial.print("cycleTimeFinish: "); Serial.print(cycleTimeFinish); Serial.println("ms");
+    //Serial.print("cycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
+    //Serial.print("longestCycleTime: "); Serial.print(debugData.longestCycleTime); Serial.println("ms");
 	#endif
 
 }
@@ -447,7 +459,7 @@ void initiateTransmitter() {
   Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
   Serial.print("Set frequecy to: "); Serial.println(RF69_FREQ);
-  delay(250);
+  delay(10);
 }
 
 // check encryptionKey
@@ -503,9 +515,11 @@ void createCustomKey() {
   }
   Serial.println("");
 
-  transmitSettingsToReceiver(); //TODO make shure receiver got message
+  updateFlashSettings();
 
-  initiateTransmitter(); // restart receiver with new key
+//  transmitSettingsToReceiver();
+
+//  initiateTransmitter();
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
@@ -575,8 +589,8 @@ bool transmitSettingsToReceiver() {
 
   remPackage.type = 1;
 
-  rf69_manager.setRetries(10);
-  rf69_manager.setTimeout(200);
+  rf69_manager.setRetries(5);
+  rf69_manager.setTimeout(100);
 
   Serial.println("Try to send receiver next package are settings");
   if ( transmitToReceiver(5,200)) {
@@ -658,8 +672,6 @@ bool transmitKeyToReceiver() {
 // --------------------------------------------------------------------------------------
 void selectBoard(uint8_t receiverID) {
 
-  Serial.print("Join pairNewBoard(receiverID) receiverID: "); Serial.println(receiverID);
-
   txSettings.customEncryptionKey[15] = receiverID;
 
   Serial.print("Custom encryptionKey with boardID: ");
@@ -669,8 +681,6 @@ void selectBoard(uint8_t receiverID) {
   Serial.println("");
 
   initiateTransmitter(); // restart receiver with new key
-
-  Serial.print("Exit pairNewBoard(receiverID)");
 
 }
 
@@ -719,6 +729,8 @@ void controlSettingsMenu() {
   if (changeThisSetting == true) {
 
     if (currentSetting == EXIT) {
+      u8g2.setDisplayRotation(U8G2_R3);
+      u8g2.begin();
       changeSettings = false;
     }
 
@@ -821,7 +833,7 @@ void controlSettingsMenu() {
         drawMessage("Complete", "Default settings loaded!", 2000);
       } else if (currentSetting == KEY) {
         for (uint8_t i = 0; i < 16; i++) {
-          txSettings.customEncryptionKey[i] = encryptionKey[1];
+          txSettings.customEncryptionKey[i] = encryptionKey[i];
         }
         updateFlashSettings();
         initiateTransmitter();
@@ -965,9 +977,7 @@ short getSettingValue(uint8_t index) {
     case 9:     value = txSettings.centerHallValue; break;
     case 10:    value = txSettings.maxHallValue;    break;
     case 11:    value = txSettings.boardID;         break;
-    case 12:    value = 0;                          break;
     case 13:    value = txSettings.transmissionPower; break;
-    case 14:    value = 0;                          break;
 
     default: /* Do nothing */ break;
   }
@@ -1028,11 +1038,26 @@ u8g2.firstPage();
     }
     else
     {
-      drawThrottle();
-      drawBatteryLevel();
-      //drawSignal();
+      if (displayView >=5) {
+        displayView = 0;
+        }
+        switch (displayView) {
+    case 0:
       drawPage();
+      drawThrottle();
+      break;
+    case 1: case 2: case 3: case 4: 
+      drawPageOLD();
+      drawThrottleOLD();
+      drawBatteryLevel();
+      drawBattery();
+      //drawSignal();
       drawHeadlightStatus();
+      if (returnData.eStopArmed) {
+        drawEStopArmed();
+        }
+      break;
+      }
     }
 u8g2.nextPage();
 }
@@ -1066,7 +1091,7 @@ void calculateThrottlePosition()
     throttle = centerThrottle;
   }
 #ifdef DEBUG
-  Serial.print("Throttle: "); Serial.println(throttle);
+  //Serial.print("Throttle: "); Serial.println(throttle);
   #endif
 
   // Find the throttle positions
@@ -1192,13 +1217,21 @@ void alarmActivated() {
 void drawSettingsMenu() {
   // Local variables to store the setting value and unit
   uint64_t value;
+  uint8_t shiftTextPixel;
 
-  x = 0;
+  x = 5;
   y = 10;
 
   // Print setting title
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr(x, y, titles[ currentSetting ] );
+  if (currentSetting != 0){
+    u8g2.drawTriangle(5, 0, 5, 10, 0, 5);
+    }
+  shiftTextPixel = 64 - (u8g2.getStrWidth(titles[ currentSetting ])/2);
+  u8g2.drawStr(shiftTextPixel, y, titles[ currentSetting ] );
+  if (currentSetting != 18){
+    u8g2.drawTriangle(123, 0, 123, 10, 128, 5);
+  }
 
   // Get current setting value
   switch (currentSetting) {
@@ -1235,7 +1268,7 @@ void drawSettingsMenu() {
   }
 
   if ( currentSetting == KEY ) {
-    for (uint8_t i = 7; i < 16; i++) {
+    for (uint8_t i = 8; i < 16; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
     }
   }
@@ -1250,16 +1283,18 @@ void drawSettingsMenu() {
 
   if ( changeThisSetting == true ) {
 
+    drawString(tString, tString.length(), x + 10, y + 30, u8g2_font_10x20_tr );
+
     // If setting has something to do with the hallValue
     if ( inRange(currentSetting, 8, 10) ) {
       tString = "(" + String(hallValue) + ")";
-      drawString(tString, tString.length(), x + 92, y + 20, u8g2_font_profont12_tr );
+      drawString(tString, tString.length(), x + 50, y + 30, u8g2_font_profont12_tr );
     }
   } else {
-    drawString(tString, tString.length(), x, y + 20, u8g2_font_10x20_tr );
+    drawString(tString, tString.length(), x, y + 30, u8g2_font_10x20_tr );
+    Serial.println(tString);
   }
 }
-
 
 // Print the startup screen
 //---------------------------------------------------------------------------------------
@@ -1269,16 +1304,16 @@ void drawStartScreen() {
 
   do {
 
-    u8g2.drawXBMP( 0, 22, 60, 64, logo);
+    u8g2.drawXBMP( 1, 22, 60, 64, logo);
 
 //    u8g2.setFont(u8g2_font_10x20_tr);
-//    u8g2.drawStr(20, 26, "Firefly");
+//    u8g2.drawStr(20, 26, "FeatherFly");
 //    u8g2.setFont(u8g2_font_t0_12_tr);
 //    u8g2.drawStr(30, 41, "mod by StefanMe");
 
   } while ( u8g2.nextPage() );
 
-  delay(2000);
+  delay(1000);
 }
 
 // Print a title on the OLED
@@ -1351,19 +1386,18 @@ void mediumbuttonPress() {
     Serial.println("Lights ON");
   }
 
-  headlightStatusUpdated = 0;
-
 }
 
-// called when button is kept pressed for 2 seconds or more
 void longbuttonPress() {
+  txSettings.eStopArmed = false;
+  transmitSettingsToReceiver();
   changeSettings = true;
 }
 
 // draw main page
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void drawPage() {
+void drawPageOLD() {
 
   uint8_t decimalsMain, decimalsSecond, decimalsThird;
   float valueMain, valueSecond, valueThird;
@@ -1373,15 +1407,8 @@ void drawPage() {
   x = 15;
   y = 10;
 
-  // handle rotation of different views
-  // - first view: Speed, voltage, distance
-  // - second view; voltage, battery amps, motor amps
-  if (displayView > 3) {
-    displayView = 0;
-  }
-
   switch (displayView) {
-    case 0:
+    case 1:
       valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
       unitMain = 1;
@@ -1392,7 +1419,7 @@ void drawPage() {
       decimalsThird = 2;
       unitThird = 2;
       break;
-    case 1:
+    case 2:
       valueMain = returnData.inpVoltage;
       decimalsMain = 1;
       unitMain = 0;
@@ -1403,7 +1430,7 @@ void drawPage() {
       decimalsThird = 1;
       unitThird = 3;
       break;
-    case 2:
+    case 3:
       valueMain = debugData.rssi;
       decimalsMain = 1;
       unitMain = 5;
@@ -1414,7 +1441,7 @@ void drawPage() {
       decimalsThird = 1;
       unitThird = 4;
       break;
-    case 3:
+    case 4:
       valueMain = debugData.longestCycleTime;
       decimalsMain = 0;
       unitMain = 6;
@@ -1501,10 +1528,183 @@ void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8
 
 }
 
+// Draw page
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawPage() {
+
+  uint8_t decimals;
+  float value;
+  uint16_t first, last;
+
+  String s;
+  
+  uint8_t offset = 38;
+  x = 0;
+  y = 37;
+  uint8_t width;
+
+//  u8g2.drawFrame(0,0,64,128);
+  
+  // --- Speed ---
+  value = ratioRpmSpeed * abs(returnData.rpm);
+  float speedMax = 30.0;
+
+  drawStringCenter(String(value,0), "km/h", y);
+
+  y = 48;
+  // speedometer graph height array
+  uint8_t a[16] = {3, 3, 4, 4, 5, 6, 7, 8, 10, 
+    11, 13, 15, 17, 20, 24, 28};
+  uint8_t h;
+  
+  for (uint8_t i = 0; i < 16; i++) {
+    h = a[i];
+    if (speedMax / 16 * i <= value) {
+      u8g2.drawVLine(x + i*4 + 2, y - h, h);
+    } else {
+      u8g2.drawPixel(x + i*4 + 2, y - h);
+      u8g2.drawPixel(x + i*4 + 2, y - 1);
+    }
+  }
+  
+  // --- Battery ---
+  value = batteryPackPercentage( returnData.inpVoltage );
+
+  y = 73;
+  
+  int battery = (int) value;
+  drawStringCenter(String(battery), "%", y);
+
+  drawString(String(returnData.inpVoltage, 1), 50, 73, u8g2_font_blipfest_07_tr);
+
+  y = 78;
+  x = 0;
+
+  // longboard body
+  h = 12;
+  uint8_t w = 41;
+  u8g2.drawHLine(x + 10, y, w); // top line
+  u8g2.drawHLine(x + 10, y + h, w); // bottom
+
+  // nose
+  u8g2.drawHLine(x + 2, y + 3, 5); // top line
+  u8g2.drawHLine(x + 2, y + h - 3, 5); // bottom
+  
+  u8g2.drawPixel(x + 1, y + 4); 
+  u8g2.drawVLine(x, y + 5, 3); // nose
+  u8g2.drawPixel(x + 1, y + h - 4); 
+
+  u8g2.drawLine(x + 6, y + 3, x + 9, y);          // / 
+  u8g2.drawLine(x + 6, y + h - 3, x + 9, y + h);  // \
+
+  // tail
+  u8g2.drawHLine(64 - 6 - 2, y + 3, 5); // top line
+  u8g2.drawHLine(64 - 6 - 2, y + h - 3, 5); // bottom
+
+  u8g2.drawPixel(64 - 3, y + 4); 
+  u8g2.drawVLine(64 - 2, y + 5, 3); // tail
+  u8g2.drawPixel(64 - 3, y + h - 4); 
+
+  u8g2.drawLine(64 - 6 - 3, y + 3, 64 - 6 - 6, y);          // / 
+  u8g2.drawLine(64 - 6 - 3, y + h - 3, 64 - 6 - 6, y + h);  // \
+ 
+  // longboard wheels
+  u8g2.drawBox(x + 3, y, 3, 2); // left
+  u8g2.drawBox(x + 3, y + h - 1, 3, 2);
+  u8g2.drawBox(64 - 7, y, 3, 2); // right
+  u8g2.drawBox(64 - 7, y + h - 1, 3, 2);
+  
+  // battery sections
+  for (uint8_t i = 0; i < 14; i++) {
+    if (round((100 / 14) * i) <= value) {
+      u8g2.drawBox(x + i*3 + 10, y + 2, 1, h - 3);
+    }
+  }
+
+  // --- Distance in km ---
+  value = ratioPulseDistance * returnData.tachometerAbs;
+  String km;
+
+  y = 118;
+
+  if (value >= 1) {
+    km = String(value, 0);  
+    drawStringCenter(String(km), "km", y);
+  } else {
+    km = String(value * 1000, 0);
+    drawStringCenter(String(km), "m", y);
+  }
+
+  // max distance
+  int range = 30;
+  
+  drawString(String(range), 56, 118, u8g2_font_blipfest_07_tr); // u8g2_font_prospero_bold_nbp_tn
+
+  // dots
+  y = 122;
+  for (uint8_t i = 0; i < 16; i++) {
+    u8g2.drawBox(x + i * 4, y + 4, 2, 2);
+  }
+
+  // start end
+  u8g2.drawBox(0, y, 2, 6);
+  u8g2.drawBox(62, y, 2, 6);
+  u8g2.drawBox(31, y, 2, 6);
+}
+
+void drawStringCenter(String value, String caption, uint8_t y){
+
+  static char cache[10];
+
+  // draw digits
+  int x = 0;
+  value.toCharArray(cache, value.length() + 1);
+  u8g2.setFont(u8g2_font_ncenB18_tn); //u8g2_font_t0_18b_tr);
+  u8g2.drawStr(x, y, cache);
+
+  // draw caption km/%
+  x += u8g2.getStrWidth(cache) + 4;
+  y -= 9;
+  caption.toCharArray(cache, caption.length() + 1);
+  u8g2.setFont(u8g2_font_crox1h_tf);
+  u8g2.drawStr(x, y, cache);
+}
+ 
+void drawString(String string, int x, int y, const uint8_t *font){
+
+  static char cache[20];
+  string.toCharArray(cache, string.length() + 1);
+  u8g2.setFont(font); 
+
+  if (x == -1) {
+    x = (64 - u8g2.getStrWidth(cache)) / 2;
+  }
+
+  u8g2.drawStr(x, y, cache);
+}
+
 /*
    Print the throttle value as a bar on the OLED
 */
 void drawThrottle() {
+
+uint16_t width;
+
+  if (throttle >= txSettings.centerHallValue) {
+    width = map(throttle, txSettings.centerHallValue, txSettings.maxHallValue, 0, 14); //todo
+    u8g2.drawBox(32 - width, 123, width, 5 );
+
+    
+  } else {
+    width = map(throttle, txSettings.minHallValue, txSettings.centerHallValue, 14, 0); //todo
+    u8g2.drawBox(32, 123, width, 5 );
+  }
+  
+}
+
+
+void drawThrottleOLD() {
 
   x = 0;
   y = 0;
@@ -1512,8 +1712,8 @@ void drawThrottle() {
   uint8_t width;
 
   // Draw throttle
-  u8g2.drawVLine(x + 5, y , 127);
-  u8g2.drawHLine(x, y, 5);
+  u8g2.drawVLine(x + 4, y , 128);
+  u8g2.drawHLine(x, y, 10);
   u8g2.drawHLine(x, y +15, 2);
   u8g2.drawHLine(x, y +31, 4);
   u8g2.drawHLine(x, y +46, 2);
@@ -1521,7 +1721,7 @@ void drawThrottle() {
   u8g2.drawHLine(x, y +78, 2);
   u8g2.drawHLine(x, y +94, 4);
   u8g2.drawHLine(x, y +110, 2);
-  u8g2.drawHLine(x, y +127, 6);
+  u8g2.drawHLine(x, y +127, 10);
 
 
   if (throttle >= 512) {
@@ -1539,6 +1739,24 @@ void drawThrottle() {
       u8g2.drawHLine(x, y + 64 + i, 4);
     }
   }
+}
+
+void drawBattery() {
+
+  x = 6;
+  y = 0;  
+  
+  u8g2.drawVLine(x + 4, y , 128);
+//  u8g2.drawHLine(x, y, 9);
+//  u8g2.drawHLine(x, y +15, 2);
+//  u8g2.drawHLine(x, y +31, 4);
+//  u8g2.drawHLine(x, y +46, 2);
+//  u8g2.drawHLine(x, y +63, 4);
+//  u8g2.drawHLine(x, y +78, 2);
+//  u8g2.drawHLine(x, y +94, 4);
+//  u8g2.drawHLine(x, y +110, 2);
+//  u8g2.drawHLine(x, y +127, 9);
+  
 }
 
 void drawSignal() {
@@ -1593,7 +1811,7 @@ void drawBatteryLevel() {
 */
 void drawHeadlightStatus() {
 
-  x = 30;
+  x = 34;
   y = 117;
 
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
@@ -1601,15 +1819,13 @@ void drawHeadlightStatus() {
   u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
 
   if (remPackage.headlight == 1) {
-    u8g2.drawLine(x - 3 , y, x - 5, y);
-    u8g2.drawLine(x - 3 , y + 3, x - 5, y + 4);
-    u8g2.drawLine(x - 3 , y - 3, x - 5, y - 4);
+    u8g2.drawLine(x     , y - 3, x    , y - 5);
+    u8g2.drawLine(x + 3 , y - 3, x + 4, y - 5);
+    u8g2.drawLine(x - 3 , y - 3, x - 4, y - 5);
   }
-  headlightStatusUpdated = 1;
 }
 
-String uint64ToString(uint64_t number)
-{
+String uint64ToString(uint64_t number) {
   unsigned long part1 = (unsigned long)((number >> 32)); // Bitwise Right Shift
   unsigned long part2 = (unsigned long)((number));
 
@@ -1617,6 +1833,18 @@ String uint64ToString(uint64_t number)
     return String(part2, DEC);
   }
   return String(part1, DEC) + String(part2, DEC);
+}
+
+// Draw eStop
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawEStopArmed(){
+
+  x = 14;
+  y = 112;
+  
+  u8g2.drawXBMP(x, y, 12, 15, eStopArmed);
+  
 }
 
 /*
