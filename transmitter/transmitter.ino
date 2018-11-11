@@ -7,7 +7,7 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -93,23 +93,26 @@ struct debug {
 
 // Defining struct to hold setting values while remote is turned on.
 typedef struct {
-  uint8_t triggerMode;              // 0
-  uint8_t batteryType;              // 1
-  uint8_t batteryCells;             // 2
-  uint8_t motorPoles;               // 3
-  uint8_t motorPulley;              // 4
-  uint8_t wheelPulley;              // 5
-  uint8_t wheelDiameter;            // 6
-  uint8_t controlMode;              // 7
-  short minHallValue;               // 8
-  short centerHallValue;            // 9
-  short maxHallValue;               // 10
-  uint8_t boardID;                  // 11
-  uint8_t pairNewBoard;             // 12
-  uint8_t transmissionPower;        // 13
-  uint8_t customEncryptionKey[16];  // 14
-  float firmVersion;                // 15
-  bool eStopArmed;                  // 16
+  uint8_t boardID;                  // 0
+  uint8_t triggerMode;              // 1
+  uint8_t batteryType;              // 2
+  uint8_t batteryCells;             // 3
+  uint8_t motorPoles;               // 4
+  uint8_t motorPulley;              // 5
+  uint8_t wheelPulley;              // 6
+  uint8_t wheelDiameter;            // 7
+  uint8_t controlMode;              // 8
+  short minHallValue;               // 9
+  short centerHallValue;            // 10
+  short maxHallValue;               // 11
+  uint8_t eStopMode;                // 12
+  uint8_t breaklightMode;           // 13
+  uint8_t throttleDeath;            // 14
+  uint8_t pairNewBoard;             // 15
+  uint8_t transmissionPower;        // 16
+  uint8_t customEncryptionKey[16];  // 17
+  float firmVersion;                // 18
+  bool eStopArmed;                  // 19
 } TxSettings;
 
 TxSettings txSettings;
@@ -118,55 +121,34 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 19;
+const uint8_t numOfSettings = 23;
 
 // Setting rules format: default, min, max.
 const short rules[numOfSettings][3] {
-  {1, 0, 1},          //0 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},          //1 0: Li-ion      | 1: LiPo
-  {10, 6, 12},        //2 Cell count
-  {14, 0, 250},       //3 Motor poles
-  {14, 0, 250},       //4 Motor pully
-  {38, 0, 250},       //5 Wheel pulley
-  {80, 0, 250},       //6 Wheel diameter
-  {1, 0, 2},          //7 0: PPM only   | 1: PPM and UART | 2: UART only
-  {300, 0, 400},      //8 Min hall value
-  {520, 300, 700},    //9 Center hall value
-  {730, 600, 1023},   //10 Max hall value
-  {1, 0, 9},          //11 boardID
-  { -1, 0, 0},        //12 pair new board
-  {20, 14, 20},       //13 transmission power
-  { -1, 0, 0},        //14 show Key
-  { -1, 0 , 0},       //15 Firmware
-  { -1, 0, 0},        //16 Set default key
-  { -1, 0, 0},        //17 Settings
-  { -1, 0, 0}         //18 Exit
-
+  {1, 0, 9},          //0 boardID
+  {1, 0, 1},          //1 0: Killswitch  | 1: Cruise control
+  {1, 0, 1},          //2 0: Li-ion      | 1: LiPo
+  {10, 6, 12},        //3 Cell count
+  {14, 0, 250},       //4 Motor poles
+  {14, 0, 250},       //5 Motor pully
+  {38, 0, 250},       //6 Wheel pulley
+  {80, 0, 250},       //7 Wheel diameter
+  {1, 0, 2},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {300, 0, 400},      //9 Min hall value
+  {520, 300, 700},    //10 Center hall value
+  {730, 600, 1023},   //11 Max hall value
+  { 0, 0, 2},         //12 EStop mode |0soft|1hard|2off
+  { 0, 0, 2},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
+  { 10, 0, 100},      //14 throttle death center
+  { -1, 0, 0},        //15 Spacer
+  { -1, 0, 0},        //16 pair new board
+  {20, 14, 20},       //17 transmission power
+  { -1, 0, 0},        //18 show Key
+  { -1, 0 , 0},       //19 Firmware
+  { -1, 0, 0},        //20 Set default key
+  { -1, 0, 0},        //21 Settings
+  { -1, 0, 0}         //22 Exit
 };
-
-const char titles[numOfSettings][19] = {
-  "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
-  "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Board ID", "Pair new Board", "Transmission Power", "Encyption key",
-  "Firmware Version", "Set default key", "Settings", "Exit"
-};
-
-const uint8_t unitIdentifier[numOfSettings]  =  {0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 4, 0, 5, 0, 0, 0, 0};
-const uint8_t valueIdentifier[numOfSettings] =  {1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-const uint8_t category[numOfSettings]  =        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
-const uint8_t menuOne[5]  =                     {1, 2, 3, 4, 5};
-const uint8_t menuTwo[5]  =                     {6, 7, 8, 9, 10};
-
-
-const char stringValues[3][3][13] = {
-  {"Killswitch", "Cruise", ""},
-  {"Li-ion", "LiPo", ""},
-  {"PPM", "PPM and UART", "UART only"},
-};
-const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
-
-const char dataSuffix[7][4] = {"V", "KMH", "KM", "A","ms","dBm", ""};
-const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
 
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define TRIGGER     0
@@ -179,6 +161,28 @@ const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
 #define DEFAULTKEY  16
 #define SETTINGS    17
 #define EXIT        18
+
+const char titles[numOfSettings][19] = {
+  "Board ID", "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
+  "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
+  "Throttle max", "Estop Mode", "Breaklight Mode", "Throttle Death", "Spacer", "Pair new Board", "Transmission Power", "Encyption key",
+  "Firmware Version", "Set default key", "Settings", "Exit"
+};
+
+const uint8_t unitIdentifier[numOfSettings]  =  {4, 0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0};
+const uint8_t valueIdentifier[numOfSettings] =  {0, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0};
+
+const char stringValues[5][3][15] = {
+  {"Killswitch", "Cruise", ""},
+  {"Li-ion", "LiPo", ""},
+  {"PPM", "PPM and UART", "UART only"},
+  {"soft", "hard", "off"},
+  {"off", "Always on", "with headlight"},
+};
+const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
+
+const char dataSuffix[7][4] = {"V", "KMH", "KM", "A","ms","dBm", ""};
+const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -237,7 +241,7 @@ const uint8_t vibrationActuatorPin = A4;
 #define RFM69_CS     8
 #define RFM69_INT   3
 #define RFM69_RST   4
-#define DiagLED     13
+#define DIAGLED     13
 #define RF69_FREQ   433.0
 #define DEST_ADDRESS   1 // where the packages goes to
 #define MY_ADDRESS     2 // own address
@@ -297,8 +301,11 @@ unsigned long lastBlockBlink;
 bool blockBlink = false;
 
 // Defining variables for vibration actuator
-unsigned long lastVibrationBlink;
-bool vibrationBlink = false;
+unsigned long alarmBlinkDuration = 0;
+uint8_t alarmBlinkTimes = 0;
+uint8_t alarmBlinkCounter = 0;
+uint8_t alarmBlinkTimer = 0;
+
 
 // Defining variables for Settings menu
 bool changeSettings     = false; // Global flag for whether or not one is editing the settings
@@ -330,7 +337,8 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(115200);
-  while (!Serial) { delay(1);};
+  delay(2000);
+  //while (!Serial) { delay(1);};
 #endif
 
   pinMode(triggerPin, INPUT_PULLUP);
@@ -339,13 +347,14 @@ void setup() {
   pinMode(batteryMeasurePin, INPUT);
   pinMode(vibrationActuatorPin, OUTPUT);
 
-  pinMode(DiagLED, OUTPUT);
+  randomSeed(analogRead(A0));
+
+  pinMode(DIAGLED, OUTPUT);
   pinMode(RFM69_RST, OUTPUT);
 
   digitalWrite(RFM69_RST, LOW);
 
   u8g2.setDisplayRotation(U8G2_R3);
-
   u8g2.begin();
   Serial.println("Draw start screen");
   drawStartScreen();
@@ -377,6 +386,8 @@ void loop() {
   detectButtonPress();
   calculateThrottlePosition();
   checkConnection();
+  checkBatteryLevel();
+  controlVib();
 
   if (changeSettings == true) {
     controlSettingsMenu();
@@ -413,7 +424,6 @@ void loop() {
 
 }
 
-
 // check connection
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -421,6 +431,9 @@ void loop() {
 
     if (millis() - debugData.lastTransmissionAvaible > 300) {
       connectionLost = true;
+      alarmBlinkDuration = 200;
+      alarmBlinkTimes = 12;
+      alarmTriggered = true;
     } else {
       connectionLost = false;
     }
@@ -520,7 +533,7 @@ void createCustomKey() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
-
+  Serial.println("Join transmitToReciever");
   transmissionTimeStart = millis();
 
   rf69_manager.setRetries(retries);
@@ -580,7 +593,7 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitSettingsToReceiver() {
-
+  Serial.println("Join transmitSettingsToReciever");
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
@@ -973,19 +986,22 @@ void calculateRatios() {
 short getSettingValue(uint8_t index) {
   short value;
   switch (index) {
-    case TRIGGER:   value = txSettings.triggerMode; break;
-    case 1:     value = txSettings.batteryType;     break;
-    case 2:     value = txSettings.batteryCells;    break;
-    case 3:     value = txSettings.motorPoles;      break;
-    case 4:     value = txSettings.motorPulley;     break;
-    case 5:     value = txSettings.wheelPulley;     break;
-    case 6:     value = txSettings.wheelDiameter;   break;
-    case MODE:  value = txSettings.controlMode;     break;
-    case 8:     value = txSettings.minHallValue;    break;
-    case 9:     value = txSettings.centerHallValue; break;
-    case 10:    value = txSettings.maxHallValue;    break;
-    case 11:    value = txSettings.boardID;         break;
-    case 13:    value = txSettings.transmissionPower; break;
+    case 0:     value = txSettings.boardID;         break;
+    case 1:     value = txSettings.triggerMode;     break;
+    case 2:     value = txSettings.batteryType;     break;
+    case 3:     value = txSettings.batteryCells;    break;
+    case 4:     value = txSettings.motorPoles;      break;
+    case 5:     value = txSettings.motorPulley;     break;
+    case 6:     value = txSettings.wheelPulley;     break;
+    case 7:     value = txSettings.wheelDiameter;   break;
+    case 8:     value = txSettings.controlMode;     break;
+    case 9:     value = txSettings.minHallValue;    break;
+    case 10:    value = txSettings.centerHallValue; break;
+    case 11:    value = txSettings.maxHallValue;    break;
+    case 12:    value = txSettings.eStopMode;       break;
+    case 13:    value = txSettings.breaklightMode;  break;
+    case 14:    value = txSettings.throttleDeath;   break;
+    case 17:    value = txSettings.transmissionPower; break;
 
     default: /* Do nothing */ break;
   }
@@ -997,19 +1013,22 @@ short getSettingValue(uint8_t index) {
 // --------------------------------------------------------------------------------------
 void setSettingValue(uint8_t index, uint64_t value) {
   switch (index) {
-    case TRIGGER:   txSettings.triggerMode = value;     break;
-    case 1:         txSettings.batteryType = value;     break;
-    case 2:         txSettings.batteryCells = value;    break;
-    case 3:         txSettings.motorPoles = value;      break;
-    case 4:         txSettings.motorPulley = value;     break;
-    case 5:         txSettings.wheelPulley = value;     break;
-    case 6:         txSettings.wheelDiameter = value;   break;
-    case MODE:      txSettings.controlMode = value;     break;
-    case 8:         txSettings.minHallValue = value;    break;
-    case 9:         txSettings.centerHallValue = value; break;
-    case 10:        txSettings.maxHallValue = value;    break;
-    case 11:        txSettings.boardID = value;         break;
-    case 13:        txSettings.transmissionPower = value; break;
+    case 0:         txSettings.boardID = value;         break;
+    case 1:         txSettings.triggerMode = value;     break;
+    case 2:         txSettings.batteryType = value;     break;
+    case 3:         txSettings.batteryCells = value;    break;
+    case 4:         txSettings.motorPoles = value;      break;
+    case 5:         txSettings.motorPulley = value;     break;
+    case 6:         txSettings.wheelPulley = value;     break;
+    case 7:         txSettings.wheelDiameter = value;   break;
+    case 8:         txSettings.controlMode = value;     break;
+    case 9:         txSettings.minHallValue = value;    break;
+    case 10:        txSettings.centerHallValue = value; break;
+    case 11:        txSettings.maxHallValue = value;    break;
+    case 12:        txSettings.eStopMode = value;       break;
+    case 13:        txSettings.breaklightMode = value;  break;
+    case 14:        txSettings.throttleDeath = value;   break;
+    case 17:        txSettings.transmissionPower = value; break;
 
     default: /* Do nothing */ break;
   }
@@ -1178,45 +1197,30 @@ void checkBatteryLevel() {
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
-  if (((boardBattery <= 15) || (remoteBattery <= 15) || alarmTriggered) && !batteryAlarmBlocked) {
-    if (millis() - lastAlarmBlink > 3000) {
-      alarmBlink = !alarmBlink;
-      lastAlarmBlink = millis();
-    }
-
-    if (alarmBlink == true) {
-      alarmTriggered = true;
-      alarmActivated();
-    } else {
-      alarmTriggered = false;
-      batteryAlarmBlocked = true;
-    }
-  }
-  if (batteryAlarmBlocked = true) {
-    if (millis() - lastBlockBlink > 120000) {
-      blockBlink = !blockBlink;
-      lastBlockBlink = millis();
-    }
-    if (blockBlink == true) {
-      batteryAlarmBlocked = true;
-    } else {
-      batteryAlarmBlocked = false;
-    }
+  if ((((boardBattery > 0) && (boardBattery <= 15)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
+    alarmBlinkDuration = 500;
+    alarmBlinkTimes = 6;
+    alarmTriggered = true;
   }
 }
 
-// Vibrate every 500ms for 500ms as long as function is called
-void alarmActivated() {
-  if (millis() - lastVibrationBlink > 500) {
-    vibrationBlink = !vibrationBlink;
-    lastVibrationBlink = millis();
+// Vibrate
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void controlVib() {
+  if (alarmTriggered){
+    if (alarmBlinkCounter < alarmBlinkTimes) {
+      if ((millis() - alarmBlinkTimer > alarmBlinkDuration)) {
+        digitalWrite(vibrationActuatorPin, !digitalRead(vibrationActuatorPin));
+        alarmBlinkTimer = millis();
+        alarmBlinkCounter++;
+      }
+    } else {
+      alarmTriggered = 0;
+      alarmTriggered = false;
+    }
   }
 
-  if (vibrationBlink == true) {
-    digitalWrite(vibrationActuatorPin, HIGH);
-  } else {
-    digitalWrite(vibrationActuatorPin, LOW);
-  }
 }
 
 // Prints the settings menu on the OLED display
@@ -1894,5 +1898,3 @@ char hexCharToBin(char c) {
   }
   return -1;
 }
-
-
