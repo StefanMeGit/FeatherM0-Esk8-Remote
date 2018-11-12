@@ -7,7 +7,7 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -108,11 +108,12 @@ typedef struct {
   uint8_t eStopMode;                // 12
   uint8_t breaklightMode;           // 13
   uint8_t throttleDeath;            // 14
-  uint8_t pairNewBoard;             // 15
-  uint8_t transmissionPower;        // 16
-  uint8_t customEncryptionKey[16];  // 17
-  float firmVersion;                // 18
-  bool eStopArmed;                  // 19
+  uint8_t drivingMode;              // 15
+  uint8_t pairNewBoard;             // 16
+  uint8_t transmissionPower;        // 17
+  uint8_t customEncryptionKey[16];  // 18
+  float firmVersion;                // 19
+  bool eStopArmed;                  // 20
 } TxSettings;
 
 TxSettings txSettings;
@@ -134,13 +135,13 @@ const short rules[numOfSettings][3] {
   {38, 0, 250},       //6 Wheel pulley
   {80, 0, 250},       //7 Wheel diameter
   {1, 0, 2},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {300, 0, 400},      //9 Min hall value
-  {520, 300, 700},    //10 Center hall value
-  {730, 600, 1023},   //11 Max hall value
+  {316, 0, 400},      //9 Min hall value
+  {490, 300, 700},    //10 Center hall value
+  {645, 600, 1023},   //11 Max hall value
   { 0, 0, 2},         //12 EStop mode |0soft|1hard|2off
   { 0, 0, 2},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  { 10, 0, 100},      //14 throttle death center
-  { -1, 0, 0},        //15 Spacer
+  { 10, 0, 30},      //14 throttle death center
+  { 2, 0, 2},         //15 Driving Mode
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
@@ -151,33 +152,35 @@ const short rules[numOfSettings][3] {
 };
 
 // Defining constants to hold the special settings, so it's easy changed though the code
-#define TRIGGER     0
-#define MODE        7
-#define BOARDID     11
-#define PAIR        12
+#define TRIGGER     1
+#define MODE        8
+#define BOARDID     0
 #define TXPOWER     13
-#define KEY         14
-#define FIRMWARE    15
-#define DEFAULTKEY  16
-#define SETTINGS    17
-#define EXIT        18
+#define DRIVINGMODE 15
+#define KEY         18
+#define FIRMWARE    19
+#define PAIR        16
+#define DEFAULTKEY  20
+#define SETTINGS    21
+#define EXIT        22
 
 const char titles[numOfSettings][19] = {
   "Board ID", "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
   "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Estop Mode", "Breaklight Mode", "Throttle Death", "Spacer", "Pair new Board", "Transmission Power", "Encyption key",
+  "Throttle max", "Estop Mode", "Breaklight Mode", "Throttle Death", "Driving Mode", "Pair new Board", "Transmission Power", "Encyption key",
   "Firmware Version", "Set default key", "Settings", "Exit"
 };
 
 const uint8_t unitIdentifier[numOfSettings]  =  {4, 0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0};
-const uint8_t valueIdentifier[numOfSettings] =  {0, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0};
+const uint8_t valueIdentifier[numOfSettings] =  {0, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 5, 0, 6, 0, 0, 0, 0, 0, 0};
 
-const char stringValues[5][3][15] = {
+const char stringValues[6][3][15] = {
   {"Killswitch", "Cruise", ""},
   {"Li-ion", "LiPo", ""},
   {"PPM", "PPM and UART", "UART only"},
   {"soft", "hard", "off"},
   {"off", "Always on", "with headlight"},
+  {"Beginner", "Intermidiate", "Pro"},
 };
 const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
 
@@ -276,7 +279,7 @@ const float refVoltage = 3.3;
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
 const uint16_t centerThrottle = 512;
-const uint8_t hallNoiseMargin = 10;
+uint8_t hallNoiseMargin = 10;
 const uint8_t hallMenuMargin = 100;
 uint8_t throttlePosition;
 
@@ -361,11 +364,11 @@ void setup() {
 
   loadFlashSettings();
 
-  // Start Radio
-  initiateTransmitter();
-
   // check if default encryptionKey is still in use and create custom one if needed
   checkEncryptionKey();
+
+  // Start Radio
+  initiateTransmitter();
 
   // Enter settings on startup if trigger is hold down
   if (triggerActive()) {
@@ -415,12 +418,6 @@ void loop() {
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
-  #ifdef DEBUG
-    //Serial.print("cycleTimeStart: "); Serial.print(cycleTimeStart); Serial.println("ms");
-    //Serial.print("cycleTimeFinish: "); Serial.print(cycleTimeFinish); Serial.println("ms");
-    //Serial.print("cycleTime: "); Serial.print(debugData.cycleTime); Serial.println("ms");
-    //Serial.print("longestCycleTime: "); Serial.print(debugData.longestCycleTime); Serial.println("ms");
-  #endif
 
 }
 
@@ -454,18 +451,11 @@ void initiateTransmitter() {
   if (!rf69.setFrequency(RF69_FREQ)) {
   }
   if (useDefaultKeyForTransmission == 1) {
-    Serial.print("useDefaultKeyForTransmission: "); Serial.println(useDefaultKeyForTransmission);
     rf69.setEncryptionKey(encryptionKey);
   } else {
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
   }
-  Serial.print("Set transmitter custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
   rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
-  Serial.print("Set frequecy to: "); Serial.println(RF69_FREQ);
   delay(10);
 }
 
@@ -474,7 +464,6 @@ void initiateTransmitter() {
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
-  Serial.println("Check for default encription key");
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
     //Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
@@ -483,7 +472,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        createCustomKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
@@ -497,14 +487,31 @@ void checkEncryptionKey() {
 
 }
 
+// create a test key
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void createTestKey() {
+  uint8_t generatedCustomEncryptionKey[16];
+
+  for (uint8_t i = 0; i < 16; i++) {
+    generatedCustomEncryptionKey[i] = encryptionKey[i];
+  }
+
+  generatedCustomEncryptionKey[15] = 1;
+  for (uint8_t i = 0; i < 16; i++) {
+    txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
+  }
+
+  updateFlashSettings();
+
+}
+
 // create a new custom encryptionKey and send it to receiver
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void createCustomKey() {
-  Serial.print("Create custom encryptionKey");
   uint8_t generatedCustomEncryptionKey[16];
 
-  Serial.print("Custom encryptionKey: ");
   for (uint8_t i = 0; i < 16; i++) {
     generatedCustomEncryptionKey[i] = random(9);
     Serial.print(generatedCustomEncryptionKey[i]);
@@ -516,24 +523,14 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
-  Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
-
   updateFlashSettings();
 
-//  transmitSettingsToReceiver();
-
-//  initiateTransmitter();
 }
 
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
-  Serial.println("Join transmitToReciever");
   transmissionTimeStart = millis();
 
   rf69_manager.setRetries(retries);
@@ -544,47 +541,20 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
     uint8_t len = sizeof(returnData);
     uint8_t from;
-  #ifdef DEBUG
-    //Serial.print("Needed retries OK: "); Serial.println(rf69_manager.retries());
-    //Serial.print("Normal transmission remPackage.type: "); Serial.println(remPackage.type);
-  #endif
+
     debugData.counterSend++;
 
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
-//    if (rf69_manager.recvfromAck((uint8_t*)&returnData, &len, &from)) {
-
-#ifdef DEBUG
-      //Serial.print("Amp hours: "); Serial.println(returnData.ampHours);
-      //Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
-      //Serial.print("Tachometer: "); Serial.println(returnData.tachometerAbs);
-      //Serial.print("Headlight active: "); Serial.println(returnData.headlightActive);
-      //Serial.print("Battery current: "); Serial.println(returnData.avgInputCurrent);
-      //Serial.print("Motor current: "); Serial.println(returnData.avgMotorCurrent);
-      //Serial.print("Duty cycle: "); Serial.println(returnData.dutyCycleNow);
-#endif
 
       debugData.counterReceived++;
       transmissionTimeFinish = millis();
       debugData.transmissionTime = transmissionTimeFinish - transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
-
-    #ifdef DEBUG
-      //Serial.print("Got ack and reply from board #"); Serial.print(from);
-      //Serial.print(" transmission # "); Serial.print(counterRecived);
-      //Serial.print(" period: "); Serial.print(debugData.transmissionTime); Serial.print("ms");
-      //Serial.print(" [RSSI: "); Serial.print(rf69.lastRssi());
-      //Serial.println("]");
-    #endif
       return true;
-
     } else {
-    #ifdef DEBUG
-    //Serial.println("No reply, is anyone listening?");
-    #endif
       return false;
     }
   } else {
-
     return false;
   }
 }
@@ -593,36 +563,27 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitSettingsToReceiver() {
-  Serial.println("Join transmitSettingsToReciever");
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  rf69_manager.setRetries(5);
+  rf69_manager.setRetries(3);
   rf69_manager.setTimeout(100);
 
-  Serial.println("Try to send receiver next package are settings");
-  if ( transmitToReceiver(5,100)) {
-    Serial.println("Send settings... ");
+  if ( transmitToReceiver(3,100)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(remPackage);
       uint8_t from;
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
-        Serial.print("Received ack for settings from receiver #"); Serial.println(from);
-        Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
       } else {
-        Serial.println("Sending settings failed, no ack");
         remPackage.type = 0;
         return false;
       }
     } else {
-      Serial.println("Sending settings failed, no one listening");
       remPackage.type = 0;
       return false;
     }
-    Serial.println("Receiver have new Settings, restart transmitter");
     return true;
   } else {
-    Serial.println("Could not tell the receiver next package are settings");
     remPackage.type = 0;
     return false;
   }
@@ -638,36 +599,29 @@ bool transmitKeyToReceiver() {
   initiateTransmitter();
 
   remPackage.type = 1;
+  txSettings.eStopArmed = false;
 
-  Serial.println("Try to send receiver next package are settings");
-  if ( transmitToReceiver(5,100)) {
-    Serial.println("Send settings... ");
+  if ( transmitToReceiver(3,100)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(remPackage);
       uint8_t from;
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
-        Serial.print("Received ack for settings from receiver #"); Serial.println(from);
-        Serial.print("Received remPackage.type: "); Serial.println(remPackage.type);
       } else {
-        Serial.println("Sending settings failed, no ack");
         remPackage.type = 0;
         useDefaultKeyForTransmission = 0;
         initiateTransmitter();
         return false;
       }
     } else {
-      Serial.println("Sending settings failed, no one listening");
       remPackage.type = 0;
       useDefaultKeyForTransmission = 0;
       initiateTransmitter();
       return false;
     }
-    Serial.println("Receiver have new Settings, restart transmitter");
     useDefaultKeyForTransmission = 0;
     initiateTransmitter();
     return true;
   } else {
-    Serial.println("Could not tell the receiver next package are settings");
     remPackage.type = 0;
     useDefaultKeyForTransmission = 0;
     initiateTransmitter();
@@ -682,12 +636,6 @@ void selectBoard(uint8_t receiverID) {
 
   txSettings.customEncryptionKey[15] = receiverID;
 
-  Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
-
   initiateTransmitter(); // restart receiver with new key
 
 }
@@ -697,27 +645,15 @@ void selectBoard(uint8_t receiverID) {
 // --------------------------------------------------------------------------------------
 bool pairNewBoard() {
 
-  Serial.print("Join pairNewBoard()");
-
   txSettings.customEncryptionKey[15] = txSettings.boardID;
 
-  Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
-
-  Serial.println("Send custom encryptionKey to receiver by default key");
   useDefaultKeyForTransmission = 1;
 
   transmitKeyToReceiver();
 
-  // set variable to use custom key for the next transmissions
   useDefaultKeyForTransmission = 0;
-  // reset transmitter to activate custom key
 
   rf69.setEncryptionKey(txSettings.customEncryptionKey);
-  //initiateTransmitter();
 
   delay(50);
 
@@ -777,14 +713,10 @@ void controlSettingsMenu() {
 
     if (settingsLoopFlag == false) {
       if (throttlePosition == TOP && currentSetting != 0) {
-        Serial.print("Current Setting before currentSetting++ : "); Serial.println(currentSetting);
         currentSetting--;
-        Serial.print("Current Setting after currentSetting-- : "); Serial.println(currentSetting);
         settingsLoopFlag = true;
       } else if (throttlePosition == BOTTOM && currentSetting < (numOfSettings - 1)) {
-        Serial.print("Current Setting before currentSetting++ : "); Serial.println(currentSetting);
         currentSetting++;
-        Serial.print("Current Setting after currentSetting++ : "); Serial.println(currentSetting);
         settingsLoopFlag = true;
       }
     }
@@ -801,7 +733,6 @@ void controlSettingsMenu() {
       // Settings that needs to be transmitted to the recevier
       if (currentSetting == TRIGGER) {
         txSettings.triggerMode = getSettingValue(currentSetting);
-        Serial.println("Settings menu - TRIGGER");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -810,7 +741,6 @@ void controlSettingsMenu() {
         }
       } else if (currentSetting == MODE) {
         txSettings.controlMode = getSettingValue(currentSetting);
-        Serial.println("Settings menu - MODE");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -819,7 +749,6 @@ void controlSettingsMenu() {
         }
       } else if (currentSetting == TXPOWER) {
         txSettings.transmissionPower = getSettingValue(currentSetting);
-        Serial.println("Settings menu - TxPower");
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -829,7 +758,6 @@ void controlSettingsMenu() {
           drawMessage("Complete", "Power changed", 2000);
         }
       } else if (currentSetting == BOARDID) {
-        Serial.println("Settings menu - BOARDID");
         selectBoard(getSettingValue(currentSetting));
         drawMessage("Complete", "New board selected!", 2000);
       }
@@ -869,7 +797,6 @@ void controlSettingsMenu() {
 // --------------------------------------------------------------------------------------
 void setDefaultFlashSettings() {
 
-  Serial.println("Load default flash settings");
   for ( uint8_t i = 0; i < numOfSettings; i++ )
   {  if (rules[i][0] == -1) {
     } else {
@@ -877,27 +804,8 @@ void setDefaultFlashSettings() {
     Serial.println(rules[i][0]);
     }
   }
-  //Serial.print("Default encryptionKey: ");
-  //for ( uint8_t i = 0; i < 16 ; i++) {
-    //txSettings.customEncryptionKey[i] = encryptionKey[i];
-  //  Serial.print(encryptionKey[i]);
-  //}
-  txSettings.firmVersion = VERSION;
-  Serial.println("");
 
-  Serial.print("Killswitch: "); Serial.println(txSettings.triggerMode);
-  Serial.print("Battery: "); Serial.println(txSettings.batteryType);
-  Serial.print("Cell count: "); Serial.println(txSettings.batteryCells);
-  Serial.print("Motor poles: "); Serial.println(txSettings.motorPoles);
-  Serial.print("Motor pulley: "); Serial.println(txSettings.motorPulley);
-  Serial.print("Wheel Pulley"); Serial.println(txSettings.wheelPulley);
-  Serial.print("Wheel diameter: "); Serial.println(txSettings.wheelDiameter);
-  Serial.print("Control mode: "); Serial.println(txSettings.controlMode);
-  Serial.print("Min hall: "); Serial.println(txSettings.minHallValue);
-  Serial.print("Center hall: "); Serial.println(txSettings.centerHallValue);
-  Serial.print("Max hall: "); Serial.println(txSettings.maxHallValue);
-  Serial.print("BoardID: "); Serial.println(txSettings.boardID);
-  Serial.print("Transmission power: "); Serial.println(txSettings.transmissionPower);
+  txSettings.firmVersion = VERSION;
 
   updateFlashSettings();
 }
@@ -906,8 +814,6 @@ void setDefaultFlashSettings() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loadFlashSettings() {
-
-  Serial.println("Load flash settings");
 
   txSettings = flash_TxSettings.read();
 
@@ -927,17 +833,7 @@ void loadFlashSettings() {
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
 
-  Serial.println("Update flash settings");
-
   flash_TxSettings.write(txSettings);
-
-  Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
-
-
 
   calculateRatios();
 }
@@ -958,7 +854,6 @@ void detectButtonPress() {
     else if (currButtonState == LOW) {
       buttonPressCount++;
     #ifdef DEBUG
-      Serial.print("buttonPressCount: "); Serial.println(buttonPressCount);
     #endif
       if (buttonPressCount >= longbuttonPressCountMax) {
         longbuttonPress();
@@ -1001,6 +896,7 @@ short getSettingValue(uint8_t index) {
     case 12:    value = txSettings.eStopMode;       break;
     case 13:    value = txSettings.breaklightMode;  break;
     case 14:    value = txSettings.throttleDeath;   break;
+    case 15:    value = txSettings.drivingMode;     break;
     case 17:    value = txSettings.transmissionPower; break;
 
     default: /* Do nothing */ break;
@@ -1028,6 +924,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 12:        txSettings.eStopMode = value;       break;
     case 13:        txSettings.breaklightMode = value;  break;
     case 14:        txSettings.throttleDeath = value;   break;
+    case 15:        txSettings.drivingMode = value;     break;
     case 17:        txSettings.transmissionPower = value; break;
 
     default: /* Do nothing */ break;
@@ -1097,6 +994,15 @@ void calculateThrottlePosition()
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
   uint8_t samples = 10;
+  uint16_t throttleMax = 512; // override from drivingMode to calculate max throttle
+
+  if (txSettings.drivingMode == 0) { // slow mode
+    throttleMax = 700;
+  } else if (txSettings.drivingMode == 1){ // Intermidiate mode
+    throttleMax = 850;
+  } else if (txSettings.drivingMode == 2){ // pro mode
+    throttleMax = 1023;
+  }
 
   for ( uint8_t i = 0; i < samples; i++ )
   {
@@ -1107,18 +1013,19 @@ void calculateThrottlePosition()
 
   if ( hallValue >= txSettings.centerHallValue )
   {
-    throttle = constrain( map(hallValue, txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, 1023), centerThrottle, 1023 );
+    throttle = constrain( map(hallValue, txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax), centerThrottle, 1023 );
   } else {
     throttle = constrain( map(hallValue, txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle), 0, centerThrottle );
   }
 
   // Remove hall center noise
+  hallNoiseMargin = txSettings.throttleDeath;
+
   if ( abs(throttle - centerThrottle) < hallNoiseMargin )
   {
     throttle = centerThrottle;
   }
 #ifdef DEBUG
-  //Serial.print("Throttle: "); Serial.println(throttle);
   #endif
 
   // Find the throttle positions
@@ -1304,7 +1211,7 @@ void drawSettingsMenu() {
     drawString(tString, tString.length(), x + 10, y + 30, u8g2_font_10x20_tr );
 
     // If setting has something to do with the hallValue
-    if ( inRange(currentSetting, 8, 10) ) {
+    if ( inRange(currentSetting, 9, 11) ) {
       tString = "(" + String(hallValue) + ")";
       drawString(tString, tString.length(), x + 50, y + 30, u8g2_font_profont12_tr );
     }
@@ -1396,11 +1303,9 @@ void mediumbuttonPress() {
   if ( returnData.headlightActive == 1 ) {
 
     remPackage.headlight = 0;
-    Serial.println("Lights OFF");
   } else {
 
     remPackage.headlight = 1;
-    Serial.println("Lights ON");
   }
 
 }
@@ -1410,6 +1315,7 @@ void longbuttonPress() {
   transmitSettingsToReceiver();
   u8g2.setDisplayRotation(U8G2_R0);
   changeSettings = true;
+  drawTitle("Settings", 1500);
 }
 
 // draw main page
@@ -1743,14 +1649,14 @@ void drawThrottleOLD() {
 
 
   if (throttle >= 512) {
-    width = map(throttle, 512, 1023, 0, 62);
+    width = map(remPackage.throttle, 512, 1023, 0, 62);
 
     for (uint8_t i = 0; i < width; i++)
     {
       u8g2.drawHLine(x, y + 64 -i, 4);
     }
   } else {
-    width = map(throttle, 0, 511, 62, 0);
+    width = map(remPackage.throttle, 0, 511, 62, 0);
 
     for (uint8_t i = 0; i < width; i++)
     {
@@ -1765,15 +1671,6 @@ void drawBattery() {
   y = 0;
 
   u8g2.drawVLine(x + 4, y , 128);
-//  u8g2.drawHLine(x, y, 9);
-//  u8g2.drawHLine(x, y +15, 2);
-//  u8g2.drawHLine(x, y +31, 4);
-//  u8g2.drawHLine(x, y +46, 2);
-//  u8g2.drawHLine(x, y +63, 4);
-//  u8g2.drawHLine(x, y +78, 2);
-//  u8g2.drawHLine(x, y +94, 4);
-//  u8g2.drawHLine(x, y +110, 2);
-//  u8g2.drawHLine(x, y +127, 9);
 
 }
 
