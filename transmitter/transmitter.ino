@@ -289,7 +289,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 6;
+uint8_t displayView = 4;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -964,15 +964,15 @@ u8g2.firstPage();
     }
     else
     {
-      if (displayView >=7) {
-        displayView = 2;
+      if (displayView >= 5) {
+        displayView = 0;
         }
-        switch (displayView) {
-    case 2:
+      switch (displayView) {
+    case 0:
       drawPage();
       drawThrottle();
       break;
-    case 3: case 4: case 5: case 6:
+    case 1: case 2: case 3: case 4:
       drawPageOLD();
       drawThrottleOLD();
       drawBatteryLevel();
@@ -982,7 +982,7 @@ u8g2.firstPage();
       if (returnData.eStopArmed) {
         drawEStopArmed();
       }
-    case 0:
+    case 99:
       drawAnnouncement();
       break;
       }
@@ -1336,7 +1336,7 @@ void drawPageOLD() {
   y = 10;
 
   switch (displayView) {
-    case 3:
+    case 1:
       valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
       unitMain = 1;
@@ -1347,7 +1347,7 @@ void drawPageOLD() {
       decimalsThird = 2;
       unitThird = 2;
       break;
-    case 4:
+    case 2:
       valueMain = returnData.inpVoltage;
       decimalsMain = 1;
       unitMain = 0;
@@ -1358,7 +1358,7 @@ void drawPageOLD() {
       decimalsThird = 1;
       unitThird = 3;
       break;
-    case 5:
+    case 3:
       valueMain = debugData.rssi;
       decimalsMain = 1;
       unitMain = 5;
@@ -1369,7 +1369,7 @@ void drawPageOLD() {
       decimalsThird = 1;
       unitThird = 4;
       break;
-    case 6:
+    case 4:
       valueMain = debugData.longestCycleTime;
       decimalsMain = 0;
       unitMain = 6;
@@ -1465,10 +1465,6 @@ void drawAnnouncement() {
   y = 37;
 
   drawString("E-Stop Activated!", 10, x, y, u8g2_font_logisoso18_tn);
-
-  if (millis() - announcmentTimer > 2000){
-    displayView = 6;
-  }
 
 }
 

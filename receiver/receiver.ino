@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -213,33 +213,38 @@ void loop() {
   controlStatusLed();
 
   debugData.lastTransmissionStart = millis();
-  if (rf69_manager.available()) {
-      debugData.lastTransmissionAvaible = millis();
-    if (remPackage.type == 0) {
-      if (!eStopTriggered){
-        if (analyseMessage()) {
-          setStatus(COMPLETE);
-          if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
-            rxSettings.eStopArmed = true;
-            //getUartData();
+
+  if (!eStopTriggered) {
+    if (rf69_manager.available()) {
+        debugData.lastTransmissionAvaible = millis();
+        if (remPackage.type == 0) {
+          if (!eStopTriggered){
+            if (analyseMessage()) {
+              setStatus(COMPLETE);
+              if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
+                rxSettings.eStopArmed = true;
+                //getUartData();
+              }
+            } else {
+              setStatus(FAILED);
+            }
+            speedControl( remPackage.throttle, remPackage.trigger );
           }
-        } else {
-          setStatus(FAILED);
+        } else if (remPackage.type == 1) { // join settings transmission
+          analyseSettingsMessage();
         }
-        speedControl( remPackage.throttle, remPackage.trigger );
-      }
-    } else if (remPackage.type == 1) { // join settings transmission
-      analyseSettingsMessage();
-    }
-  } else { //no valid messaage available
-    if (rxSettings.eStopMode != 2 && rxSettings.eStopArmed == true && remPackage.type == 0) {
-        if ((millis() - debugData.lastTransmissionAvaible >= 300) || eStopTriggered){
-          activateESTOP(remPackage.throttle);
+      } else { //no valid messaage available
+        if (rxSettings.eStopMode <= 2 && rxSettings.eStopArmed == true && remPackage.type == 0) {
+          if ((millis() - debugData.lastTransmissionAvaible >= 300) || eStopTriggered){
+            activateESTOP(remPackage.throttle);
+            }
+          } else {
+            returnData.eStopArmed = true;
           }
-        } else {
-          returnData.eStopArmed = true;
-      }
-    }
+        }
+    } else {
+  activateESTOP(remPackage.throttle);
+  }
 
   headLight();
   breakLight();
@@ -255,7 +260,6 @@ void loop() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void activateESTOP(uint16_t lastThrottlePos) {
-Serial.println("join ESTOP");
   uint8_t decreseThrottleValue;
 
   setStatus(ESTOP);
@@ -281,11 +285,10 @@ Serial.println("join ESTOP");
   eStopFullBreak = true;
 
   if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
-  Serial.println("try to recover ESTOP");
-    //if ((millis() - goodTransissionsTimer) <= 1000){
+    if ((millis() - goodTransissionsTimer) <= 1000){
 
       if (analyseMessage()) {
-        if (goodTransmissions >= 20) {
+        if (goodTransmissions >= 10) {
 
           goodTransmissions = 0;
           eStopTriggered = false;
@@ -297,12 +300,11 @@ Serial.println("join ESTOP");
           Serial.println(millis());
         }
       }
-    //} else {
-    //  Serial.println("took to long");
-    //  goodTransmissions = 0;
-    //  eStopFullBreak = true;
-    //  goodTransissionsTimer = millis();
-  //}
+    } else {
+      goodTransmissions = 0;
+      eStopFullBreak = true;
+      goodTransissionsTimer = millis();
+  }
   }
 }
 
