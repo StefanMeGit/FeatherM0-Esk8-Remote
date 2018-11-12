@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -282,11 +282,10 @@ Serial.println("join ESTOP");
 
   if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
   Serial.println("try to recover ESTOP");
-    if ((millis() - goodTransissionsTimer) <= 1000){
+    //if ((millis() - goodTransissionsTimer) <= 1000){
 
       if (analyseMessage()) {
-Serial.println("Message OK");
-        if (goodTransmissions >= 5) {
+        if (goodTransmissions >= 20) {
 
           goodTransmissions = 0;
           eStopTriggered = false;
@@ -294,14 +293,16 @@ Serial.println("Message OK");
           debugData.lastTransmissionAvaible = millis();
         } else {
           goodTransmissions++;
+          Serial.println(goodTransmissions);
+          Serial.println(millis());
         }
       }
-    } else {
-      Serial.println("took to long");
-      goodTransmissions = 0;
-      eStopFullBreak = true;
-      goodTransissionsTimer = millis();
-    }
+    //} else {
+    //  Serial.println("took to long");
+    //  goodTransmissions = 0;
+    //  eStopFullBreak = true;
+    //  goodTransissionsTimer = millis();
+  //}
   }
 }
 
