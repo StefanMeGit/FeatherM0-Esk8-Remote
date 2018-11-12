@@ -333,6 +333,8 @@ unsigned long cycleTimeDuration = 0;
 uint8_t useDefaultKeyForTransmission = 0;
 uint8_t headlightStatusUpdated = 0;
 
+unsigned long announcmentTimer = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -430,6 +432,7 @@ void loop() {
       alarmBlinkDuration = 200;
       alarmBlinkTimes = 12;
       alarmTriggered = true;
+      returnData.eStopArmed = false;
     } else {
       connectionLost = false;
     }
@@ -976,11 +979,11 @@ u8g2.firstPage();
       drawBattery();
       //drawSignal();
       drawHeadlightStatus();
-    case 0:
-      drawAnnouncement();
       if (returnData.eStopArmed) {
         drawEStopArmed();
-        }
+      }
+    case 0:
+      drawAnnouncement();
       break;
       }
     }
@@ -1461,7 +1464,11 @@ void drawAnnouncement() {
   x = 0;
   y = 37;
 
+  drawString("E-Stop Activated!", 10, x, y, u8g2_font_logisoso18_tn);
 
+  if (millis() - announcmentTimer > 2000){
+    displayView = 6;
+  }
 
 }
 
