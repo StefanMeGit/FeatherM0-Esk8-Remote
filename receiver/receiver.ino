@@ -115,11 +115,11 @@ const short settingRules[numOfSettings][3] {
 };
 
 // Definition for RFM69HW radio on Feather m0
-#define RFM69_CS     8
+#define RFM69_CS    8
 #define RFM69_INT   3
 #define RFM69_RST   4
 #define RF69_FREQ   433.0
-#define MY_ADDRESS     1
+#define MY_ADDRESS  1
 
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
@@ -133,6 +133,7 @@ uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 #define TIMEOUT 1
 #define COMPLETE 2
 #define FAILED 3
+#define ESTOP 4
 
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
@@ -192,11 +193,10 @@ void setup() {
   loadFlashSettings();
 
   pinMode(statusLedPin, OUTPUT);
-  esc.attach(throttlePin);
-
   pinMode(breakLightPin, OUTPUT);
-
   pinMode(RFM69_RST, OUTPUT);
+
+  esc.attach(throttlePin);
 
   digitalWrite(RFM69_RST, LOW);
 
@@ -210,16 +210,21 @@ delay(2000);
 // --------------------------------------------------------------------------------------
 void loop() {
 
+  controlStatusLed();
+
   debugData.lastTransmissionStart = millis();
   if (rf69_manager.available()) {
       debugData.lastTransmissionAvaible = millis();
     if (remPackage.type == 0) {
       if (!eStopTriggered){
         if (analyseMessage()) {
+          setStatus(COMPLETE);
           if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
             rxSettings.eStopArmed = true;
             //getUartData();
           }
+        } else {
+          setStatus(FAILED);
         }
         speedControl( remPackage.throttle, remPackage.trigger );
       }
@@ -250,8 +255,10 @@ void loop() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void activateESTOP(uint16_t lastThrottlePos) {
-
+Serial.println("join ESTOP");
   uint8_t decreseThrottleValue;
+
+  setStatus(ESTOP);
 
   if (rxSettings.eStopMode == 0){
     decreseThrottleValue = 2;
@@ -273,24 +280,28 @@ void activateESTOP(uint16_t lastThrottlePos) {
 
   eStopFullBreak = true;
 
-  if ((millis() - goodTransissionsTimer) <= 1000){
+  if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
+  Serial.println("try to recover ESTOP");
+    if ((millis() - goodTransissionsTimer) <= 1000){
 
+      if (analyseMessage()) {
+Serial.println("Message OK");
+        if (goodTransmissions >= 5) {
 
-    if (analyseMessage()) {
-
-      if (goodTransmissions >= 10) {
-
-        goodTransmissions = 0;
-        eStopTriggered = false;
-        eStopFullBreak = false;
-        debugData.lastTransmissionAvaible = millis();
-      } else {
-        goodTransmissions++;
+          goodTransmissions = 0;
+          eStopTriggered = false;
+          eStopFullBreak = false;
+          debugData.lastTransmissionAvaible = millis();
+        } else {
+          goodTransmissions++;
+        }
       }
+    } else {
+      Serial.println("took to long");
+      goodTransmissions = 0;
+      eStopFullBreak = true;
+      goodTransissionsTimer = millis();
     }
-  } else {
-    goodTransmissions = 0;
-    goodTransissionsTimer = millis();
   }
 }
 
@@ -305,6 +316,7 @@ bool analyseMessage() {
     if (remPackage.throttle > 1200){
       Serial.println("ALARM!!!!! STRANGE THROTTLE VALUE!");
       Serial.print("remPackage.throttle: "); Serial.println(remPackage.throttle);
+      rxSettings.eStopMode = 1; // hard stop for no recovery
       activateESTOP(512);
     }
 
@@ -333,7 +345,6 @@ void analyseSettingsMessage() {
     if (!rf69_manager.sendtoWait((uint8_t*)&remPackage, sizeof(remPackage), from)) {
 
     }
-
 
     remPackage.type = 0;
     updateFlashSettings();
@@ -376,6 +387,7 @@ void controlStatusLed() {
     case TIMEOUT:   oninterval = 300;   offinterval = 300;  break;
     case COMPLETE:  oninterval = 50;    offinterval = 50;   break;
     case FAILED:    oninterval = 500;   offinterval = 200;  break;
+    case ESTOP:    oninterval = 1000;   offinterval = 200;  break;
   }
 
   currentMillis = millis();
@@ -391,6 +403,9 @@ void controlStatusLed() {
     statusLedState = !statusLedState;
 
   }
+
+  digitalWrite(statusLedPin, statusLedState);
+
 }
 
 // initiate receiver radio

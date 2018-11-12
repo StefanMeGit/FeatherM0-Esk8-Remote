@@ -289,7 +289,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 1;
+uint8_t displayView = 6;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -340,8 +340,7 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(115200);
-  delay(2000);
-  //while (!Serial) { delay(1);};
+  while (!Serial) { delay(1);};
 #endif
 
   pinMode(triggerPin, INPUT_PULLUP);
@@ -962,21 +961,23 @@ u8g2.firstPage();
     }
     else
     {
-      if (displayView >=5) {
-        displayView = 0;
+      if (displayView >=7) {
+        displayView = 2;
         }
         switch (displayView) {
-    case 0:
+    case 2:
       drawPage();
       drawThrottle();
       break;
-    case 1: case 2: case 3: case 4:
+    case 3: case 4: case 5: case 6:
       drawPageOLD();
       drawThrottleOLD();
       drawBatteryLevel();
       drawBattery();
       //drawSignal();
       drawHeadlightStatus();
+    case 0:
+      drawAnnouncement();
       if (returnData.eStopArmed) {
         drawEStopArmed();
         }
@@ -1332,7 +1333,7 @@ void drawPageOLD() {
   y = 10;
 
   switch (displayView) {
-    case 1:
+    case 3:
       valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
       unitMain = 1;
@@ -1343,7 +1344,7 @@ void drawPageOLD() {
       decimalsThird = 2;
       unitThird = 2;
       break;
-    case 2:
+    case 4:
       valueMain = returnData.inpVoltage;
       decimalsMain = 1;
       unitMain = 0;
@@ -1354,7 +1355,7 @@ void drawPageOLD() {
       decimalsThird = 1;
       unitThird = 3;
       break;
-    case 3:
+    case 5:
       valueMain = debugData.rssi;
       decimalsMain = 1;
       unitMain = 5;
@@ -1365,7 +1366,7 @@ void drawPageOLD() {
       decimalsThird = 1;
       unitThird = 4;
       break;
-    case 4:
+    case 6:
       valueMain = debugData.longestCycleTime;
       decimalsMain = 0;
       unitMain = 6;
@@ -1449,6 +1450,18 @@ void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8
 
   u8g2.setFont(font);
   u8g2.drawStr(x, y, cache);
+
+}
+
+// Draw page
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawAnnouncement() {
+
+  x = 0;
+  y = 37;
+
+
 
 }
 
