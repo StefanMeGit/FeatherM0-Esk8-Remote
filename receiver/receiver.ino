@@ -223,7 +223,7 @@ void loop() {
               setStatus(COMPLETE);
               if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
                 rxSettings.eStopArmed = true;
-                //getUartData();
+                getUartData();
               }
             } else {
               setStatus(FAILED);
@@ -285,19 +285,18 @@ void activateESTOP(uint16_t lastThrottlePos) {
   eStopFullBreak = true;
 
   if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
-    if ((millis() - goodTransissionsTimer) <= 1000){
+    if ((millis() - goodTransissionsTimer) <= 2000){
 
       if (analyseMessage()) {
-        if (goodTransmissions >= 10) {
-
+        if (goodTransmissions >= 20) {
           goodTransmissions = 0;
           eStopTriggered = false;
           eStopFullBreak = false;
           debugData.lastTransmissionAvaible = millis();
         } else {
-          goodTransmissions++;
-          Serial.println(goodTransmissions);
-          Serial.println(millis());
+          if (remPackage.throttle <= 550){
+            goodTransmissions++;
+          }
         }
       }
     } else {
