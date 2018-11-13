@@ -268,8 +268,6 @@ uint8_t data[] = "  OK";
 uint8_t transmissionFailCounter = 0;
 bool connectionLost = false;
 
-// define variable for battery alert
-bool alarmTriggered = false;
 
 // Battery monitering
 const float minVoltage = 3.1;
@@ -304,10 +302,10 @@ unsigned long lastBlockBlink;
 bool blockBlink = false;
 
 // Defining variables for vibration actuator
-unsigned long alarmBlinkDuration = 0;
-uint8_t alarmBlinkTimes = 0;
-uint8_t alarmBlinkCounter = 0;
-uint8_t alarmBlinkTimer = 0;
+unsigned long vibIntervalDuration = 0;
+uint8_t vibIntervalCounterTarget = 0;
+uint8_t vibIntervalCounter = 0;
+uint8_t vibIntervalTimer = 0;
 
 
 // Defining variables for Settings menu
@@ -338,6 +336,7 @@ unsigned long announcementTimer = 0;
 long announcementDuration = 0;
 String announcementString = "";
 bool activateAnnouncement = false;
+bool announcementBlockTimer = false;
 
 
 // SETUP
@@ -438,11 +437,8 @@ void loop() {
 
     if (millis() - debugData.lastTransmissionAvaible > 300) {
       connectionLost = true;
-      alarmBlinkDuration = 200;
-      alarmBlinkTimes = 12;
-      alarmTriggered = true;
       returnData.eStopArmed = false;
-      setAnnouncement("E-Stop Activated!",1000);
+      setAnnouncement("E-Stop Activated!",5000);
     } else {
       connectionLost = false;
     }
@@ -960,18 +956,40 @@ bool triggerActive() {
     return false;
 }
 
-// setAnnouncement
+// setAnnouncement with vibration
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setAnnouncement(String string, short duration) {
 
-  activateAnnouncement = true;
+  if (!activateAnnouncement) {
 
-  announcementString = string;
+    announcementString = string;
+    announcementDuration = duration;
 
-  announcementDuration = duration;
-  activateAnnouncement = true;
-  announcementTimer = millis();
+    vibIntervalDuration = 500; // interval duration for normal alarm
+    vibIntervalCounterTarget = abs(duration / vibIntervalDuration);
+
+    activateAnnouncement = true;
+    announcementTimer = millis();
+
+  }
+
+}
+
+// vibrate corresponding to announcment
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void controlVib() {
+  if (activateAnnouncement){
+    if (vibIntervalCounter < vibIntervalCounterTarget) {
+      if ((millis() - vibIntervalTimer > vibIntervalDuration)) {
+        digitalWrite(vibrationActuatorPin, !digitalRead(vibrationActuatorPin));
+        vibIntervalTimer = millis();
+        vibIntervalCounter++;
+      }
+    }
+  }
+
 }
 
 // Update the OLED for each loop
@@ -1136,29 +1154,8 @@ void checkBatteryLevel() {
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
   if ((((boardBattery > 0) && (boardBattery <= 15)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
-    alarmBlinkDuration = 500;
-    alarmBlinkTimes = 6;
-    alarmTriggered = true;
+    setAnnouncement("Low Battery!", 3000);
   }
-}
-
-// Vibrate
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-void controlVib() {
-  if (alarmTriggered){
-    if (alarmBlinkCounter < alarmBlinkTimes) {
-      if ((millis() - alarmBlinkTimer > alarmBlinkDuration)) {
-        digitalWrite(vibrationActuatorPin, !digitalRead(vibrationActuatorPin));
-        alarmBlinkTimer = millis();
-        alarmBlinkCounter++;
-      }
-    } else {
-      alarmTriggered = 0;
-      alarmTriggered = false;
-    }
-  }
-
 }
 
 // Prints the settings menu on the OLED display
