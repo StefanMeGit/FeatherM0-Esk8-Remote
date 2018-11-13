@@ -209,8 +209,8 @@ struct callback {
 // defining button data
 unsigned long buttonPrevMillis = 0;
 const unsigned long buttonSampleIntervalsMs = 200;
-byte longbuttonPressCountMax = 12;    // 80 * 25 = 2000 ms
-byte mediumbuttonPressCountMin = 4;    // 20 * 25 = 500 ms
+byte longbuttonPressCountMax = 10;    // 80 * 25 = 2000 ms
+byte mediumbuttonPressCountMin = 2;    // 20 * 25 = 500 ms
 byte buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low
 
@@ -275,6 +275,7 @@ bool connectionLost = false;
 const float minVoltage = 3.1;
 const float maxVoltage = 4.2;
 const float refVoltage = 3.3;
+unsigned long overchargeTimer = 0;
 
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
@@ -289,7 +290,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 4;
+uint8_t displayView = 3;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -315,8 +316,10 @@ unsigned long settingChangeMillis = 0;
 //announcment
 unsigned long announcementTimer = 0;
 long announcementDuration = 0;
-String announcementString = "";
+String announcementStringLine1 = "";
+String announcementStringLine2 = "";
 bool activateAnnouncement = false;
+bool announcementFade = false;
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -368,15 +371,7 @@ void setup() {
 void loop() {
 
   debugData.cycleTimeStart = millis();
-  detectButtonPress();
   calculateThrottlePosition();
-  checkConnection();
-  checkBatteryLevel();
-  controlVib();
-
-  if (triggerActive()){ // for test announcments
-    setAnnouncement("Test passed!",1000);
-  }
 
   if (changeSettings == true) {
     drawSettingsMenu();
@@ -388,11 +383,11 @@ void loop() {
 
     if (transmitToReceiver(1,30)) {
       debugData.lastTransmissionAvaible = millis();
-      updateMainDisplayBuffer();
+      updateMainDisplay();
     }
 
     if (connectionLost) {
-      updateMainDisplayBuffer();
+      updateMainDisplay();
       }
 
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
@@ -405,6 +400,11 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 
+  detectButtonPress();
+  checkConnection();
+  checkBatteryLevel();
+  controlVib();
+
 }
 
 // check connection
@@ -415,7 +415,7 @@ void loop() {
     if (millis() - debugData.lastTransmissionAvaible > 300) {
       connectionLost = true;
       returnData.eStopArmed = false;
-      setAnnouncement("E-Stop Activated!",5000);
+      setAnnouncement("E-Stop!!!", "E-Stop!!!",5000, false);
     } else {
       connectionLost = false;
     }
@@ -933,15 +933,27 @@ bool triggerActive() {
     return false;
 }
 
+// Return true if extra Button is activated, false otherwise
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+bool extraButtonActive() {
+  if (digitalRead(extraButtonPin) == LOW)
+    return true;
+  else
+    return false;
+}
+
 // setAnnouncement with vibration
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void setAnnouncement(String string, short duration) {
+void setAnnouncement(String stringLine1, String stringLine2, short duration, bool fade) {
 
   if (!activateAnnouncement) {
 
-    announcementString = string;
+    announcementStringLine1 = stringLine1;
+    announcementStringLine2 = stringLine2;
     announcementDuration = duration;
+    announcementFade = fade;
 
     vibIntervalDuration = 500; // interval duration for normal alarm
     vibIntervalCounterTarget = abs(duration / vibIntervalDuration);
@@ -951,6 +963,31 @@ void setAnnouncement(String string, short duration) {
 
   }
 
+}
+
+// Draw announcment
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawAnnouncement(){
+
+  if ((millis() - announcementTimer < announcementDuration) || !announcementFade) {
+
+    x = 20;
+    y = 0;
+
+    u8g2.setFontDirection(1);
+    drawString(announcementStringLine1, announcementStringLine1.length(), x + 20 , y , u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
+    drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
+    u8g2.setFontDirection(0);
+
+    if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
+      activateAnnouncement = false;
+    }
+  } else {
+    if (announcementFade) {
+      activateAnnouncement = false;
+    }
+  }
 }
 
 // vibrate corresponding to announcment
@@ -974,39 +1011,12 @@ void controlVib() {
 //---------------------------------------------------------------------------------------
 void updateMainDisplay() {
 
-u8g2.firstPage();
-    if ( changeSettings == true ) {
-      drawSettingsMenu();
-    } else {
-      if (displayView >= 5) {
-        displayView = 1;
-      }
-      if (activateAnnouncement){
-        drawAnnouncement();
-      } else {
-        drawPage();
-      }
-      drawThrottle();
-      drawBatteryRemote();
-      drawBatteryBoard();
-      drawHeadlightStatus();
-      if (returnData.eStopArmed) {
-        drawEStopArmed();
-      }
-    }
-u8g2.nextPage();
-}
-
-// test!!
-
-void updateMainDisplayBuffer() {
-
 u8g2.clearBuffer();
     if ( changeSettings == true ) {
       drawSettingsMenu();
     } else {
-      if (displayView >= 5) {
-        displayView = 1;
+      if (displayView >= 4) {
+        displayView = 0;
       }
       if (activateAnnouncement){
         drawAnnouncement();
@@ -1022,21 +1032,6 @@ u8g2.clearBuffer();
       }
     }
 u8g2.sendBuffer();
-}
-
-// Draw announcment
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-void drawAnnouncement(){
-
-  if (millis() - announcementTimer < announcementDuration) {
-
-    u8g2.setFontDirection(1);
-    drawString(announcementString, announcementString.length(), x + 10, y + 30, u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
-    u8g2.setFontDirection(0);
-  } else {
-    activateAnnouncement = false;
-  }
 }
 
 // Measure the hall sensor output and calculate throttle posistion
@@ -1153,12 +1148,29 @@ void checkBatteryLevel() {
   float boardBattery;
   uint16_t remoteBattery;
   uint16_t boardBatteryAbs;
+  String device;
 
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
   if ((((boardBattery > 0) && (boardBattery <= 15)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
-    setAnnouncement("Low Battery!", 3000);
+    if (boardBattery <= 15) {
+      device = "Board: ";
+      device += String(boardBatteryAbs);
+      device += "%";
+      setAnnouncement("Low Battery!", device, 5000, true);
+    } else {
+      device = "Remote: ";
+      device += String(remoteBattery);
+      device += "%";
+      setAnnouncement("Low Battery!", device, 5000, true);
+    }
+  } else if (returnData.inpVoltage >= 42.0 && throttlePosition == BOTTOM){
+      if ((millis() - overchargeTimer) > 5000) {
+        setAnnouncement("Overcharge!", "Caution!", 3000, true);
+      }
+  } else {
+    overchargeTimer = millis();
   }
 }
 
@@ -1364,7 +1376,7 @@ void drawPage() {
   y = 10;
 
   switch (displayView) {
-    case 1:
+    case 0:
       valueMain = ratioRpmSpeed * returnData.rpm;
       decimalsMain = 1;
       unitMain = 1;
@@ -1375,7 +1387,7 @@ void drawPage() {
       decimalsThird = 2;
       unitThird = 2;
       break;
-    case 2:
+    case 1:
       valueMain = returnData.inpVoltage;
       decimalsMain = 1;
       unitMain = 0;
@@ -1386,7 +1398,7 @@ void drawPage() {
       decimalsThird = 1;
       unitThird = 3;
       break;
-    case 3:
+    case 2:
       valueMain = debugData.rssi;
       decimalsMain = 1;
       unitMain = 5;
@@ -1397,7 +1409,7 @@ void drawPage() {
       decimalsThird = 1;
       unitThird = 4;
       break;
-    case 4:
+    case 3:
       valueMain = debugData.longestCycleTime;
       decimalsMain = 0;
       unitMain = 6;
