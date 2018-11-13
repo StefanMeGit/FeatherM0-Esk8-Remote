@@ -104,7 +104,7 @@ const short settingRules[numOfSettings][3] {
   { 0, 0, 2},         //12 EStop mode |0soft|1hard|2off
   { 0, 0, 2},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   { 10, 0, 100},      //14 throttle death center
-  { 0, 0, 2},        //15 drivingMode
+  { 0, 0, 2},         //15 drivingMode
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key

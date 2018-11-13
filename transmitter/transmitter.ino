@@ -333,7 +333,12 @@ unsigned long cycleTimeDuration = 0;
 uint8_t useDefaultKeyForTransmission = 0;
 uint8_t headlightStatusUpdated = 0;
 
-unsigned long announcmentTimer = 0;
+//announcment
+unsigned long announcementTimer = 0;
+long announcementDuration = 0;
+String announcementString = "";
+bool activateAnnouncement = false;
+
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -393,8 +398,12 @@ void loop() {
   checkBatteryLevel();
   controlVib();
 
+  if (triggerActive()){
+    setAnnouncement("Test passed!",1000);
+  }
+
   if (changeSettings == true) {
-    controlSettingsMenu();
+    drawSettingsMenu();
     updateMainDisplay();
   } else {
     remPackage.type = 0;
@@ -433,6 +442,7 @@ void loop() {
       alarmBlinkTimes = 12;
       alarmTriggered = true;
       returnData.eStopArmed = false;
+      setAnnouncement("E-Stop Activated!",1000);
     } else {
       connectionLost = false;
     }
@@ -671,7 +681,7 @@ bool pairNewBoard() {
 // Uses the throttle and trigger to navigate and change settings
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void controlSettingsMenu() {
+void setSettingsMenu() {
 
   if (changeThisSetting == true) {
 
@@ -950,44 +960,61 @@ bool triggerActive() {
     return false;
 }
 
+// setAnnouncement
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void setAnnouncement(String string, short duration) {
+
+  activateAnnouncement = true;
+
+  announcementString = string;
+
+  announcementDuration = duration;
+  activateAnnouncement = true;
+  announcementTimer = millis();
+}
 
 // Update the OLED for each loop
-// To-Do: Only update display when needed
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void updateMainDisplay()
 {
 u8g2.firstPage();
-    if ( changeSettings == true )
-    {
+    if ( changeSettings == true ) {
       drawSettingsMenu();
-    }
-    else
-    {
+    } else {
       if (displayView >= 5) {
-        displayView = 0;
-        }
-      switch (displayView) {
-    case 0:
-      drawPage();
+        displayView = 1;
+      }
+      if (activateAnnouncement){
+        drawAnnouncement();
+      } else {
+        drawPage();
+      }
       drawThrottle();
-      break;
-    case 1: case 2: case 3: case 4:
-      drawPageOLD();
-      drawThrottleOLD();
-      drawBatteryLevel();
-      drawBattery();
-      //drawSignal();
+      drawBatteryRemote();
+      drawBatteryBoard();
       drawHeadlightStatus();
       if (returnData.eStopArmed) {
         drawEStopArmed();
       }
-    case 99:
-      drawAnnouncement();
-      break;
-      }
     }
 u8g2.nextPage();
+}
+
+// Draw announcment
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawAnnouncement(){
+
+  if (millis() - announcementTimer < announcementDuration) {
+
+    u8g2.setFontDirection(1);
+    drawString(announcementString, announcementString.length(), x + 10, y + 30, u8g2_font_10x20_tr );
+    u8g2.setFontDirection(0);
+  } else {
+    activateAnnouncement = false;
+  }
 }
 
 // Measure the hall sensor output and calculate throttle posistion
@@ -1325,7 +1352,7 @@ void longbuttonPress() {
 // draw main page
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void drawPageOLD() {
+void drawPage() {
 
   uint8_t decimalsMain, decimalsSecond, decimalsThird;
   float valueMain, valueSecond, valueThird;
@@ -1456,143 +1483,9 @@ void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8
 
 }
 
-// Draw page
+// Draw stringCenter
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void drawAnnouncement() {
-
-  x = 0;
-  y = 37;
-
-  drawString("E-Stop Activated!", 10, x, y, u8g2_font_logisoso18_tn);
-
-}
-
-// Draw page
-//---------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------
-void drawPage() {
-
-  uint8_t decimals;
-  float value;
-  uint16_t first, last;
-
-  String s;
-
-  uint8_t offset = 38;
-  x = 0;
-  y = 37;
-  uint8_t width;
-
-//  u8g2.drawFrame(0,0,64,128);
-
-  // --- Speed ---
-  value = ratioRpmSpeed * abs(returnData.rpm);
-  float speedMax = 30.0;
-
-  drawStringCenter(String(value,0), "km/h", y);
-
-  y = 48;
-  // speedometer graph height array
-  uint8_t a[16] = {3, 3, 4, 4, 5, 6, 7, 8, 10,
-    11, 13, 15, 17, 20, 24, 28};
-  uint8_t h;
-
-  for (uint8_t i = 0; i < 16; i++) {
-    h = a[i];
-    if (speedMax / 16 * i <= value) {
-      u8g2.drawVLine(x + i*4 + 2, y - h, h);
-    } else {
-      u8g2.drawPixel(x + i*4 + 2, y - h);
-      u8g2.drawPixel(x + i*4 + 2, y - 1);
-    }
-  }
-
-  // --- Battery ---
-  value = batteryPackPercentage( returnData.inpVoltage );
-
-  y = 73;
-
-  int battery = (int) value;
-  drawStringCenter(String(battery), "%", y);
-
-  drawString(String(returnData.inpVoltage, 1), 50, 73, u8g2_font_blipfest_07_tr);
-
-  y = 78;
-  x = 0;
-
-  // longboard body
-  h = 12;
-  uint8_t w = 41;
-  u8g2.drawHLine(x + 10, y, w); // top line
-  u8g2.drawHLine(x + 10, y + h, w); // bottom
-
-  // nose
-  u8g2.drawHLine(x + 2, y + 3, 5); // top line
-  u8g2.drawHLine(x + 2, y + h - 3, 5); // bottom
-
-  u8g2.drawPixel(x + 1, y + 4);
-  u8g2.drawVLine(x, y + 5, 3); // nose
-  u8g2.drawPixel(x + 1, y + h - 4);
-
-  u8g2.drawLine(x + 6, y + 3, x + 9, y);          // /
-  u8g2.drawLine(x + 6, y + h - 3, x + 9, y + h);  // \
-
-  // tail
-  u8g2.drawHLine(64 - 6 - 2, y + 3, 5); // top line
-  u8g2.drawHLine(64 - 6 - 2, y + h - 3, 5); // bottom
-
-  u8g2.drawPixel(64 - 3, y + 4);
-  u8g2.drawVLine(64 - 2, y + 5, 3); // tail
-  u8g2.drawPixel(64 - 3, y + h - 4);
-
-  u8g2.drawLine(64 - 6 - 3, y + 3, 64 - 6 - 6, y);          // /
-  u8g2.drawLine(64 - 6 - 3, y + h - 3, 64 - 6 - 6, y + h);  // \
-
-  // longboard wheels
-  u8g2.drawBox(x + 3, y, 3, 2); // left
-  u8g2.drawBox(x + 3, y + h - 1, 3, 2);
-  u8g2.drawBox(64 - 7, y, 3, 2); // right
-  u8g2.drawBox(64 - 7, y + h - 1, 3, 2);
-
-  // battery sections
-  for (uint8_t i = 0; i < 14; i++) {
-    if (round((100 / 14) * i) <= value) {
-      u8g2.drawBox(x + i*3 + 10, y + 2, 1, h - 3);
-    }
-  }
-
-  // --- Distance in km ---
-  value = ratioPulseDistance * returnData.tachometerAbs;
-  String km;
-
-  y = 118;
-
-  if (value >= 1) {
-    km = String(value, 0);
-    drawStringCenter(String(km), "km", y);
-  } else {
-    km = String(value * 1000, 0);
-    drawStringCenter(String(km), "m", y);
-  }
-
-  // max distance
-  int range = 30;
-
-  drawString(String(range), 56, 118, u8g2_font_blipfest_07_tr); // u8g2_font_prospero_bold_nbp_tn
-
-  // dots
-  y = 122;
-  for (uint8_t i = 0; i < 16; i++) {
-    u8g2.drawBox(x + i * 4, y + 4, 2, 2);
-  }
-
-  // start end
-  u8g2.drawBox(0, y, 2, 6);
-  u8g2.drawBox(62, y, 2, 6);
-  u8g2.drawBox(31, y, 2, 6);
-}
-
 void drawStringCenter(String value, String caption, uint8_t y){
 
   static char cache[10];
@@ -1624,27 +1517,7 @@ void drawString(String string, int x, int y, const uint8_t *font){
   u8g2.drawStr(x, y, cache);
 }
 
-/*
-   Print the throttle value as a bar on the OLED
-*/
 void drawThrottle() {
-
-uint16_t width;
-
-  if (throttle >= txSettings.centerHallValue) {
-    width = map(throttle, txSettings.centerHallValue, txSettings.maxHallValue, 0, 14); //todo
-    u8g2.drawBox(32 - width, 123, width, 5 );
-
-
-  } else {
-    width = map(throttle, txSettings.minHallValue, txSettings.centerHallValue, 14, 0); //todo
-    u8g2.drawBox(32, 123, width, 5 );
-  }
-
-}
-
-
-void drawThrottleOLD() {
 
   x = 0;
   y = 0;
@@ -1681,12 +1554,14 @@ void drawThrottleOLD() {
   }
 }
 
-void drawBattery() {
+void drawBatteryBoard() {
 
   x = 6;
   y = 0;
 
   u8g2.drawVLine(x + 4, y , 128);
+
+
 
 }
 
@@ -1718,7 +1593,7 @@ void drawSignal() {
 /*
    Print the remotes battery level as a battery on the OLED
 */
-void drawBatteryLevel() {
+void drawBatteryRemote() {
 
   x = 43;
   y = 115;
