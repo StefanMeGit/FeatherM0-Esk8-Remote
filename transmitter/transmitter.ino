@@ -78,16 +78,22 @@ const unsigned char eStopArmed[] PROGMEM = {
 
 // Transmit and receive package
 struct debug {
-  unsigned long cycleTime;
-  unsigned long transmissionTime;
+  unsigned long cycleTime = 0;
+  unsigned long transmissionTime = 0;
   int8_t rssi;
-  unsigned long counterJoined;
-  unsigned long counterSend;
-  unsigned long counterReceived;
-  unsigned long differenceJoinedSend;
-  unsigned long differenceJoinedReceived;
-  unsigned long longestCycleTime;
-  unsigned long lastTransmissionAvaible;
+  unsigned long counterJoined = 0;
+  unsigned long counterSend = 0;
+  unsigned long counterReceived = 0;
+  unsigned long differenceJoinedSend = 0;
+  unsigned long differenceJoinedReceived = 0;
+  unsigned long longestCycleTime = 0;
+  unsigned long lastTransmissionAvaible = 0;
+  unsigned short transmissionTimeStart = 0;
+  unsigned short transmissionTimeFinish = 0;
+  unsigned short transmissionTimeDuration = 0;
+  unsigned long cycleTimeStart = 0;
+  unsigned long cycleTimeFinish = 0;
+  unsigned long cycleTimeDuration = 0;
 } debugData;
 
 
@@ -256,11 +262,7 @@ uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                               0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
                             };
 
-unsigned long  counterRecived = 0;
-unsigned long  counterSent = 0;
-unsigned long  counterJoined = 0;
-unsigned long sendFailCounterRow = 0;
-
+uint8_t useDefaultKeyForTransmission = 0;
 
 // Dont put this on the stack:
 uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
@@ -294,19 +296,11 @@ uint8_t x, y;
 unsigned long lastSignalBlink;
 bool signalBlink = false;
 
-// Defining variables for alarm
-unsigned long lastAlarmBlink;
-bool alarmBlink = false;
-bool batteryAlarmBlocked = false;
-unsigned long lastBlockBlink;
-bool blockBlink = false;
-
 // Defining variables for vibration actuator
 unsigned long vibIntervalDuration = 0;
 uint8_t vibIntervalCounterTarget = 0;
 uint8_t vibIntervalCounter = 0;
 uint8_t vibIntervalTimer = 0;
-
 
 // Defining variables for Settings menu
 bool changeSettings     = false; // Global flag for whether or not one is editing the settings
@@ -315,29 +309,14 @@ bool settingsLoopFlag   = false;
 bool triggerFlag = false;
 bool settingScrollFlag  = false;
 bool settingsChangeValueFlag = false;
-unsigned short settingWaitDelay = 500;
 unsigned short settingScrollWait = 800;
 unsigned long settingChangeMillis = 0;
-
-// TEST
-unsigned short transmissionTimeStart = 0;
-unsigned short transmissionTimeFinish = 0;
-unsigned short transmissionTimeDuration = 0;
-
-unsigned long cycleTimeStart = 0;
-unsigned long cycleTimeFinish = 0;
-unsigned long cycleTimeDuration = 0;
-
-uint8_t useDefaultKeyForTransmission = 0;
-uint8_t headlightStatusUpdated = 0;
 
 //announcment
 unsigned long announcementTimer = 0;
 long announcementDuration = 0;
 String announcementString = "";
 bool activateAnnouncement = false;
-bool announcementBlockTimer = false;
-
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -369,10 +348,8 @@ void setup() {
 
   loadFlashSettings();
 
-  // check if default encryptionKey is still in use and create custom one if needed
   checkEncryptionKey();
 
-  // Start Radio
   initiateTransmitter();
 
   // Enter settings on startup if trigger is hold down
@@ -390,14 +367,14 @@ void setup() {
 // --------------------------------------------------------------------------------------
 void loop() {
 
-  cycleTimeStart = millis();
+  debugData.cycleTimeStart = millis();
   detectButtonPress();
   calculateThrottlePosition();
   checkConnection();
   checkBatteryLevel();
   controlVib();
 
-  if (triggerActive()){
+  if (triggerActive()){ // for test announcments
     setAnnouncement("Test passed!",1000);
   }
 
@@ -410,20 +387,20 @@ void loop() {
     remPackage.throttle = throttle;
 
     if (transmitToReceiver(1,30)) {
-      updateMainDisplay();
       debugData.lastTransmissionAvaible = millis();
+      updateMainDisplayBuffer();
     }
 
     if (connectionLost) {
-      updateMainDisplay();
+      updateMainDisplayBuffer();
       }
 
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
     debugData.differenceJoinedReceived = debugData.counterJoined - debugData.counterReceived;
   }
 
-  cycleTimeFinish = millis();
-  debugData.cycleTime = cycleTimeFinish - cycleTimeStart;
+  debugData.cycleTimeFinish = millis();
+  debugData.cycleTime = debugData.cycleTimeFinish - debugData.cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
@@ -539,7 +516,7 @@ void createCustomKey() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
-  transmissionTimeStart = millis();
+  debugData.transmissionTimeStart = millis();
 
   rf69_manager.setRetries(retries);
   rf69_manager.setTimeout(timeout);
@@ -555,8 +532,8 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
 
       debugData.counterReceived++;
-      transmissionTimeFinish = millis();
-      debugData.transmissionTime = transmissionTimeFinish - transmissionTimeStart;
+      debugData.transmissionTimeFinish = millis();
+      debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
       return true;
     } else {
@@ -995,8 +972,8 @@ void controlVib() {
 // Update the OLED for each loop
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void updateMainDisplay()
-{
+void updateMainDisplay() {
+
 u8g2.firstPage();
     if ( changeSettings == true ) {
       drawSettingsMenu();
@@ -1020,6 +997,33 @@ u8g2.firstPage();
 u8g2.nextPage();
 }
 
+// test!!
+
+void updateMainDisplayBuffer() {
+
+u8g2.clearBuffer();
+    if ( changeSettings == true ) {
+      drawSettingsMenu();
+    } else {
+      if (displayView >= 5) {
+        displayView = 1;
+      }
+      if (activateAnnouncement){
+        drawAnnouncement();
+      } else {
+        drawPage();
+      }
+      drawThrottle();
+      drawBatteryRemote();
+      drawBatteryBoard();
+      drawHeadlightStatus();
+      if (returnData.eStopArmed) {
+        drawEStopArmed();
+      }
+    }
+u8g2.sendBuffer();
+}
+
 // Draw announcment
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
@@ -1028,7 +1032,7 @@ void drawAnnouncement(){
   if (millis() - announcementTimer < announcementDuration) {
 
     u8g2.setFontDirection(1);
-    drawString(announcementString, announcementString.length(), x + 10, y + 30, u8g2_font_10x20_tr );
+    drawString(announcementString, announcementString.length(), x + 10, y + 30, u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
     u8g2.setFontDirection(0);
   } else {
     activateAnnouncement = false;
