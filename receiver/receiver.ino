@@ -11,10 +11,6 @@
 
 #define VERSION 1.0
 
-#ifdef DEBUG
-  #define DEBUG_PRINT(x)
-#endif
-
 struct debug {
   unsigned long cycleTime = 0;
   unsigned long longestCycleTime = 0;
@@ -78,6 +74,7 @@ typedef struct {
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
+  short Frequency;                  // 21
 } RxSettings;
 
 RxSettings rxSettings;
@@ -85,7 +82,7 @@ RxSettings rxSettings;
 //Defining flash storage
 FlashStorage(flash_RxSettings, RxSettings);
 
-const uint8_t numOfSettings = 23;
+const uint8_t numOfSettings = 24;
 
 // Setting rules format: default, min, max.
 const short settingRules[numOfSettings][3] {
@@ -108,10 +105,11 @@ const short settingRules[numOfSettings][3] {
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
-  { -1, 0 , 0},       //19 Firmware
-  { -1, 0, 0},        //20 Set default key
-  { -1, 0, 0},        //21 Settings
-  { -1, 0, 0}         //22 Exit
+  { -1, 0 , 0},       //19 Frequency
+  { -1, 0 , 0},       //20 Firmware
+  { -1, 0, 0},        //22 Set default key
+  { -1, 0, 0},        //22 Settings
+  { -1, 0, 0}         //23 Exit
 };
 
 // Definition for RFM69HW radio on Feather m0
@@ -180,13 +178,13 @@ VescUart UART;
 void setup() {
 
   #ifdef DEBUG
-    UART.setDebugPort(&Serial);
+    //UART.setDebugPort(&Serial);
     Serial.begin(115200);
     while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
   #endif
 
-  UART.setSerialPort(&Serial1);
-  Serial1.begin(115200);
+  //UART.setSerialPort(&Serial1);
+  //Serial1.begin(115200);
 
   while (!Serial1) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
@@ -202,8 +200,16 @@ void setup() {
 
   initiateReceiver();
 
-delay(2000);
+delay(1000);
+
+Serial.println(rxSettings.Frequency);
+for (uint8_t i = 0; i <=15; i++){
+  Serial.print(rxSettings.customEncryptionKey[i]);
 }
+Serial.println("");
+
+}
+
 
 // LOOP
 // --------------------------------------------------------------------------------------
@@ -223,7 +229,7 @@ void loop() {
               setStatus(COMPLETE);
               if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
                 rxSettings.eStopArmed = true;
-                getUartData();
+                //getUartData();
               }
             } else {
               setStatus(FAILED);
@@ -235,7 +241,7 @@ void loop() {
         }
       } else { //no valid messaage available
         if (rxSettings.eStopMode <= 2 && rxSettings.eStopArmed == true && remPackage.type == 0) {
-          if ((millis() - debugData.lastTransmissionAvaible >= 300) || eStopTriggered){
+          if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
             activateESTOP(remPackage.throttle);
             }
           } else {
@@ -316,10 +322,8 @@ bool analyseMessage() {
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
     if (remPackage.throttle > 1200){
-      Serial.println("ALARM!!!!! STRANGE THROTTLE VALUE!");
-      Serial.print("remPackage.throttle: "); Serial.println(remPackage.throttle);
-      rxSettings.eStopMode = 1; // hard stop for no recovery
-      activateESTOP(512);
+      //rxSettings.eStopMode = 1; // hard stop for no recovery
+      //activateESTOP(512);
     }
 
   rf69_manager.setRetries(1);
@@ -351,9 +355,6 @@ void analyseSettingsMessage() {
     remPackage.type = 0;
     updateFlashSettings();
     initiateReceiver();
-    #ifdef DEBUG
-     //Serial.println("Exit analyseSettingsMessage");
-    #endif
   }
 }
 
@@ -423,7 +424,7 @@ void initiateReceiver() {
     while (1);
   }
 
-  if (!rf69.setFrequency(RF69_FREQ)) {
+  if (!rf69.setFrequency(rxSettings.Frequency)) {
   }
 
   rf69.setTxPower(20, true);
@@ -607,13 +608,14 @@ void getUartData() {
 void setDefaultFlashSettings() {
   for ( int i = 0; i < numOfSettings; i++ ) {
     setSettingValue(i, settingRules[i][0]);
-    Serial.println(i);
   }
 
   rxSettings.firmVersion = VERSION;
   for (int i = 0; i < 16; i++) {
     rxSettings.customEncryptionKey[i] = encryptionKey[i];
   }
+
+  rxSettings.Frequency = RF69_FREQ;
 
   updateFlashSettings();
 }

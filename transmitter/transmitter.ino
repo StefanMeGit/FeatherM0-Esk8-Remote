@@ -120,6 +120,7 @@ typedef struct {
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
+  short Frequency;                  // 21
 } TxSettings;
 
 TxSettings txSettings;
@@ -128,7 +129,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 23;
+const uint8_t numOfSettings = 24;
 
 struct menuItems{
   uint8_t ID;
@@ -160,10 +161,11 @@ struct menuItems{
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
-  {20,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
-  {21,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
-  {22,  -1,   0,    0,    "Exit",           0 , 0}         //22 Exit
+  {19,  -1,   0,    0,    "Frequency", 0 , 0},       //19 Frequency
+  {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
+  {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
+  {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
+  {23,  -1,   0,    0,    "Exit",           0 , 0}         //22 Exit
 };
 
 // Defining constants to hold the special settings, so it's easy changed though the code
@@ -174,13 +176,10 @@ struct menuItems{
 #define PAIR        16
 #define TXPOWER     17
 #define KEY         18
-#define FIRMWARE    19
-#define DEFAULTKEY  20
-#define SETTINGS    21
-#define EXIT        22
-
-const uint8_t unitIdentifier[numOfSettings]  =  {4, 0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0};
-const uint8_t valueIdentifier[numOfSettings] =  {0, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 5, 0, 6, 0, 0, 0, 0, 0, 0};
+#define FIRMWARE    20
+#define DEFAULTKEY  21
+#define SETTINGS    22
+#define EXIT        23
 
 const char stringValues[6][3][15] = {
   {"Killswitch", "Cruise", ""},
@@ -261,7 +260,7 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01
                             };
 
 uint8_t useDefaultKeyForTransmission = 0;
@@ -367,6 +366,11 @@ void setup() {
       drawTitle("Settings", 1500);
   }
 
+  Serial.println(txSettings.Frequency);
+  for (uint8_t i = 0; i <=15; i++){
+    Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
 }
 
 // loop
@@ -440,15 +444,25 @@ void initiateTransmitter() {
     while (1);
   }
 
-  if (!rf69.setFrequency(RF69_FREQ)) {
-  }
   if (useDefaultKeyForTransmission == 1) {
+    rf69.setFrequency(RF69_FREQ);
     rf69.setEncryptionKey(encryptionKey);
+    Serial.println(RF69_FREQ);
+    for (uint8_t i = 0; i <=15; i++){
+      Serial.print(encryptionKey[i]);
+    }
+    Serial.println("");
   } else {
+    rf69.setFrequency(txSettings.Frequency);
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
   }
-  rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
+  rf69.setTxPower(20, true);
   delay(10);
+ Serial.println("initiateTransmitter");
+  for (uint8_t i = 0; i <=15; i++){
+    Serial.print(txSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
 }
 
 // check encryptionKey
@@ -458,14 +472,13 @@ void checkEncryptionKey() {
 
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
-    //Serial.print("Default encryptionKey: "); Serial.println(encryptionKey[i]);
 
     if (txSettings.customEncryptionKey[i] == 0) {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        //createCustomKey();
-        createTestKey();
+        createCustomKey();
+        //createTestKey();
       }
 
     } else {
@@ -514,6 +527,9 @@ void createCustomKey() {
   for (uint8_t i = 0; i < 16; i++) {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
+
+  txSettings.Frequency = random(424, 442);
+  Serial.print(txSettings.Frequency);
 
   updateFlashSettings();
 
@@ -597,6 +613,7 @@ bool transmitKeyToReceiver() {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(remPackage);
       uint8_t from;
+      Serial.println("Told Receiver next package are Settings");
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
       } else {
         remPackage.type = 0;
@@ -646,6 +663,7 @@ bool pairNewBoard() {
   useDefaultKeyForTransmission = 0;
 
   rf69.setEncryptionKey(txSettings.customEncryptionKey);
+  rf69.setFrequency(txSettings.Frequency);
 
   delay(50);
 
