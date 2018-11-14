@@ -130,52 +130,54 @@ FlashStorage(flash_TxSettings, TxSettings);
 uint8_t currentSetting = 0;
 const uint8_t numOfSettings = 23;
 
-// Setting rules format: default, min, max.
-const short rules[numOfSettings][3] {
-  {1, 0, 9},          //0 boardID
-  {1, 0, 1},          //1 0: Killswitch  | 1: Cruise control
-  {1, 0, 1},          //2 0: Li-ion      | 1: LiPo
-  {10, 6, 12},        //3 Cell count
-  {14, 0, 250},       //4 Motor poles
-  {14, 0, 250},       //5 Motor pully
-  {38, 0, 250},       //6 Wheel pulley
-  {80, 0, 250},       //7 Wheel diameter
-  {1, 0, 2},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {316, 0, 400},      //9 Min hall value
-  {490, 300, 700},    //10 Center hall value
-  {645, 600, 1023},   //11 Max hall value
-  { 0, 0, 2},         //12 EStop mode |0soft|1hard|2off
-  { 0, 0, 2},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  { 10, 0, 30},      //14 throttle death center
-  { 2, 0, 2},         //15 Driving Mode
-  { -1, 0, 0},        //16 pair new board
-  {20, 14, 20},       //17 transmission power
-  { -1, 0, 0},        //18 show Key
-  { -1, 0 , 0},       //19 Firmware
-  { -1, 0, 0},        //20 Set default key
-  { -1, 0, 0},        //21 Settings
-  { -1, 0, 0}         //22 Exit
+struct menuItems{
+  uint8_t ID;
+  short standart;
+  short minimum;
+  short maximum;
+  char name[20];
+  uint8_t unitIdentifier;
+  uint8_t valueIdentifier;
+} menuItems[] = {
+
+  {0,   1,    0,    9,    "Board ID",       4 , 0},          //0 boardID
+  {16,  -1,   0,    0,    "Pair new Board", 0 , 0},        //16 pair new board
+  {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
+  {12,  0,    0,    2,    "Estop Mode",     0 , 4},         //12 EStop mode |0soft|1hard|2off
+  {1,   1,    0,    1,    "Trigger use",    0 , 1},          //1 0: Killswitch
+  {2,   1,    0,    1,    "Battery type",   0 , 2},          //2 0: Li-ion      | 1: LiPo
+  {3,   10,   6,    12,   "Battery cells",  1 , 0},        //3 Cell count
+  {4,   14,   0,    250,  "Motor poles",    0 , 0},       //4 Motor poles
+  {5,   14,   0,    250,  "Motor pulley",   2 , 0},       //5 Motor pully
+  {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
+  {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
+  {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {9,   316,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
+  {10,  490,  300,  700,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  645,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
+  {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
+  {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
+  {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
+  {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
+  {19,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
+  {20,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
+  {21,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
+  {22,  -1,   0,    0,    "Exit",           0 , 0}         //22 Exit
 };
 
 // Defining constants to hold the special settings, so it's easy changed though the code
+#define BOARDID     0
 #define TRIGGER     1
 #define MODE        8
-#define BOARDID     0
-#define TXPOWER     13
 #define DRIVINGMODE 15
+#define PAIR        16
+#define TXPOWER     17
 #define KEY         18
 #define FIRMWARE    19
-#define PAIR        16
 #define DEFAULTKEY  20
 #define SETTINGS    21
 #define EXIT        22
-
-const char titles[numOfSettings][19] = {
-  "Board ID", "Trigger use", "Battery type", "Battery cells", "Motor poles", "Motor pulley",
-  "Wheel pulley", "Wheel diameter", "Control mode", "Throttle min", "Throttle center",
-  "Throttle max", "Estop Mode", "Breaklight Mode", "Throttle Death", "Driving Mode", "Pair new Board", "Transmission Power", "Encyption key",
-  "Firmware Version", "Set default key", "Settings", "Exit"
-};
 
 const uint8_t unitIdentifier[numOfSettings]  =  {4, 0, 0, 1, 0, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0};
 const uint8_t valueIdentifier[numOfSettings] =  {0, 1, 2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 5, 0, 6, 0, 0, 0, 0, 0, 0};
@@ -320,6 +322,7 @@ String announcementStringLine1 = "";
 String announcementStringLine2 = "";
 bool activateAnnouncement = false;
 bool announcementFade = false;
+bool blockAnnouncement = false;
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -346,7 +349,7 @@ void setup() {
 
   u8g2.setDisplayRotation(U8G2_R3);
   u8g2.begin();
-  Serial.println("Draw start screen");
+
   drawStartScreen();
 
   loadFlashSettings();
@@ -363,6 +366,7 @@ void setup() {
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
   }
+
 }
 
 // loop
@@ -374,7 +378,7 @@ void loop() {
   calculateThrottlePosition();
 
   if (changeSettings == true) {
-    drawSettingsMenu();
+    controlSettings();
     updateMainDisplay();
   } else {
     remPackage.type = 0;
@@ -413,11 +417,14 @@ void loop() {
  void checkConnection() {
 
     if (millis() - debugData.lastTransmissionAvaible > 300) {
-      connectionLost = true;
       returnData.eStopArmed = false;
-      setAnnouncement("E-Stop!!!", "E-Stop!!!",5000, false);
+      if (!connectionLost) {
+          setAnnouncement("E-Stop!!!", "Caution!",5000, false);
+      }
+      connectionLost = true;
     } else {
       connectionLost = false;
+
     }
  }
 
@@ -654,26 +661,27 @@ bool pairNewBoard() {
 // Uses the throttle and trigger to navigate and change settings
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void setSettingsMenu() {
+void controlSettings() {
+
 
   if (changeThisSetting == true) {
 
-    if (currentSetting == EXIT) {
+    if (menuItems[currentSetting].ID == EXIT) {
       u8g2.setDisplayRotation(U8G2_R3);
       u8g2.begin();
       changeSettings = false;
     }
 
-    if (settingsLoopFlag == false && rules[currentSetting][0] != -1) {
-      short value = getSettingValue(currentSetting);
+    if (settingsLoopFlag == false && menuItems[currentSetting].standart != -1) {
+      short value = getSettingValue(menuItems[currentSetting].ID);
       if ( throttlePosition == TOP ) {
         value++;
       } else if ( throttlePosition == BOTTOM ) {
         value--;
       }
 
-      if (inRange(value, rules[currentSetting][1], rules[currentSetting][2])) {
-        setSettingValue(currentSetting, value);
+      if (inRange(value, menuItems[currentSetting].minimum, menuItems[currentSetting].maximum)) {
+        setSettingValue(menuItems[currentSetting].ID, value);
         if (settingChangeMillis == 0) {
           settingChangeMillis = millis();
         }
@@ -700,7 +708,7 @@ void setSettingsMenu() {
       if (throttlePosition == TOP && currentSetting != 0) {
         currentSetting--;
         settingsLoopFlag = true;
-      } else if (throttlePosition == BOTTOM && currentSetting < (numOfSettings - 1)) {
+      } else if (throttlePosition == BOTTOM && currentSetting < (numOfSettings)) {
         currentSetting++;
         settingsLoopFlag = true;
       }
@@ -716,24 +724,24 @@ void setSettingsMenu() {
   if ( triggerActive() ) {
     if (changeThisSetting == true && triggerFlag == false) {
       // Settings that needs to be transmitted to the recevier
-      if (currentSetting == TRIGGER) {
-        txSettings.triggerMode = getSettingValue(currentSetting);
+      if (menuItems[currentSetting].ID == TRIGGER) {
+        txSettings.triggerMode = getSettingValue(menuItems[currentSetting].ID);
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
         } else {
           drawMessage("Complete", "Trigger mode changed", 2000);
         }
-      } else if (currentSetting == MODE) {
-        txSettings.controlMode = getSettingValue(currentSetting);
+      } else if (menuItems[currentSetting].ID == MODE) {
+        txSettings.controlMode = getSettingValue(menuItems[currentSetting].ID);
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
         } else {
           drawMessage("Complete", "Trigger mode changed", 2000);
         }
-      } else if (currentSetting == TXPOWER) {
-        txSettings.transmissionPower = getSettingValue(currentSetting);
+      } else if (menuItems[currentSetting].ID == TXPOWER) {
+        txSettings.transmissionPower = getSettingValue(menuItems[currentSetting].ID);
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -742,18 +750,18 @@ void setSettingsMenu() {
           initiateTransmitter();
           drawMessage("Complete", "Power changed", 2000);
         }
-      } else if (currentSetting == BOARDID) {
-        selectBoard(getSettingValue(currentSetting));
+      } else if (menuItems[currentSetting].ID == BOARDID) {
+        selectBoard(getSettingValue(menuItems[currentSetting].ID));
         drawMessage("Complete", "New board selected!", 2000);
       }
       updateFlashSettings();
     }
 
     if (triggerFlag == false) {
-      if (currentSetting == SETTINGS) {
+      if (menuItems[currentSetting].ID == SETTINGS) {
         setDefaultFlashSettings();
         drawMessage("Complete", "Default settings loaded!", 2000);
-      } else if (currentSetting == KEY) {
+      } else if (menuItems[currentSetting].ID == KEY) {
         for (uint8_t i = 0; i <= 15; i++) {
           txSettings.customEncryptionKey[i] = encryptionKey[i];
         }
@@ -762,7 +770,7 @@ void setSettingsMenu() {
         initiateTransmitter();
 
         drawMessage("Complete", "Default encryption Key!", 2000);
-      } else if (currentSetting == PAIR) {
+      } else if (menuItems[currentSetting].ID == PAIR) {
         Serial.println("Settings menu - PAIR");
         pairNewBoard();
       } else {
@@ -783,10 +791,9 @@ void setSettingsMenu() {
 void setDefaultFlashSettings() {
 
   for ( uint8_t i = 0; i < numOfSettings; i++ )
-  {  if (rules[i][0] == -1) {
+  {  if (menuItems[i].standart == -1) {
     } else {
-    setSettingValue( i, rules[i][0] );
-    Serial.println(rules[i][0]);
+    setSettingValue( menuItems[i].ID, menuItems[i].standart );
     }
   }
 
@@ -1073,8 +1080,6 @@ void calculateThrottlePosition()
   {
     throttle = centerThrottle;
   }
-#ifdef DEBUG
-  #endif
 
   // Find the throttle positions
   if (throttle >= (centerThrottle + hallMenuMargin)) {
@@ -1190,47 +1195,48 @@ void drawSettingsMenu() {
   if (currentSetting != 0){
     u8g2.drawTriangle(5, 0, 5, 10, 0, 5);
     }
-  shiftTextPixel = 64 - (u8g2.getStrWidth(titles[ currentSetting ])/2);
-  u8g2.drawStr(shiftTextPixel, y, titles[ currentSetting ] );
-  if (currentSetting != 18){
+  //shiftTextPixel = 64 - (u8g2.getStrWidth(menuItems[ currentSetting ].name)/2);
+  shiftTextPixel = 64 - (u8g2.getStrWidth(menuItems[ currentSetting ].name)/2);
+  u8g2.drawStr(shiftTextPixel, y, menuItems[ currentSetting ].name);
+  if (currentSetting != 22){
     u8g2.drawTriangle(123, 0, 123, 10, 128, 5);
   }
 
   // Get current setting value
-  switch (currentSetting) {
+  switch (menuItems[ currentSetting ].ID) {
     default:
-      value = getSettingValue(currentSetting);
+      value = getSettingValue(menuItems[ currentSetting ].ID);
       break;
 
   }
 
   // Check if there is a text string for the setting value
-  if ( valueIdentifier[currentSetting] != 0 )
+  if ( menuItems[currentSetting].valueIdentifier != 0 )
   {
-    uint8_t index = valueIdentifier[ currentSetting ] - 1;
+    uint8_t index = menuItems[currentSetting].valueIdentifier - 1;
     tString = stringValues[ index ][ value ];
   } else { // else normal value from txSettings
     tString = uint64ToString(value);
   }
 
 
-  if ( unitIdentifier[ currentSetting ] != 0 ) {
-    tString += settingUnits[ unitIdentifier[ currentSetting ] - 1 ];
+  if ( menuItems[currentSetting].unitIdentifier != 0 ) {
+    tString += settingUnits[ menuItems[currentSetting].unitIdentifier - 1 ];
   }
 
-  if ( currentSetting == EXIT ) {
+  if ( menuItems[ currentSetting ].ID == EXIT ) {
     tString = F("Exit");
   }
 
-  if ( currentSetting == PAIR ) {
+  if ( menuItems[ currentSetting ].ID == PAIR ) {
     tString = F("Pair now");
   }
 
-  if ( currentSetting == DEFAULTKEY ) {
+  if ( menuItems[ currentSetting ].ID == DEFAULTKEY ) {
     tString = F("Restore");
   }
 
-  if ( currentSetting == KEY ) {
+  if ( menuItems[ currentSetting ].ID == KEY ) {
     for (uint8_t i = 10; i < 16; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
     }
@@ -1242,11 +1248,11 @@ void drawSettingsMenu() {
   Serial.println("");
   }
 
-  if ( currentSetting == SETTINGS ) {
+  if ( menuItems[ currentSetting ].ID == SETTINGS ) {
     tString = F("Reset");
   }
 
-  if ( currentSetting == FIRMWARE ) {
+  if ( menuItems[ currentSetting ].ID == FIRMWARE ) {
     tString = String(txSettings.firmVersion);
   }
 
@@ -1572,8 +1578,21 @@ void drawBatteryBoard() {
   x = 6;
   y = 0;
 
+  uint8_t height;
+  uint8_t boardBattery;
+  uint8_t boardBatteryAbs;
+  uint8_t shift;
+
+  boardBattery = batteryPackPercentage( 40.2 );
+  boardBatteryAbs = abs( floor(boardBattery) );
+
   u8g2.drawVLine(x + 4, y , 128);
 
+  height = map(boardBatteryAbs, 0, 100, 0, 128);
+
+  shift = 128 - height;
+
+  u8g2.drawBox(x, y + shift, 5, height);
 
 
 }
@@ -1635,7 +1654,7 @@ void drawHeadlightStatus() {
 
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_LEFT);
-  u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
+  //u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
 
   if (remPackage.headlight == 1) {
     u8g2.drawLine(x     , y - 3, x    , y - 5);
