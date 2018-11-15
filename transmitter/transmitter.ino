@@ -389,8 +389,7 @@ void loop() {
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
 
-    if (transmitToReceiver(1,30)) {
-      debugData.lastTransmissionAvaible = millis();
+    if (transmitToReceiver(1,50)) {
       updateMainDisplay();
     }
 
@@ -420,7 +419,7 @@ void loop() {
 // --------------------------------------------------------------------------------------
  void checkConnection() {
 
-    if (millis() - debugData.lastTransmissionAvaible > 300) {
+    if (millis() - debugData.lastTransmissionAvaible > 350) {
       returnData.eStopArmed = false;
       if (!connectionLost) {
           setAnnouncement("E-Stop!!!", "Caution!",5000, false);
@@ -547,6 +546,7 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
   debugData.counterJoined++;
 
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+    debugData.lastTransmissionAvaible = millis();
     uint8_t len = sizeof(returnData);
     uint8_t from;
 
@@ -997,13 +997,18 @@ void drawAnnouncement(){
 
   if ((millis() - announcementTimer < announcementDuration) || !announcementFade) {
 
-    x = 20;
+    x = 23;
     y = 0;
 
+    //u8g2.drawBox(16,0,50,110);
+
     u8g2.setFontDirection(1);
-    drawString(announcementStringLine1, announcementStringLine1.length(), x + 20 , y , u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
+    u8g2.setFontMode(1);
+    u8g2.setDrawColor(1);
+    drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
     drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
     u8g2.setFontDirection(0);
+    u8g2.setDrawColor(1);
 
     if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
       activateAnnouncement = false;

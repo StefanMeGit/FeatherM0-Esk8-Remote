@@ -13,6 +13,8 @@
 
 struct debug {
   unsigned long cycleTime = 0;
+  unsigned long startCycleTime = 0;
+  unsigned long finishCycleTime = 0;
   unsigned long longestCycleTime = 0;
   unsigned long lastTransmissionStart = 0;
   unsigned long lastTransmissionEnd = 0;
@@ -215,7 +217,7 @@ Serial.println("");
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-
+debugData.startCycleTime = millis();
   controlStatusLed();
 
   debugData.lastTransmissionStart = millis();
@@ -260,6 +262,13 @@ void loop() {
     }
 
    debugData.lastTransmissionDuration = debugData.lastTransmissionStart - debugData.lastTransmissionEnd;
+   debugData.finishCycleTime = millis();
+   debugData.cycleTime = debugData.finishCycleTime - debugData.startCycleTime;
+   if (debugData.longestCycleTime < debugData.cycleTime) {
+     debugData.longestCycleTime = debugData.cycleTime;
+   }
+   Serial.println(debugData.cycleTime);
+   Serial.println(debugData.longestCycleTime);
 }
 
 // checkConnection for ESTOP
