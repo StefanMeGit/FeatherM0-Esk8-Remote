@@ -77,6 +77,7 @@ typedef struct {
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
   short Frequency;                  // 21
+  uint8_t standbyMode;               // 22
 } RxSettings;
 
 RxSettings rxSettings;
@@ -84,7 +85,7 @@ RxSettings rxSettings;
 //Defining flash storage
 FlashStorage(flash_RxSettings, RxSettings);
 
-const uint8_t numOfSettings = 24;
+const uint8_t numOfSettings = 25;
 
 // Setting rules format: default, min, max.
 const short settingRules[numOfSettings][3] {
@@ -107,11 +108,12 @@ const short settingRules[numOfSettings][3] {
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
-  { -1, 0 , 0},       //19 Frequency
+  { 433, 424 , 442},  //19 Frequency
+  { 0, 0 , 1},       //19 Stanby mode
   { -1, 0 , 0},       //20 Firmware
   { -1, 0, 0},        //22 Set default key
   { -1, 0, 0},        //22 Settings
-  { -1, 0, 0}         //23 Exit
+  { -1, 0, 0},         //23 Exit
 };
 
 // Definition for RFM69HW radio on Feather m0
@@ -168,6 +170,10 @@ bool eStopTriggered = false;
 bool eStopFullBreak = false;
 uint16_t goodTransmissions = 0;
 unsigned long goodTransissionsTimer = 0;
+
+//Estop start
+uint8_t goodTransmissionsEstop = 0;
+unsigned long goodTransissionsTimerEstop = 0;
 
 // Initiate Servo class
 Servo esc;
@@ -230,9 +236,9 @@ debugData.startCycleTime = millis();
         if (remPackage.type == 0) {
           if (!eStopTriggered){
             if (analyseMessage()) {
+              armEstop();
               setStatus(COMPLETE);
               if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
-                rxSettings.eStopArmed = true;
                 //getUartData();
               }
             } else {
@@ -244,14 +250,18 @@ debugData.startCycleTime = millis();
           analyseSettingsMessage();
         }
       } else { //no valid messaage available
-        if (rxSettings.eStopMode <= 2 && rxSettings.eStopArmed == true && remPackage.type == 0) {
+        Serial.println("Test");
+        Serial.println(rxSettings.eStopMode);
+        Serial.println(rxSettings.eStopArmed);
+        Serial.println(remPackage.type == 0);
+        if (rxSettings.eStopMode < 2 && rxSettings.eStopArmed && remPackage.type == 0) {
           if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
             activateESTOP(remPackage.throttle);
-            }
           } else {
             returnData.eStopArmed = true;
           }
         }
+      }
     } else {
   activateESTOP(remPackage.throttle);
   }
@@ -306,6 +316,9 @@ void activateESTOP(uint16_t lastThrottlePos) {
     if ((millis() - goodTransissionsTimer) <= 2000){
 
       if (analyseMessage()) {
+        if (remPackage.type == 1) {
+          analyseSettingsMessage();
+        }
         if (goodTransmissions >= 20) {
           goodTransmissions = 0;
           eStopTriggered = false;
@@ -323,6 +336,25 @@ void activateESTOP(uint16_t lastThrottlePos) {
       goodTransissionsTimer = millis();
   }
   }
+}
+
+// reset Adress
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void armEstop(){
+
+  Serial.println("arm estop");
+
+  if (millis() - goodTransissionsTimerEstop <= 2000 ){
+    goodTransmissionsEstop++;
+  } else {
+    goodTransmissionsEstop = 0;
+    goodTransissionsTimerEstop = millis();
+  }
+  if (goodTransmissionsEstop > 10) {
+    rxSettings.eStopArmed = true;
+  }
+
 }
 
 // reset Adress
@@ -403,6 +435,7 @@ void analyseSettingsMessage() {
      Serial.print(rxSettings.customEncryptionKey[i]);
    }
    Serial.println("");
+   remPackage.type = 0;
 }
 
 // set status

@@ -123,6 +123,7 @@ typedef struct {
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
   short Frequency;                  // 21
+  uint8_t standbyMode;               // 22
 } TxSettings;
 
 TxSettings txSettings;
@@ -131,7 +132,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 24;
+const uint8_t numOfSettings = 25;
 
 struct menuItems{
   uint8_t ID;
@@ -163,7 +164,8 @@ struct menuItems{
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  433,   424,  442, "Frequency", 6 , 0},       //19 Frequency
+  {19,  433,  424,  442,  "Frequency", 6 , 0},            //19 Frequency
+  {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
   {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
@@ -174,6 +176,7 @@ struct menuItems{
 #define BOARDID     0
 #define TRIGGER     1
 #define MODE        8
+#define ESTOP       12
 #define BREAKLIGHT  13
 #define DRIVINGMODE 15
 #define PAIR        16
@@ -185,13 +188,14 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[6][3][15] = {
+const char stringValues[7][3][15] = {
   {"Killswitch", "Cruise", ""},
   {"Li-ion", "LiPo", ""},
   {"PPM", "PPM and UART", "UART only"},
   {"soft", "hard", "off"},
   {"off", "Always on", "with headlight"},
   {"Beginner", "Intermidiate", "Pro"},
+  {"off", "10 minutes", "30 minutes"},
 };
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
@@ -376,6 +380,8 @@ void setup() {
   }
   Serial.println("");
 
+  updateLastTransmissionTimer();
+
 }
 
 // loop
@@ -448,6 +454,7 @@ void sleep() {
   updateMainDisplay();
   detachInterrupt(6);
   u8g2.setDisplayRotation(U8G2_R3);
+  updateLastTransmissionTimer();
 
 }
 
@@ -457,16 +464,32 @@ void sleep() {
  void checkConnection() {
 
     if (millis() - debugData.lastTransmissionAvaible > 350) {
-      returnData.eStopArmed = false;
 
-      if (!connectionLost) {
+      if (!connectionLost && returnData.eStopArmed) {
           setAnnouncement("E-Stop!!!", "Caution!",1000, false);
       }
+      returnData.eStopArmed = false;
+
       connectionLost = true;
     } else {
       connectionLost = false;
-
     }
+
+    if (txSettings.standbyMode == 1){
+
+      if (millis() - debugData.lastTransmissionAvaible > 600000) {
+        sleep();
+      }
+
+    } else if (txSettings.standbyMode == 2) {
+
+        if (millis() - debugData.lastTransmissionAvaible > 1800000) {
+        sleep();
+
+      }
+    }
+
+
  }
 
 // initiate radio
@@ -509,6 +532,15 @@ void initiateTransmitter() {
     Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
+}
+
+// check encryptionKey
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void updateLastTransmissionTimer (){
+
+  debugData.lastTransmissionAvaible = millis();
+
 }
 
 // check encryptionKey
@@ -593,14 +625,14 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
   debugData.counterJoined++;
 
   if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
-    debugData.lastTransmissionAvaible = millis();
+    updateLastTransmissionTimer();
     uint8_t len = sizeof(returnData);
     uint8_t from;
 
     debugData.counterSend++;
 
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
-
+      updateLastTransmissionTimer();
       debugData.counterReceived++;
       debugData.transmissionTimeFinish = millis();
       debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
@@ -880,6 +912,14 @@ void controlSettings() {
           updateFlashSettings();
           drawMessage("Complete", "Changed!", 2000);
         }
+      } else if (menuItems[currentSetting].ID == ESTOP) {
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+          drawMessage("Failed", "No communication", 2000);
+        } else {
+          updateFlashSettings();
+          drawMessage("Complete", "Changed!", 2000);
+        }
       }
       updateFlashSettings();
     }
@@ -1019,6 +1059,7 @@ short getSettingValue(uint8_t index) {
     case 17:    value = txSettings.transmissionPower; break;
     case 19:    value = txSettings.Frequency;        break;
     case 20:    value = txSettings.firmVersion;        break;
+    case 24:    value = txSettings.standbyMode;        break;
 
 
     default: /* Do nothing */ break;
@@ -1050,6 +1091,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 17:        txSettings.transmissionPower = value; break;
     case 19:        txSettings.Frequency = value; break;
     case 20:        txSettings.firmVersion = value; break;
+    case 24:        txSettings.standbyMode = value; break;
 
     default: /* Do nothing */ break;
   }
