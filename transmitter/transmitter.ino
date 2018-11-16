@@ -9,7 +9,7 @@
 // #include <Adafruit_SleepyDog.h>
 
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -375,6 +375,7 @@ void setup() {
     Serial.print(txSettings.customEncryptionKey[i]);
   }
   Serial.println("");
+
 }
 
 // loop
@@ -418,52 +419,37 @@ void loop() {
 
 }
 
-// DeepSleep test
+// Sleep mode handling
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-// void sleepTest(){
-//   u8g2.setPowerSave(1);
-//   rf69.sleep();
-//   Watchdog.sleep(5000);
-//   u8g2.setPowerSave(0);
-// }
 
-//void isr() { } // Interrupt Service Routine
-// void sleep(){
-//
-// //setAnnouncement( "Good Night!", "ZZZzzzZZZzzz", 2000, true);
-// // turn off screen
-//  u8g2.setPowerSave(1);
-//
-//  // interrupt
-//  attachInterrupt (digitalPinToInterrupt(5), isr, CHANGE);  // attach interrupt handler
-//
- // radio''
-//  rf69.sleep();
-//
-//  digitalWrite(DIAGLED, LOW);
-//
-//  USBDevice.standby();
-//
-//  delay(200);
-//
-//  // Set sleep mode to deep sleep
-//  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-//
-//  //Enter sleep mode and wait for interrupt (WFI)
-//  __DSB();
-//  __WFI();
-//
-//  // After waking the code continues
-//  // to execute from this point.
-//
-//  detachInterrupt(digitalPinToInterrupt(5));
-//  u8g2.setPowerSave(0);
-//  digitalWrite(DIAGLED, HIGH);
-//
-//  SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
-//
-// }
+void ISR (){}
+
+void sleep() {
+
+  txSettings.eStopArmed = false; // dissable eStop on connected Board
+  transmitSettingsToReceiver(); // transmitt Settings
+
+  //sleeping
+  digitalWrite(13, LOW); //swtich off LED
+  rf69.sleep(); // switch off radio
+  drawMessage("See You!", "Switching off...", 2000);
+  updateMainDisplay();
+  u8g2.setPowerSave(1); // set OLED into sleep
+  delay(100);
+  attachInterrupt(6, ISR, LOW);
+  delay(100);
+  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+  __WFI();
+
+  //wake up
+  u8g2.setPowerSave(0);
+  drawMessage("Lets Ride!", "Switching on...", 2000);
+  updateMainDisplay();
+  detachInterrupt(6);
+  u8g2.setDisplayRotation(U8G2_R3);
+
+}
 
 // check connection
 // --------------------------------------------------------------------------------------
@@ -472,6 +458,7 @@ void loop() {
 
     if (millis() - debugData.lastTransmissionAvaible > 350) {
       returnData.eStopArmed = false;
+
       if (!connectionLost) {
           setAnnouncement("E-Stop!!!", "Caution!",1000, false);
       }
@@ -1450,6 +1437,7 @@ void drawTitle(String title, uint16_t duration) {
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawMessage(String title, String details, uint16_t duration) {
+  u8g2.setDisplayRotation(U8G2_R0);
   u8g2.firstPage();
 
   do {
@@ -1502,13 +1490,16 @@ void mediumbuttonPress() {
 }
 
 void longbuttonPress() {
+
+    sleep();
+
   // sleepTest();
-  // sleep();
-  txSettings.eStopArmed = false;
-  transmitSettingsToReceiver();
-  u8g2.setDisplayRotation(U8G2_R0);
-  changeSettings = true;
-  drawTitle("Settings", 1500);
+  //sleep();
+  //txSettings.eStopArmed = false;
+  //transmitSettingsToReceiver();
+  //u8g2.setDisplayRotation(U8G2_R0);
+  //changeSettings = true;
+  //drawTitle("Settings", 1500);
 }
 
 // draw main page
