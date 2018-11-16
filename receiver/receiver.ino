@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -153,6 +153,7 @@ unsigned long previousStatusMillis, currentMillis, startCycleMillis = 0;
 const uint16_t defaultThrottle = 512;
 
 // Defining receiver pins
+const uint8_t resetPin = 6;
 const uint8_t statusLedPin = 13;
 const uint8_t throttlePin = 10;
 const uint8_t breakLightPin = 11;
@@ -194,6 +195,7 @@ void setup() {
 
   pinMode(statusLedPin, OUTPUT);
   pinMode(breakLightPin, OUTPUT);
+  pinMode(resetPin, INPUT_PULLUP);
   pinMode(RFM69_RST, OUTPUT);
 
   esc.attach(throttlePin);
@@ -256,6 +258,7 @@ debugData.startCycleTime = millis();
 
   headLight();
   breakLight();
+  resetAdress();
 
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
@@ -267,8 +270,8 @@ debugData.startCycleTime = millis();
    if (debugData.longestCycleTime < debugData.cycleTime) {
      debugData.longestCycleTime = debugData.cycleTime;
    }
-   Serial.println(debugData.cycleTime);
-   Serial.println(debugData.longestCycleTime);
+   //Serial.println(debugData.cycleTime);
+   //Serial.println(debugData.longestCycleTime);
 }
 
 // checkConnection for ESTOP
@@ -322,6 +325,34 @@ void activateESTOP(uint16_t lastThrottlePos) {
   }
 }
 
+// reset Adress
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+bool resetAdress() {
+
+  if (millis() - debugData.lastTransmissionAvaible > 5000) {
+    if (!digitalRead(resetPin)) {
+
+      for (int i = 0; i <=15; i++) {
+        rxSettings.customEncryptionKey[i] = encryptionKey[i];
+      }
+      rxSettings.Frequency = RF69_FREQ;
+      rxSettings.eStopArmed = false;
+      eStopTriggered = false;
+
+      updateFlashSettings();
+      initiateReceiver();
+
+      Serial.println("Reset");
+       Serial.println(rxSettings.Frequency);
+       for (uint8_t i = 0; i <=15; i++){
+         Serial.print(rxSettings.customEncryptionKey[i]);
+       }
+       Serial.println("");
+    }
+  }
+}
+
 // analyse transmission
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -340,6 +371,7 @@ bool analyseMessage() {
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
     } else {
+      debugData.lastTransmissionAvaible = millis();
       return true;
     }
 
@@ -365,6 +397,12 @@ void analyseSettingsMessage() {
     updateFlashSettings();
     initiateReceiver();
   }
+  Serial.println("Settings");
+   Serial.println(rxSettings.Frequency);
+   for (uint8_t i = 0; i <=15; i++){
+     Serial.print(rxSettings.customEncryptionKey[i]);
+   }
+   Serial.println("");
 }
 
 // set status
@@ -435,9 +473,16 @@ void initiateReceiver() {
 
   if (!rf69.setFrequency(rxSettings.Frequency)) {
   }
-
   rf69.setTxPower(20, true);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
+
+  Serial.println(rxSettings.Frequency);
+  for (uint8_t i = 0; i <=15; i++){
+    Serial.print(rxSettings.customEncryptionKey[i]);
+  }
+  Serial.println("");
+
+
 }
 
 // cruise control
@@ -645,6 +690,7 @@ void loadFlashSettings() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
+
   flash_RxSettings.write(rxSettings);
 
 }

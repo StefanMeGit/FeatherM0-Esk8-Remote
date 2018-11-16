@@ -6,8 +6,10 @@
 #include <FlashStorage.h>
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
+// #include <Adafruit_SleepyDog.h>
 
-//#define DEBUG
+
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -153,15 +155,15 @@ struct menuItems{
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {9,   316,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  490,  300,  700,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  645,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
+  {10,  525,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  750,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  -1,   0,    0,    "Frequency", 0 , 0},       //19 Frequency
+  {19,  433,   424,  442, "Frequency", 6 , 0},       //19 Frequency
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
   {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
@@ -172,10 +174,12 @@ struct menuItems{
 #define BOARDID     0
 #define TRIGGER     1
 #define MODE        8
+#define BREAKLIGHT  13
 #define DRIVINGMODE 15
 #define PAIR        16
 #define TXPOWER     17
 #define KEY         18
+#define FREQUENCY   19
 #define FIRMWARE    20
 #define DEFAULTKEY  21
 #define SETTINGS    22
@@ -189,7 +193,7 @@ const char stringValues[6][3][15] = {
   {"off", "Always on", "with headlight"},
   {"Beginner", "Intermidiate", "Pro"},
 };
-const char settingUnits[5][4] = {"S", "T", "mm", "#", "dBm"};
+const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[7][4] = {"V", "KMH", "KM", "A","ms","dBm", ""};
 const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
@@ -253,8 +257,8 @@ const uint8_t vibrationActuatorPin = A4;
 #define RFM69_RST   4
 #define DIAGLED     13
 #define RF69_FREQ   433.0
-#define DEST_ADDRESS   1 // where the packages goes to
-#define MY_ADDRESS     2 // own address
+#define DEST_ADDRESS   1
+#define MY_ADDRESS     2
 
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
@@ -414,6 +418,53 @@ void loop() {
 
 }
 
+// DeepSleep test
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+// void sleepTest(){
+//   u8g2.setPowerSave(1);
+//   rf69.sleep();
+//   Watchdog.sleep(5000);
+//   u8g2.setPowerSave(0);
+// }
+
+//void isr() { } // Interrupt Service Routine
+// void sleep(){
+//
+// //setAnnouncement( "Good Night!", "ZZZzzzZZZzzz", 2000, true);
+// // turn off screen
+//  u8g2.setPowerSave(1);
+//
+//  // interrupt
+//  attachInterrupt (digitalPinToInterrupt(5), isr, CHANGE);  // attach interrupt handler
+//
+ // radio''
+//  rf69.sleep();
+//
+//  digitalWrite(DIAGLED, LOW);
+//
+//  USBDevice.standby();
+//
+//  delay(200);
+//
+//  // Set sleep mode to deep sleep
+//  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+//
+//  //Enter sleep mode and wait for interrupt (WFI)
+//  __DSB();
+//  __WFI();
+//
+//  // After waking the code continues
+//  // to execute from this point.
+//
+//  detachInterrupt(digitalPinToInterrupt(5));
+//  u8g2.setPowerSave(0);
+//  digitalWrite(DIAGLED, HIGH);
+//
+//  SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+//
+// }
+
 // check connection
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -422,7 +473,7 @@ void loop() {
     if (millis() - debugData.lastTransmissionAvaible > 350) {
       returnData.eStopArmed = false;
       if (!connectionLost) {
-          setAnnouncement("E-Stop!!!", "Caution!",5000, false);
+          setAnnouncement("E-Stop!!!", "Caution!",1000, false);
       }
       connectionLost = true;
     } else {
@@ -451,6 +502,14 @@ void initiateTransmitter() {
       Serial.print(encryptionKey[i]);
     }
     Serial.println("");
+  } else if (useDefaultKeyForTransmission == 2){
+    rf69.setEncryptionKey(txSettings.customEncryptionKey);
+    rf69.setFrequency(txSettings.Frequency);
+    Serial.println(txSettings.Frequency);
+    for (uint8_t i = 0; i <=15; i++){
+      Serial.print(encryptionKey[i]);
+    }
+    Serial.println("");
   } else {
     rf69.setFrequency(txSettings.Frequency);
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
@@ -458,6 +517,7 @@ void initiateTransmitter() {
   rf69.setTxPower(20, true);
   delay(10);
  Serial.println("initiateTransmitter");
+  Serial.println(txSettings.Frequency);
   for (uint8_t i = 0; i <=15; i++){
     Serial.print(txSettings.customEncryptionKey[i]);
   }
@@ -517,7 +577,7 @@ void createCustomKey() {
   uint8_t generatedCustomEncryptionKey[16];
 
   for (uint8_t i = 0; i < 16; i++) {
-    generatedCustomEncryptionKey[i] = random(9);
+    generatedCustomEncryptionKey[i] = random(255);
     Serial.print(generatedCustomEncryptionKey[i]);
   }
   Serial.println("");
@@ -610,7 +670,51 @@ bool transmitKeyToReceiver() {
   txSettings.eStopArmed = false;
 
   if ( transmitToReceiver(3,100)) {
+
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      uint8_t len = sizeof(remPackage);
+      uint8_t from;
+      Serial.println("Told Receiver next package are Settings");
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+      } else {
+        remPackage.type = 0;
+        useDefaultKeyForTransmission = 0;
+        initiateTransmitter();
+        return false;
+      }
+    } else {
+      remPackage.type = 0;
+      useDefaultKeyForTransmission = 0;
+      initiateTransmitter();
+      return false;
+    }
+    useDefaultKeyForTransmission = 0;
+    initiateTransmitter();
+    return true;
+  } else {
+    remPackage.type = 0;
+    useDefaultKeyForTransmission = 0;
+    initiateTransmitter();
+    return false;
+  }
+}
+
+//Function used to transmit settings to receiver
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+bool transmitFreqToReceiver() {
+
+  useDefaultKeyForTransmission = 2;
+
+  initiateTransmitter();
+
+  remPackage.type = 1;
+  txSettings.eStopArmed = false;
+
+  if ( transmitToReceiver(3,100)) {
+    Serial.println("FirstTrans ok");
+    if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      Serial.println("SettingsSend ok");
       uint8_t len = sizeof(remPackage);
       uint8_t from;
       Serial.println("Told Receiver next package are Settings");
@@ -756,6 +860,7 @@ void controlSettings() {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
         } else {
+          updateFlashSettings();
           drawMessage("Complete", "Trigger mode changed", 2000);
         }
       } else if (menuItems[currentSetting].ID == TXPOWER) {
@@ -771,6 +876,23 @@ void controlSettings() {
       } else if (menuItems[currentSetting].ID == BOARDID) {
         selectBoard(getSettingValue(menuItems[currentSetting].ID));
         drawMessage("Complete", "New board selected!", 2000);
+      } else if (menuItems[currentSetting].ID == FREQUENCY) {
+        if ( ! transmitFreqToReceiver()) {
+          loadFlashSettings();
+          drawMessage("Failed", "No communication", 2000);
+        } else {
+          updateFlashSettings();
+          initiateTransmitter();
+          drawMessage("Complete", "Frequency changed", 2000);
+        }
+      } else if (menuItems[currentSetting].ID == BREAKLIGHT) {
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+          drawMessage("Failed", "No communication", 2000);
+        } else {
+          updateFlashSettings();
+          drawMessage("Complete", "Changed!", 2000);
+        }
       }
       updateFlashSettings();
     }
@@ -908,6 +1030,9 @@ short getSettingValue(uint8_t index) {
     case 14:    value = txSettings.throttleDeath;   break;
     case 15:    value = txSettings.drivingMode;     break;
     case 17:    value = txSettings.transmissionPower; break;
+    case 19:    value = txSettings.Frequency;        break;
+    case 20:    value = txSettings.firmVersion;        break;
+
 
     default: /* Do nothing */ break;
   }
@@ -936,6 +1061,8 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 14:        txSettings.throttleDeath = value;   break;
     case 15:        txSettings.drivingMode = value;     break;
     case 17:        txSettings.transmissionPower = value; break;
+    case 19:        txSettings.Frequency = value; break;
+    case 20:        txSettings.firmVersion = value; break;
 
     default: /* Do nothing */ break;
   }
@@ -952,10 +1079,11 @@ bool inRange(short val, short minimum, short maximum) {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool triggerActive() {
-  if (digitalRead(triggerPin) == LOW)
+  if (digitalRead(triggerPin) == LOW) {
     return true;
-  else
+  } else {
     return false;
+  }
 }
 
 // Return true if extra Button is activated, false otherwise
@@ -1260,23 +1388,13 @@ void drawSettingsMenu() {
   }
 
   if ( menuItems[ currentSetting ].ID == KEY ) {
-    for (uint8_t i = 10; i < 16; i++) {
+    for (uint8_t i = 8; i < 16; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
     }
-
-  Serial.print("Custom encryptionKey with boardID: ");
-  for (uint8_t i = 0; i < 16; i++) {
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
   }
 
   if ( menuItems[ currentSetting ].ID == SETTINGS ) {
     tString = F("Reset");
-  }
-
-  if ( menuItems[ currentSetting ].ID == FIRMWARE ) {
-    tString = String(txSettings.firmVersion);
   }
 
   if ( changeThisSetting == true ) {
@@ -1284,7 +1402,7 @@ void drawSettingsMenu() {
     drawString(tString, tString.length(), x + 10, y + 30, u8g2_font_10x20_tr );
 
     // If setting has something to do with the hallValue
-    if ( inRange(currentSetting, 9, 11) ) {
+    if ( inRange(menuItems[ currentSetting ].ID, 9, 11) ) {
       tString = "(" + String(hallValue) + ")";
       drawString(tString, tString.length(), x + 50, y + 30, u8g2_font_profont12_tr );
     }
@@ -1384,6 +1502,8 @@ void mediumbuttonPress() {
 }
 
 void longbuttonPress() {
+  // sleepTest();
+  // sleep();
   txSettings.eStopArmed = false;
   transmitSettingsToReceiver();
   u8g2.setDisplayRotation(U8G2_R0);
