@@ -6,7 +6,6 @@
 #include <FlashStorage.h>
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
-// #include <Adafruit_SleepyDog.h>
 
 
 //#define DEBUG
@@ -504,7 +503,10 @@ void initiateTransmitter() {
     while (1);
   }
 
+  rf69.setTxPower(20, true);
+
   if (useDefaultKeyForTransmission == 1) {
+    Serial.println("useDefaultKeyForTransmission == 1");
     rf69.setFrequency(RF69_FREQ);
     rf69.setEncryptionKey(encryptionKey);
     Serial.println(RF69_FREQ);
@@ -512,7 +514,9 @@ void initiateTransmitter() {
       Serial.print(encryptionKey[i]);
     }
     Serial.println("");
+
   } else if (useDefaultKeyForTransmission == 2){
+    Serial.println("useDefaultKeyForTransmission == 2");
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
     rf69.setFrequency(txSettings.Frequency);
     Serial.println(txSettings.Frequency);
@@ -520,18 +524,19 @@ void initiateTransmitter() {
       Serial.print(encryptionKey[i]);
     }
     Serial.println("");
-  } else {
+
+  } else if (useDefaultKeyForTransmission == 0){
+    Serial.println("useDefaultKeyForTransmission == 0");
     rf69.setFrequency(txSettings.Frequency);
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
+    Serial.println(txSettings.Frequency);
+    for (uint8_t i = 0; i <=15; i++){
+      Serial.print(txSettings.customEncryptionKey[i]);
+    }
+    Serial.println("");
   }
-  rf69.setTxPower(20, true);
-  delay(10);
- Serial.println("initiateTransmitter");
-  Serial.println(txSettings.Frequency);
-  for (uint8_t i = 0; i <=15; i++){
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
+
+  delay(20);
 }
 
 // check encryptionKey
@@ -580,7 +585,7 @@ void createTestKey() {
     generatedCustomEncryptionKey[i] = encryptionKey[i];
   }
 
-  generatedCustomEncryptionKey[15] = 1;
+  //generatedCustomEncryptionKey[15] = 1;
   for (uint8_t i = 0; i < 16; i++) {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
@@ -596,7 +601,7 @@ void createCustomKey() {
   uint8_t generatedCustomEncryptionKey[16];
 
   for (uint8_t i = 0; i < 16; i++) {
-    generatedCustomEncryptionKey[i] = random(255);
+    generatedCustomEncryptionKey[i] = random(9);
     Serial.print(generatedCustomEncryptionKey[i]);
   }
   Serial.println("");
@@ -606,7 +611,7 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
-  txSettings.Frequency = random(424, 442);
+  txSettings.Frequency = RF69_FREQ;//random(424, 442);
   Serial.print(txSettings.Frequency);
 
   updateFlashSettings();
@@ -653,14 +658,14 @@ bool transmitSettingsToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  rf69_manager.setRetries(3);
-  rf69_manager.setTimeout(100);
+  rf69_manager.setRetries(1);
+  rf69_manager.setTimeout(200);
 
-  if ( transmitToReceiver(3,100)) {
+  if ( transmitToReceiver(1,200)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
-      uint8_t len = sizeof(remPackage);
+      uint8_t len = sizeof(returnData);
       uint8_t from;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 200, &from)) {
       } else {
         remPackage.type = 0;
         return false;
@@ -688,13 +693,16 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(3,100)) {
+  rf69_manager.setRetries(1);
+  rf69_manager.setTimeout(200);
+
+  if ( transmitToReceiver(1,200)) {
 
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
-      uint8_t len = sizeof(remPackage);
+      uint8_t len = sizeof(returnData);
       uint8_t from;
       Serial.println("Told Receiver next package are Settings");
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&remPackage, &len, 200, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 200, &from)) {
       } else {
         remPackage.type = 0;
         useDefaultKeyForTransmission = 0;
@@ -779,18 +787,14 @@ bool pairNewBoard() {
 
   txSettings.customEncryptionKey[15] = txSettings.boardID;
 
-  useDefaultKeyForTransmission = 1;
-
   transmitKeyToReceiver();
-
-  useDefaultKeyForTransmission = 0;
 
   rf69.setEncryptionKey(txSettings.customEncryptionKey);
   rf69.setFrequency(txSettings.Frequency);
 
-  delay(50);
+  initiateTransmitter();
 
-  if (transmitToReceiver(5,100)) {
+  if (transmitToReceiver(1,200)) {
     drawMessage("Complete", "New board paired!", 2000);
   } else {
     drawMessage("Fail", "Board not paired", 2000);
@@ -1515,8 +1519,12 @@ void buttonPress() {
 
 // called when button is kept pressed for less than .5 seconds
 void shortbuttonPress() {
-
-  displayView++;
+  if (changeSettings) {
+    changeSettings = false;
+    u8g2.setDisplayRotation(U8G2_R3);
+  } else {
+    displayView++;
+  }
 }
 
 // called when button is kept pressed for more than 2 seconds
@@ -1533,15 +1541,16 @@ void mediumbuttonPress() {
 
 void longbuttonPress() {
 
+  if (throttlePosition == BOTTOM){
+    txSettings.eStopArmed = false;
+    transmitSettingsToReceiver();
+    u8g2.setDisplayRotation(U8G2_R0);
+    changeSettings = true;
+    drawTitle("Settings", 1500);
+  } else {
     sleep();
+  }
 
-  // sleepTest();
-  //sleep();
-  //txSettings.eStopArmed = false;
-  //transmitSettingsToReceiver();
-  //u8g2.setDisplayRotation(U8G2_R0);
-  //changeSettings = true;
-  //drawTitle("Settings", 1500);
 }
 
 // draw main page
