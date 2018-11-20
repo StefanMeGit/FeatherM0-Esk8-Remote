@@ -30,6 +30,14 @@ struct package {        // | Normal   | Setting   | Confirm
   uint8_t headlight = 0;
 } remPackage;
 
+// Transmit and receive package
+struct packageBackup {        // | Normal   | Setting   | Confirm
+  uint8_t type = 0;       // | 0      | 1     | 2
+  uint16_t throttle = 0;    // | Throttle   | ---   | ---
+  uint8_t trigger = 0;      // | Trigger  | ---     | ---
+  uint8_t headlight = 0;
+} remPackageBackup;
+
 #define NORMAL 0
 #define SETTING 1
 #define CONFIRM 2
@@ -120,9 +128,8 @@ const short settingRules[numOfSettings][3] {
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
-uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01
-                            };
+uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
 
 // Current mode of receiver - 0: Connected | 1: Timeout | 2: Updating settings
 #define CONNECTED 0
@@ -178,6 +185,9 @@ VescUart UART;
 //TESTtypecounter
 uint8_t typecounter = 0;
 
+unsigned long aliveTimer = 0;
+short aliveCounter = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -223,100 +233,93 @@ Serial.println("Setup end");
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-debugData.startCycleTime = millis();
 
-  controlStatusLed();
+  if (millis() - aliveTimer > 5000) {
+    Serial.println(aliveCounter);
+    Serial.print("type ");Serial.println(remPackage.type);
+    aliveCounter++;
+    aliveTimer = millis();
+  }
+
+  debugData.startCycleTime = millis();
 
   debugData.lastTransmissionStart = millis();
 
   if (!eStopTriggered) {
     if (rf69_manager.available()) {
-        debugData.lastTransmissionAvaible = millis();
         if (remPackage.type == 0) {
-          if (!eStopTriggered){
             if (analyseMessage()) {
-              if (remPackage.type > 1){
-                Serial.println("No message available");
-                Serial.print("type ");Serial.println(remPackage.type);
-                Serial.print("throttle ");Serial.println(remPackage.throttle);
-                Serial.print("Trigger ");Serial.println(remPackage.trigger);
-                Serial.print("headlight ");Serial.println(remPackage.headlight);
-              }
-              armEstop();
-              setStatus(COMPLETE);
-              if (validateRemPackage()){
-                speedControl( remPackage.throttle, remPackage.trigger );
-              }  else {
-                rescueRemPackage();
-              }
-              if ((rxSettings.controlMode > 0) && (remPackage.type == 0)) {
+              if (validateRemPackageEstop()) { // make shure the data is valid
+                armEstop();
+                speedControl(remPackage.throttle, remPackage.trigger);
                 getUartData();
+              } else { // if data is not valid, rescue data!
+                rescueRemPackage();
               }
             } else {
               setStatus(FAILED);
+              if (!validateRemPackageEstop()) {
+                rescueRemPackage();
+              }
             }
-          }
         } else if (remPackage.type == 1) { // join settings transmission
           analyseSettingsMessage();
+        } else {
+          activateESTOP(remPackage.throttle);
         }
-      } else { //no valid messaage available
-        if (remPackage.type > 1){
-          Serial.println("No message available");
-          Serial.print("type ");Serial.println(remPackage.type);
-          Serial.print("throttle ");Serial.println(remPackage.throttle);
-          Serial.print("Trigger ");Serial.println(remPackage.trigger);
-          Serial.print("headlight ");Serial.println(remPackage.headlight);
-        }
-        if (rxSettings.eStopMode < 2 && rxSettings.eStopArmed && remPackage.type == 0) {
-          if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
-            Serial.println("ESTOP");
-            activateESTOP(remPackage.throttle);
-          } else {
-            returnData.eStopArmed = true;
-          }
+      }
+      if (rxSettings.eStopMode < 2 && rxSettings.eStopArmed && remPackage.type == 0) {
+        if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
+          Serial.println("ESTOP");
+          activateESTOP(remPackage.throttle);
+        } else {
+          returnData.eStopArmed = true;
         }
       }
     } else {
       activateESTOP(512);
-  }
+    }
 
-  headLight();
-  breakLight();
-  resetAdress();
+    controlStatusLed();
+    headLight();
+    breakLight();
+    resetAdress();
 
-  if (debugData.cycleTime > debugData.longestCycleTime) {
+    debugData.lastTransmissionDuration = debugData.lastTransmissionStart - debugData.lastTransmissionEnd;
+    debugData.finishCycleTime = millis();
+    debugData.cycleTime = debugData.finishCycleTime - debugData.startCycleTime;
+
+    if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
     }
 
-   debugData.lastTransmissionDuration = debugData.lastTransmissionStart - debugData.lastTransmissionEnd;
-   debugData.finishCycleTime = millis();
-   debugData.cycleTime = debugData.finishCycleTime - debugData.startCycleTime;
-   if (debugData.longestCycleTime < debugData.cycleTime) {
-     debugData.longestCycleTime = debugData.cycleTime;
-   }
 }
 
-// Validate received data
+// validateRemPackage
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool validateRemPackage(){
-  if (remPackage.type >= 3) {
-    return false;
-  } else if (remPackage.throttle >= 1200){
-    return false;
-  } else if (remPackage.trigger >= 2){
-    return false;
-  } else if (remPackage.headlight >= 2){
-    return false;
+bool validateRemPackageEstop(){
+
+  if (remPackage.type > 1 || remPackage.throttle > 1200 || remPackage.trigger > 1 || remPackage.headlight > 1) {
+
+      Serial.println("Shit package?");
+      Serial.print("type ");Serial.println(remPackage.type);
+      Serial.print("throttle ");Serial.println(remPackage.throttle);
+      Serial.print("Trigger ");Serial.println(remPackage.trigger);
+      Serial.print("headlight ");Serial.println(remPackage.headlight);
+      setStatus(FAILED);
+      return false;
   } else {
     return true;
   }
 }
 
-// Validate received data
+// rescue received data
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool rescueRemPackage(){
+void rescueRemPackage() {
+
+  Serial.println(millis());
 
   Serial.println("Shit package?");
   Serial.print("type ");Serial.println(remPackage.type);
@@ -324,16 +327,18 @@ bool rescueRemPackage(){
   Serial.print("Trigger ");Serial.println(remPackage.trigger);
   Serial.print("headlight ");Serial.println(remPackage.headlight);
 
-  remPackage.type = 0;
-  remPackage.throttle = 512;
-  remPackage.trigger = 0;
-  remPackage.headlight = 0;
+  remPackage.type = remPackageBackup.type;
+  remPackage.throttle = remPackageBackup.throttle;
+  remPackage.trigger = remPackageBackup.trigger;
+  remPackage.headlight = remPackageBackup.headlight;
 
   Serial.println("rescue to default");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
   Serial.print("Trigger ");Serial.println(remPackage.trigger);
   Serial.print("headlight ");Serial.println(remPackage.headlight);
+
+  setStatus(FAILED);
 
 }
 
@@ -382,7 +387,7 @@ void activateESTOP(uint16_t lastThrottlePos) {
             eStopFullBreak = false;
             Serial.println("Recovered");
             Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
-            debugData.lastTransmissionAvaible = millis();
+            updateLastTransmissionTimer();
           } else {
             if (remPackage.throttle <= 550){
               goodTransmissions++;
@@ -403,14 +408,18 @@ void activateESTOP(uint16_t lastThrottlePos) {
 // --------------------------------------------------------------------------------------
 void armEstop(){
 
-  if (millis() - goodTransissionsTimerEstop <= 2000 ){
-    goodTransmissionsEstop++;
-  } else {
-    goodTransmissionsEstop = 0;
-    goodTransissionsTimerEstop = millis();
-  }
-  if (goodTransmissionsEstop > 10) {
-    rxSettings.eStopArmed = true;
+  if (!rxSettings.eStopArmed) {
+
+    if (millis() - goodTransissionsTimerEstop <= 2000 ){
+      goodTransmissionsEstop++;
+    } else {
+      goodTransmissionsEstop = 0;
+      goodTransissionsTimerEstop = millis();
+    }
+    if (goodTransmissionsEstop > 10) {
+      rxSettings.eStopArmed = true;
+      Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
+    }
   }
 
 }
@@ -448,9 +457,15 @@ bool resetAdress() {
 // --------------------------------------------------------------------------------------
 bool analyseMessage() {
 
+  remPackageBackup.type = remPackage.type;
+  remPackageBackup.throttle = remPackage.throttle;
+  remPackageBackup.trigger = remPackage.trigger;
+  remPackageBackup.headlight = remPackage.headlight;
+
   uint8_t len = sizeof(remPackage);
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
+    Serial.print("analyse message type ");Serial.println(remPackage.type);
     if (remPackage.throttle > 1200){
       //rxSettings.eStopMode = 1; // hard stop for no recovery
       //activateESTOP(512);
@@ -461,10 +476,12 @@ bool analyseMessage() {
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
     } else {
-      debugData.lastTransmissionAvaible = millis();
+      updateLastTransmissionTimer();
       return true;
     }
 
+  } else {
+    rescueRemPackage();
   }
 }
 
@@ -479,7 +496,7 @@ void analyseSettingsMessage() {
 
     remPackage.type = 0;
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
-
+      updateLastTransmissionTimer();
     }
 
     remPackage.type = 0;
@@ -493,6 +510,13 @@ void analyseSettingsMessage() {
    }
    Serial.println("");
    remPackage.type = 0;
+}
+
+// update last transmission
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void updateLastTransmissionTimer() {
+  debugData.lastTransmissionAvaible = millis();
 }
 
 // set status
@@ -563,7 +587,7 @@ void initiateReceiver() {
 
   if (!rf69.setFrequency(rxSettings.Frequency)) {
   }
-  rf69.setTxPower(20, true);
+  rf69.setTxPower(20);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
 
   Serial.println(rxSettings.Frequency);
@@ -716,6 +740,7 @@ void breakLight() {
 // --------------------------------------------------------------------------------------
 void getUartData() {
 
+if (rxSettings.controlMode > 0) {
   if ( millis() - lastUartPull >= uartPullInterval ) {
 
     lastUartPull = millis();
@@ -744,6 +769,7 @@ void getUartData() {
     }
 
   }
+}
 }
 
 // set default settings

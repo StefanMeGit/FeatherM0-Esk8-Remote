@@ -266,9 +266,8 @@ const uint8_t vibrationActuatorPin = A4;
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
-uint8_t encryptionKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                              0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01
-                            };
+uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
 
 uint8_t useDefaultKeyForTransmission = 0;
 
@@ -503,7 +502,7 @@ void initiateTransmitter() {
     while (1);
   }
 
-  rf69.setTxPower(20, true);
+  rf69.setTxPower(20);
 
   if (useDefaultKeyForTransmission == 1) {
     Serial.println("useDefaultKeyForTransmission == 1");
@@ -629,7 +628,9 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 
   debugData.counterJoined++;
 
-  if (rf69_manager.sendtoWait((byte*)&remPackage, sizeof(remPackage), DEST_ADDRESS)) {
+  uint8_t len = sizeof(remPackage);
+
+  if (rf69_manager.sendtoWait((byte*)&remPackage, len, DEST_ADDRESS)) {
     updateLastTransmissionTimer();
     uint8_t len = sizeof(returnData);
     uint8_t from;
