@@ -77,6 +77,12 @@ const unsigned char eStopArmed[] PROGMEM = {
   0x28, 0x01, 0xB0, 0x00, 0x60, 0x00,
 };
 
+const unsigned char policeMode[] PROGMEM = {
+  0xFF, 0x0F, 0x01, 0x08, 0x7D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B,
+  0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x09, 0x39, 0x09, 0x32, 0x04, 0x34, 0x02,
+  0x28, 0x01, 0xB0, 0x00, 0x60, 0x00,
+};
+
 // Transmit and receive package
 struct debug {
   unsigned long cycleTime = 0;
@@ -124,6 +130,7 @@ typedef struct {
   short Frequency;                  // 21
   uint8_t standbyMode;              // 22
   uint8_t metricImperial;           // 23
+  uint8_t policeMode;               // 24
 } TxSettings;
 
 TxSettings txSettings;
@@ -132,14 +139,14 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 26;
+const uint8_t numOfSettings = 27;
 
 struct menuItems{
   uint8_t ID;
   short standart;
   short minimum;
   short maximum;
-  char name[20];
+  char name[19];
   uint8_t unitIdentifier;
   uint8_t valueIdentifier;
 } menuItems[] = {
@@ -167,6 +174,7 @@ struct menuItems{
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
   {19,  433,  424,  442,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
+  {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
   {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
@@ -189,7 +197,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[8][3][15] = {
+const char stringValues[9][3][15] = {
   {"Killswitch", "Cruise", ""},
   {"Li-ion", "LiPo", ""},
   {"PPM", "PPM and UART", "UART only"},
@@ -197,8 +205,10 @@ const char stringValues[8][3][15] = {
   {"off", "Always on", "with headlight"},
   {"Beginner", "Intermidiate", "Pro"},
   {"off", "10 minutes", "30 minutes"},
-  {"Metric", "Imperial", ""}
+  {"Metric", "Imperial", ""},
+  {"off", "startup", "activation"}
 };
+
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[9][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi."};
@@ -219,10 +229,10 @@ struct callback {
 
 // defining button data
 unsigned long buttonPrevMillis = 0;
-const unsigned long buttonSampleIntervalsMs = 200;
-byte longbuttonPressCountMax = 10;    // 80 * 25 = 2000 ms
-byte mediumbuttonPressCountMin = 2;    // 20 * 25 = 500 ms
-byte buttonPressCount = 0;
+const unsigned long buttonSampleIntervalsMs = 100;
+uint8_t longbuttonPressCountMax = 12;    // 80 * 25 = 2000 ms
+uint8_t mediumbuttonPressCountMin = 5;    // 20 * 25 = 500 ms
+uint8_t buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low
 
 // Transmit and receive package
@@ -332,6 +342,10 @@ bool activateAnnouncement = false;
 bool announcementFade = false;
 bool blockAnnouncement = false;
 
+bool policeModeActive = false;
+
+short throttleMax = 512;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -339,7 +353,7 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(115200);
-  while (!Serial) { delay(1);};
+  //while (!Serial) { delay(1);};
 #endif
 
   pinMode(triggerPin, INPUT_PULLUP);
@@ -366,20 +380,27 @@ void setup() {
 
   initiateTransmitter();
 
-  // Enter settings on startup if trigger is hold down
-  if (triggerActive()) {
+  if (txSettings.policeMode >= 1 ){
+    policeModeActive = true;
+  }
+
+  calculateThrottlePosition();
+
+  if ((txSettings.policeMode == 1) && (throttlePosition == BOTTOM) && triggerActive() ){
+    policeModeActive = false;
+  } else {
+    if (txSettings.policeMode == 1) {
+      policeModeActive = true;
+    }
+  }
+
+  if (extraButtonActive()) {
       txSettings.eStopArmed = false;
       transmitSettingsToReceiver();
       changeSettings = true;
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
   }
-
-  Serial.println(txSettings.Frequency);
-  for (uint8_t i = 0; i <=15; i++){
-    Serial.print(txSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
 
   updateLastTransmissionTimer();
 
@@ -742,7 +763,7 @@ bool transmitFreqToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(3,100)) {
+  if ( transmitToReceiver(1,200)) {
     Serial.println("FirstTrans ok");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       Serial.println("SettingsSend ok");
@@ -799,7 +820,7 @@ bool pairNewBoard() {
   initiateTransmitter();
 
   if (transmitToReceiver(1,200)) {
-    drawMessage("Complete", "New board paired!", 2000);
+    drawMessage("Complete", "New board paired!", 1000);
   } else {
     drawMessage("Fail", "Board not paired", 2000);
   }
@@ -1069,6 +1090,7 @@ short getSettingValue(uint8_t index) {
     case 20:    value = txSettings.firmVersion;     break;
     case 24:    value = txSettings.standbyMode;     break;
     case 25:    value = txSettings.metricImperial;  break;
+    case 26:    value = txSettings.policeMode;      break;
 
 
     default: /* Do nothing */ break;
@@ -1102,6 +1124,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 20:        txSettings.firmVersion = value;     break;
     case 24:        txSettings.standbyMode = value;     break;
     case 25:        txSettings.metricImperial = value;  break;
+    case 26:        txSettings.policeMode = value;      break;
 
     default: /* Do nothing */ break;
   }
@@ -1224,7 +1247,11 @@ u8g2.clearBuffer();
       drawBatteryRemote();
       drawBatteryBoard();
       drawHeadlightStatus();
-      if (returnData.eStopArmed) {
+      if (connectionLost){
+        drawSignal();
+      } else if ((txSettings.policeMode >= 1) && (policeModeActive == true)){
+        drawPoliceMode();
+      } else if (returnData.eStopArmed) {
         drawEStopArmed();
       }
     }
@@ -1239,9 +1266,10 @@ void calculateThrottlePosition()
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
   uint8_t samples = 10;
-  uint16_t throttleMax = 512; // override from drivingMode to calculate max throttle
 
-  if (txSettings.drivingMode == 0) { // slow mode
+  if ((txSettings.policeMode > 0) && policeModeActive){
+    throttleMax = 600;
+  } else if (txSettings.drivingMode == 0){ // slow mode
     throttleMax = 700;
   } else if (txSettings.drivingMode == 1){ // Intermidiate mode
     throttleMax = 850;
@@ -1535,19 +1563,32 @@ void shortbuttonPress() {
 
 // called when button is kept pressed for more than 2 seconds
 void mediumbuttonPress() {
-  if ( returnData.headlightActive == 1 ) {
+
+  if ((throttlePosition == BOTTOM) && triggerActive()){
+
+    if (!policeModeActive){
+      setAnnouncement("Sexy!", "lalalala...", 1000, true);
+      policeModeActive = true;
+    } else {
+      setAnnouncement("Police OFF!", "Go baby, go!", 1000, true);
+      policeModeActive = false;
+    }
+
+  } else if ( returnData.headlightActive == 1 ) {
 
     remPackage.headlight = 0;
+
   } else {
 
     remPackage.headlight = 1;
+
   }
 
 }
 
 void longbuttonPress() {
 
-  if (throttlePosition == BOTTOM){
+  if ((throttlePosition == BOTTOM) && !triggerActive()){
     txSettings.eStopArmed = false;
     transmitSettingsToReceiver();
     u8g2.setDisplayRotation(U8G2_R0);
@@ -1760,7 +1801,7 @@ void drawThrottle() {
 
 
   if (throttle >= 512) {
-    width = map(remPackage.throttle, 512, 1023, 0, 62);
+    width = map(remPackage.throttle, 512, throttleMax, 0, 62);
 
     for (uint8_t i = 0; i < width; i++)
     {
@@ -1786,7 +1827,7 @@ void drawBatteryBoard() {
   uint8_t boardBatteryAbs;
   uint8_t shift;
 
-  boardBattery = batteryPackPercentage( 40.2 );
+  boardBattery = abs( floor( batteryPackPercentage(returnData.inpVoltage)));
   boardBatteryAbs = abs( floor(boardBattery) );
 
   u8g2.drawVLine(x + 4, y , 128);
@@ -1802,8 +1843,8 @@ void drawBatteryBoard() {
 
 void drawSignal() {
 
-  x = 26;
-  y = 112;
+  x = 14;
+  y = 113;
 
   if (connectionLost) {
 
@@ -1885,6 +1926,21 @@ void drawEStopArmed(){
   y = 112;
 
   u8g2.drawXBMP(x, y, 12, 15, eStopArmed);
+
+}
+
+// Draw police mode
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawPoliceMode(){
+
+  x = 16;
+  y = 115;
+
+  u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
+  u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_LEFT);
+  u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_RIGHT);
+  u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_LEFT);
 
 }
 

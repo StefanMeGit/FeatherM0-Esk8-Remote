@@ -79,7 +79,9 @@ typedef struct {
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
   short Frequency;                  // 21
-  uint8_t standbyMode;               // 22
+  uint8_t standbyMode;              // 22
+  uint8_t metricImperial;           // 23
+  uint8_t policeMode;               // 24
 } RxSettings;
 
 RxSettings rxSettings;
