@@ -78,9 +78,8 @@ const unsigned char eStopArmed[] PROGMEM = {
 };
 
 const unsigned char policeMode[] PROGMEM = {
-  0xFF, 0x0F, 0x01, 0x08, 0x7D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x0B,
-  0x3D, 0x0B, 0x3D, 0x0B, 0x3D, 0x09, 0x39, 0x09, 0x32, 0x04, 0x34, 0x02,
-  0x28, 0x01, 0xB0, 0x00, 0x60, 0x00,
+  0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F,
+  0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F,
 };
 
 // Transmit and receive package
@@ -1569,6 +1568,8 @@ void mediumbuttonPress() {
     if (!policeModeActive){
       setAnnouncement("Sexy!", "lalalala...", 1000, true);
       policeModeActive = true;
+      txSettings.policeMode = 1;
+      updateFlashSettings();
     } else {
       setAnnouncement("Police OFF!", "Go baby, go!", 1000, true);
       policeModeActive = false;
@@ -1934,13 +1935,10 @@ void drawEStopArmed(){
 //---------------------------------------------------------------------------------------
 void drawPoliceMode(){
 
-  x = 16;
-  y = 115;
+  x = 15;
+  y = 114;
 
-  u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
-  u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_LEFT);
-  u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_RIGHT);
-  u8g2.drawDisc(x , y , 5, U8G2_DRAW_UPPER_LEFT);
+  u8g2.drawXBMP(x, y, 12, 12, policeMode);
 
 }
 

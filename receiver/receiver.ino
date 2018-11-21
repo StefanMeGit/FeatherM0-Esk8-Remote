@@ -117,7 +117,7 @@ const short settingRules[numOfSettings][3] {
   { -1, 0 , 0},       //20 Firmware
   { -1, 0, 0},        //22 Set default key
   { -1, 0, 0},        //22 Settings
-  { -1, 0, 0},         //23 Exit
+  { -1, 0, 0},        //23 Exit
 };
 
 // Definition for RFM69HW radio on Feather m0
