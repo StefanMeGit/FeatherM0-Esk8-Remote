@@ -122,7 +122,8 @@ typedef struct {
   float firmVersion;                // 19
   bool eStopArmed;                  // 20
   short Frequency;                  // 21
-  uint8_t standbyMode;               // 22
+  uint8_t standbyMode;              // 22
+  uint8_t metricImperial;           // 23
 } TxSettings;
 
 TxSettings txSettings;
@@ -131,7 +132,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 25;
+const uint8_t numOfSettings = 26;
 
 struct menuItems{
   uint8_t ID;
@@ -161,9 +162,10 @@ struct menuItems{
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
+  {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  433,  424,  442,  "Frequency", 6 , 0},            //19 Frequency
+  {19,  433,  424,  442,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
@@ -187,7 +189,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[7][3][15] = {
+const char stringValues[8][3][15] = {
   {"Killswitch", "Cruise", ""},
   {"Li-ion", "LiPo", ""},
   {"PPM", "PPM and UART", "UART only"},
@@ -195,10 +197,11 @@ const char stringValues[7][3][15] = {
   {"off", "Always on", "with headlight"},
   {"Beginner", "Intermidiate", "Pro"},
   {"off", "10 minutes", "30 minutes"},
+  {"Metric", "Imperial", ""}
 };
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
-const char dataSuffix[7][4] = {"V", "KMH", "KM", "A","ms","dBm", ""};
+const char dataSuffix[9][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi."};
 const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
@@ -223,11 +226,11 @@ byte buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low
 
 // Transmit and receive package
-struct package {    // | Normal   | Setting   | Dummy
-  uint8_t type;   // | 0      | 1     | 2
-  uint16_t throttle;  // | Throttle   |       |
-  uint8_t trigger;  // | Trigger  |       |
-  uint8_t headlight; //       | ON       | OFF         |
+struct package {      // | Normal   | Setting   | Dummy
+  uint8_t type;       // | 0        | 1         | 2
+  uint16_t throttle;  // | Throttle |           |
+  uint8_t trigger;    // | Trigger  |           |
+  uint8_t headlight;  // | ON       | OFF       |
 } remPackage;
 
 // Define package to transmit settings
@@ -1061,10 +1064,11 @@ short getSettingValue(uint8_t index) {
     case 13:    value = txSettings.breaklightMode;  break;
     case 14:    value = txSettings.throttleDeath;   break;
     case 15:    value = txSettings.drivingMode;     break;
-    case 17:    value = txSettings.transmissionPower; break;
-    case 19:    value = txSettings.Frequency;        break;
-    case 20:    value = txSettings.firmVersion;        break;
-    case 24:    value = txSettings.standbyMode;        break;
+    case 17:    value = txSettings.transmissionPower;break;
+    case 19:    value = txSettings.Frequency;       break;
+    case 20:    value = txSettings.firmVersion;     break;
+    case 24:    value = txSettings.standbyMode;     break;
+    case 25:    value = txSettings.metricImperial;  break;
 
 
     default: /* Do nothing */ break;
@@ -1094,9 +1098,10 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 14:        txSettings.throttleDeath = value;   break;
     case 15:        txSettings.drivingMode = value;     break;
     case 17:        txSettings.transmissionPower = value; break;
-    case 19:        txSettings.Frequency = value; break;
-    case 20:        txSettings.firmVersion = value; break;
-    case 24:        txSettings.standbyMode = value; break;
+    case 19:        txSettings.Frequency = value;       break;
+    case 20:        txSettings.firmVersion = value;     break;
+    case 24:        txSettings.standbyMode = value;     break;
+    case 25:        txSettings.metricImperial = value;  break;
 
     default: /* Do nothing */ break;
   }
@@ -1560,24 +1565,36 @@ void longbuttonPress() {
 void drawPage() {
 
   uint8_t decimalsMain, decimalsSecond, decimalsThird;
-  float valueMain, valueSecond, valueThird;
+  float valueMain, valueSecond, valueThird, speedValue, distanceValue;
   int unitMain, unitSecond, unitThird;
-  uint16_t first, last, firstSecond, lastSecond, firstThird, lastThird;
+  uint16_t first, last, firstSecond, lastSecond, firstThird, lastThird, speedValueUnit, distanceValueUnit;
 
   x = 15;
   y = 10;
 
+  if (txSettings.metricImperial == 1){
+    speedValue = (ratioRpmSpeed * returnData.rpm) * 0.621371;
+    speedValueUnit = 7;
+    distanceValue = (ratioPulseDistance * returnData.tachometerAbs) * 0.621371;
+    distanceValueUnit = 8;
+  } else {
+    speedValue = ratioRpmSpeed * returnData.rpm;
+    speedValueUnit = 1;
+    distanceValue = ratioPulseDistance * returnData.tachometerAbs;
+    distanceValueUnit = 8;
+  }
+
   switch (displayView) {
     case 0:
-      valueMain = ratioRpmSpeed * returnData.rpm;
+      valueMain = speedValue;
       decimalsMain = 1;
-      unitMain = 1;
+      unitMain = speedValueUnit;
       valueSecond = returnData.inpVoltage;
       decimalsSecond = 2;
       unitSecond = 0;
-      valueThird = ratioPulseDistance * returnData.tachometerAbs;
+      valueThird = distanceValue;
       decimalsThird = 2;
-      unitThird = 2;
+      unitThird = distanceValueUnit;
       break;
     case 1:
       valueMain = returnData.inpVoltage;

@@ -1,4 +1,4 @@
 lastTransmissionDuration
-- KMH / MPH
+- DONE KMH / MPH
 - Move main page down, battery on top with signal
 - Button timer from cycle to millis()
