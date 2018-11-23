@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 

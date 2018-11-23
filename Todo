@@ -3,6 +3,5 @@ lastTransmissionDuration
 - CANCELD Move main page down, battery on top with signal
 - DONE Button timer from cycle to millis()
 - DONE Police Mode
-- battery check / eStopArmed false... connectionValid true
 
 - PROBLEMS?!
