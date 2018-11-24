@@ -166,7 +166,7 @@ struct menuItems{
   {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
+  {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
@@ -495,7 +495,9 @@ void sleep() {
     if (millis() - debugData.lastTransmissionAvaible > 350) {
 
       if (!connectionLost && returnData.eStopArmed) {
-          setAnnouncement("E-Stop!!!", "Caution!",10000, false);
+        String lastTranmissionDurationStr = "Time: ";
+        lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
+        setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
       }
       returnData.eStopArmed = false;
 
@@ -1328,7 +1330,7 @@ void calculateThrottlePosition()
 uint8_t batteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 10;
+  uint8_t samples = 20;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
