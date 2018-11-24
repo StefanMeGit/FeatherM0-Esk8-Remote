@@ -347,6 +347,8 @@ short throttleMax = 512;
 uint8_t boardBatteryWarningLevel = 0;
 uint8_t remoteBatteryWanringLevel = 0;
 
+bool eStopAnnounced = false;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -485,6 +487,11 @@ void sleep() {
 // --------------------------------------------------------------------------------------
  void checkConnection() {
 
+   if (returnData.eStopArmed && !eStopAnnounced) {
+     setAnnouncement("EStop Armed!", "Have a safe ride!", 1000, true);
+     eStopAnnounced = true;
+   }
+
     if (millis() - debugData.lastTransmissionAvaible > 350) {
 
       if (!connectionLost && returnData.eStopArmed) {
@@ -493,6 +500,7 @@ void sleep() {
       returnData.eStopArmed = false;
 
       connectionLost = true;
+      eStopAnnounced = false;
     } else {
       connectionLost = false;
     }
