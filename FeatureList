@@ -20,3 +20,5 @@ Feature list:
   - startup activation -> remote start in police mode if not pressed a button combination on startup
   - manual activation -> remote starts normal, police mode can be activated by button combination (and safe the actual state after restart!)
 - throttle center death zone adjustable from settings menu
+- overcharge alert -> if voltage is 5 seconds over 42.0 volts announcemnt with vibration is set
+- discharge alert -> if board/remote voltage drops under 20/15% announcment with vibration is set

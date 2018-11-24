@@ -163,8 +163,8 @@ struct menuItems{
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  525,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  750,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
@@ -271,7 +271,7 @@ const uint8_t vibrationActuatorPin = A4;
 #define RFM69_INT   3
 #define RFM69_RST   4
 #define DIAGLED     13
-#define RF69_FREQ   433.0
+#define RF69_FREQ   433
 #define DEST_ADDRESS   1
 #define MY_ADDRESS     2
 
@@ -284,8 +284,6 @@ uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 uint8_t useDefaultKeyForTransmission = 0;
 
 // Dont put this on the stack:
-uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-uint8_t data[] = "  OK";
 uint8_t transmissionFailCounter = 0;
 bool connectionLost = false;
 
@@ -295,6 +293,7 @@ const float minVoltage = 3.1;
 const float maxVoltage = 4.2;
 const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
+unsigned long underVoltageTimer = 0;
 
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
@@ -309,7 +308,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 3;
+uint8_t displayView = 0;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -345,6 +344,9 @@ bool policeModeActive = false;
 
 short throttleMax = 512;
 
+uint8_t boardBatteryWarningLevel = 0;
+uint8_t remoteBatteryWanringLevel = 0;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -352,7 +354,7 @@ void setup() {
 
 #ifdef DEBUG
   Serial.begin(115200);
-  //while (!Serial) { delay(1);};
+  while (!Serial) { delay(1);};
 #endif
 
   pinMode(triggerPin, INPUT_PULLUP);
@@ -420,7 +422,6 @@ void loop() {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-
     if (transmitToReceiver(1,50)) {
       updateMainDisplay();
     }
@@ -487,7 +488,7 @@ void sleep() {
     if (millis() - debugData.lastTransmissionAvaible > 350) {
 
       if (!connectionLost && returnData.eStopArmed) {
-          setAnnouncement("E-Stop!!!", "Caution!",1000, false);
+          setAnnouncement("E-Stop!!!", "Caution!",10000, false);
       }
       returnData.eStopArmed = false;
 
@@ -582,8 +583,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        createCustomKey();
-        //createTestKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
@@ -607,7 +608,7 @@ void createTestKey() {
     generatedCustomEncryptionKey[i] = encryptionKey[i];
   }
 
-  //generatedCustomEncryptionKey[15] = 1;
+  generatedCustomEncryptionKey[15] = 1;
   for (uint8_t i = 0; i < 16; i++) {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
@@ -653,7 +654,7 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 
   uint8_t len = sizeof(remPackage);
 
-  if (rf69_manager.sendtoWait((byte*)&remPackage, len, DEST_ADDRESS)) {
+  if (rf69_manager.sendtoWait((uint8_t*)&remPackage, len, DEST_ADDRESS)) {
     updateLastTransmissionTimer();
     uint8_t len = sizeof(returnData);
     uint8_t from;
@@ -1221,6 +1222,9 @@ void controlVib() {
         vibIntervalCounter++;
       }
     }
+  } else {
+    vibIntervalCounter = 0;
+    digitalWrite(vibrationActuatorPin, false);
   }
 
 }
@@ -1375,25 +1379,47 @@ void checkBatteryLevel() {
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
-  if ((((boardBattery > 0) && (boardBattery <= 15)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
-    if (boardBattery <= 15) {
-      device = "Board: ";
-      device += String(boardBatteryAbs);
-      device += "%";
-      setAnnouncement("Low Battery!", device, 5000, true);
-    } else {
-      device = "Remote: ";
-      device += String(remoteBattery);
-      device += "%";
-      setAnnouncement("Low Battery!", device, 5000, true);
+  if ((((boardBattery > 0) && (boardBattery <= 20)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
+    if (millis() - underVoltageTimer >= 1000) {
+      if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
+        device = "Board: ";
+        device += String(boardBatteryAbs);
+        device += "%";
+        setAnnouncement("Low Battery!", device, 10000, true);
+        boardBatteryWarningLevel = 2;
+      } else if (boardBattery <= 20 && boardBatteryWarningLevel <= 0) {
+        device = "Board: ";
+        device += String(boardBatteryAbs);
+        device += "%";
+        setAnnouncement("Low Battery!!!", device, 5000, true);
+        boardBatteryWarningLevel = 1;
+      } else {
+        device = "Remote: ";
+        device += String(remoteBattery);
+        device += "%";
+        setAnnouncement("Low Battery!", device, 5000, true);
+        remoteBatteryWanringLevel = 1;
+      }
     }
   } else if (returnData.inpVoltage >= 42.0 && throttlePosition == BOTTOM){
-      if ((millis() - overchargeTimer) > 5000) {
+      if ((millis() - overchargeTimer) >= 5000) {
         setAnnouncement("Overcharge!", "Caution!", 3000, true);
       }
   } else {
     overchargeTimer = millis();
+    underVoltageTimer = millis();
   }
+
+  if (boardBattery >= 25 ) {
+    boardBatteryWarningLevel = 0;
+  } else if (boardBattery >= 15 ) {
+    boardBatteryWarningLevel = 1;
+  }
+
+  if (remoteBattery >= 15 ) {
+    remoteBatteryWanringLevel = 0;
+  }
+
 }
 
 // Prints the settings menu on the OLED display
@@ -1566,12 +1592,12 @@ void mediumbuttonPress() {
   if ((throttlePosition == BOTTOM) && triggerActive()){
 
     if (!policeModeActive){
-      setAnnouncement("Sexy!", "lalalala...", 1000, true);
+      setAnnouncement("Hmm :(", "Cold day today...", 1000, true);
       policeModeActive = true;
       txSettings.policeMode = 1;
       updateFlashSettings();
     } else {
-      setAnnouncement("Police OFF!", "Go baby, go!", 1000, true);
+      setAnnouncement("Yeahh!", "Go baby, go!", 1000, true);
       policeModeActive = false;
     }
 
