@@ -78,8 +78,9 @@ const unsigned char eStopArmed[] PROGMEM = {
 };
 
 const unsigned char policeMode[] PROGMEM = {
-  0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F,
-  0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F,
+  0xff, 0xf8, 0xff, 0xf8, 0xf8, 0xf8, 0xf0, 0x78, 0xc2, 0x18, 0x82, 0x08,
+  0xc0, 0x18, 0xff, 0xf8, 0xc0, 0x18, 0xe0, 0x38, 0xf8, 0xf8, 0xff, 0xf8,
+  0xff, 0xf8
 };
 
 // Transmit and receive package
@@ -89,17 +90,13 @@ struct debug {
   int8_t rssi;
   unsigned long counterJoined = 0;
   unsigned long counterSend = 0;
-  unsigned long counterReceived = 0;
   unsigned long differenceJoinedSend = 0;
-  unsigned long differenceJoinedReceived = 0;
   unsigned long longestCycleTime = 0;
   unsigned long lastTransmissionAvaible = 0;
   unsigned short transmissionTimeStart = 0;
   unsigned short transmissionTimeFinish = 0;
-  unsigned short transmissionTimeDuration = 0;
   unsigned long cycleTimeStart = 0;
   unsigned long cycleTimeFinish = 0;
-  unsigned long cycleTimeDuration = 0;
 } debugData;
 
 
@@ -433,7 +430,6 @@ void loop() {
       }
 
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
-    debugData.differenceJoinedReceived = debugData.counterJoined - debugData.counterReceived;
   }
 
   debugData.cycleTimeFinish = millis();
@@ -673,7 +669,6 @@ bool transmitToReceiver(uint8_t retries, uint8_t timeout) {
 
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
       updateLastTransmissionTimer();
-      debugData.counterReceived++;
       debugData.transmissionTimeFinish = millis();
       debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
@@ -1278,9 +1273,9 @@ void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 10;
+  uint8_t samples = 20;
 
-  if ((txSettings.policeMode > 0) && policeModeActive){
+  if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
   } else if (txSettings.drivingMode == 0){ // slow mode
     throttleMax = 700;
