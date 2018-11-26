@@ -78,9 +78,9 @@ const unsigned char eStopArmed[] PROGMEM = {
 };
 
 const unsigned char policeMode[] PROGMEM = {
-  0xff, 0xf8, 0xff, 0xf8, 0xf8, 0xf8, 0xf0, 0x78, 0xc2, 0x18, 0x82, 0x08,
-  0xc0, 0x18, 0xff, 0xf8, 0xc0, 0x18, 0xe0, 0x38, 0xf8, 0xf8, 0xff, 0xf8,
-  0xff, 0xf8
+  0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x07, 0x80, 0x1f, 0xe0, 0x7c, 0xf8,
+  0x3c, 0xf0, 0x3f, 0xf0, 0x20, 0x10, 0x1f, 0xe0, 0x0f, 0xc0, 0x03, 0x00,
+  0x00, 0x00, 0x00, 0x00
 };
 
 // Transmit and receive package
@@ -411,6 +411,8 @@ void setup() {
 // --------------------------------------------------------------------------------------
 void loop() {
 
+  Serial.println(debugData.cycleTime);
+
   debugData.cycleTimeStart = millis();
   calculateThrottlePosition();
 
@@ -436,13 +438,15 @@ void loop() {
   debugData.cycleTime = debugData.cycleTimeFinish - debugData.cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
-    }
+  }
 
   detectButtonPress();
+  if (displayView >= 4) {
+      displayView = 0;
+  }
   checkConnection();
   checkBatteryLevel();
   controlVib();
-
 }
 
 // Sleep mode handling
@@ -1243,9 +1247,6 @@ u8g2.clearBuffer();
     if ( changeSettings == true ) {
       drawSettingsMenu();
     } else {
-      if (displayView >= 4) {
-        displayView = 0;
-      }
       if (activateAnnouncement){
         drawAnnouncement();
       } else {
@@ -1273,7 +1274,7 @@ void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 20;
+  uint8_t samples = 10;
 
   if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
@@ -1325,7 +1326,7 @@ void calculateThrottlePosition()
 uint8_t batteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 20;
+  uint8_t samples = 5;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1517,11 +1518,6 @@ void drawStartScreen() {
   do {
 
     u8g2.drawXBMP( 1, 22, 60, 64, logo);
-
-//    u8g2.setFont(u8g2_font_10x20_tr);
-//    u8g2.drawStr(20, 26, "FeatherFly");
-//    u8g2.setFont(u8g2_font_t0_12_tr);
-//    u8g2.drawStr(30, 41, "mod by StefanMe");
 
   } while ( u8g2.nextPage() );
 
@@ -1966,7 +1962,7 @@ void drawEStopArmed(){
 //---------------------------------------------------------------------------------------
 void drawPoliceMode(){
 
-  x = 15;
+  x = 16;
   y = 114;
 
   u8g2.drawXBMP(x, y, 12, 12, policeMode);
