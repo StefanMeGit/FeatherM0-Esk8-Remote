@@ -305,6 +305,8 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
+String tString2;
+String tString3;
 uint8_t displayView = 0;
 uint8_t x, y;
 
@@ -488,7 +490,7 @@ void sleep() {
  void checkConnection() {
 
    if (returnData.eStopArmed && !eStopAnnounced) {
-     setAnnouncement("EStop Armed!", "Have a safe ride!", 1000, true);
+     setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
      eStopAnnounced = true;
    }
 
@@ -634,7 +636,7 @@ void createCustomKey() {
   uint8_t generatedCustomEncryptionKey[16];
 
   for (uint8_t i = 0; i < 16; i++) {
-    generatedCustomEncryptionKey[i] = random(9);
+    generatedCustomEncryptionKey[i] = random(255);
     Serial.print(generatedCustomEncryptionKey[i]);
   }
   Serial.println("");
@@ -644,7 +646,7 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
-  txSettings.Frequency = RF69_FREQ;//random(424, 442);
+  txSettings.Frequency = random(428, 438);
   Serial.print(txSettings.Frequency);
 
   updateFlashSettings();
@@ -971,7 +973,6 @@ void controlSettings() {
           txSettings.customEncryptionKey[i] = encryptionKey[i];
         }
         updateFlashSettings();
-        loadFlashSettings();
         initiateTransmitter();
 
         drawMessage("Complete", "Default encryption Key!", 2000);
@@ -1486,8 +1487,14 @@ void drawSettingsMenu() {
   }
 
   if ( menuItems[ currentSetting ].ID == KEY ) {
-    for (uint8_t i = 8; i < 16; i++) {
+    for (uint8_t i = 0; i < 6; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
+    }
+    for (uint8_t i = 6; i < 12; i++) {
+      tString2 += String(txSettings.customEncryptionKey[i]);
+    }
+    for (uint8_t i = 12; i < 16; i++) {
+      tString3 += String(txSettings.customEncryptionKey[i]);
     }
   }
 
@@ -1505,7 +1512,13 @@ void drawSettingsMenu() {
       drawString(tString, tString.length(), x + 50, y + 30, u8g2_font_profont12_tr );
     }
   } else {
-    drawString(tString, tString.length(), x, y + 30, u8g2_font_10x20_tr );
+    if ( menuItems[ currentSetting ].ID == KEY ) {
+      drawString(tString, tString.length(), x, y + 20, u8g2_font_profont12_tr );
+      drawString(tString2, tString.length(), x, y + 33, u8g2_font_profont12_tr );
+      drawString(tString3, tString.length(), x, y + 46, u8g2_font_profont12_tr );
+    } else {
+          drawString(tString, tString.length(), x, y + 30, u8g2_font_10x20_tr );
+    }
   }
 }
 
