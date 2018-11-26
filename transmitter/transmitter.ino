@@ -163,10 +163,10 @@ struct menuItems{
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  525,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  750,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  {14,  10,   0,    30,   "Throttle Death",  0 , 0},       //14 throttle death center
+  {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
@@ -293,6 +293,7 @@ const float minVoltage = 3.1;
 const float maxVoltage = 4.2;
 const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
+unsigned long underVoltageTimer = 0;
 
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
@@ -307,7 +308,7 @@ uint8_t throttlePosition;
 
 // Defining variables for OLED display
 String tString;
-uint8_t displayView = 3;
+uint8_t displayView = 0;
 uint8_t x, y;
 
 // Defiing varibales for signal
@@ -345,6 +346,8 @@ short throttleMax = 512;
 
 uint8_t boardBatteryWarningLevel = 0;
 uint8_t remoteBatteryWanringLevel = 0;
+
+bool eStopAnnounced = false;
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -484,14 +487,22 @@ void sleep() {
 // --------------------------------------------------------------------------------------
  void checkConnection() {
 
+   if (returnData.eStopArmed && !eStopAnnounced) {
+     setAnnouncement("EStop Armed!", "Have a safe ride!", 1000, true);
+     eStopAnnounced = true;
+   }
+
     if (millis() - debugData.lastTransmissionAvaible > 350) {
 
       if (!connectionLost && returnData.eStopArmed) {
-          setAnnouncement("E-Stop!!!", "Caution!",10000, false);
+        String lastTranmissionDurationStr = "Time: ";
+        lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
+        setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
       }
       returnData.eStopArmed = false;
 
       connectionLost = true;
+      eStopAnnounced = false;
     } else {
       connectionLost = false;
     }
@@ -1319,7 +1330,7 @@ void calculateThrottlePosition()
 uint8_t batteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 10;
+  uint8_t samples = 20;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1379,31 +1390,34 @@ void checkBatteryLevel() {
   boardBatteryAbs = abs( floor(boardBattery) );
   remoteBattery = batteryLevel();
   if ((((boardBattery > 0) && (boardBattery <= 20)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
-    if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
-      device = "Board: ";
-      device += String(boardBatteryAbs);
-      device += "%";
-      setAnnouncement("Low Battery!", device, 10000, true);
-      boardBatteryWarningLevel = 2;
-    } else if (boardBattery <= 20 && boardBatteryWarningLevel <= 0) {
-      device = "Board: ";
-      device += String(boardBatteryAbs);
-      device += "%";
-      setAnnouncement("Low Battery!!!", device, 5000, true);
-      boardBatteryWarningLevel = 1;
-    } else {
-      device = "Remote: ";
-      device += String(remoteBattery);
-      device += "%";
-      setAnnouncement("Low Battery!", device, 5000, true);
-      remoteBatteryWanringLevel = 1;
+    if (millis() - underVoltageTimer >= 1000) {
+      if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
+        device = "Board: ";
+        device += String(boardBatteryAbs);
+        device += "%";
+        setAnnouncement("Low Battery!", device, 10000, true);
+        boardBatteryWarningLevel = 2;
+      } else if (boardBattery <= 20 && boardBatteryWarningLevel <= 0) {
+        device = "Board: ";
+        device += String(boardBatteryAbs);
+        device += "%";
+        setAnnouncement("Low Battery!!!", device, 5000, true);
+        boardBatteryWarningLevel = 1;
+      } else {
+        device = "Remote: ";
+        device += String(remoteBattery);
+        device += "%";
+        setAnnouncement("Low Battery!", device, 5000, true);
+        remoteBatteryWanringLevel = 1;
+      }
     }
   } else if (returnData.inpVoltage >= 42.0 && throttlePosition == BOTTOM){
-      if ((millis() - overchargeTimer) > 5000) {
+      if ((millis() - overchargeTimer) >= 5000) {
         setAnnouncement("Overcharge!", "Caution!", 3000, true);
       }
   } else {
     overchargeTimer = millis();
+    underVoltageTimer = millis();
   }
 
   if (boardBattery >= 25 ) {

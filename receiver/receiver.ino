@@ -12,13 +12,6 @@
 #define VERSION 1.0
 
 struct debug {
-  unsigned long cycleTime = 0;
-  unsigned long startCycleTime = 0;
-  unsigned long finishCycleTime = 0;
-  unsigned long longestCycleTime = 0;
-  unsigned long lastTransmissionStart = 0;
-  unsigned long lastTransmissionEnd = 0;
-  unsigned long lastTransmissionDuration = 0;
   unsigned long lastTransmissionAvaible = 0;
 } debugData;
 
@@ -177,6 +170,7 @@ unsigned long goodTransissionsTimer = 0;
 //Estop start
 uint8_t goodTransmissionsEstop = 0;
 unsigned long goodTransissionsTimerEstop = 0;
+uint16_t eStopThrottlePos = 512;
 
 // Initiate Servo class
 Servo esc;
@@ -184,19 +178,13 @@ Servo esc;
 // Initiate VescUart class for UART communication
 VescUart UART;
 
-//TESTtypecounter
-uint8_t typecounter = 0;
-
-unsigned long aliveTimer = 0;
-short aliveCounter = 0;
-
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setup() {
 
   #ifdef DEBUG
-    //UART.setDebugPort(&Serial);
+    UART.setDebugPort(&Serial1);
     Serial.begin(115200);
     while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
   #endif
@@ -219,7 +207,7 @@ void setup() {
 
   initiateReceiver();
 
-delay(200);
+delay(50);
 
 Serial.println(rxSettings.Frequency);
 for (uint8_t i = 0; i <=15; i++){
@@ -235,17 +223,6 @@ Serial.println("Setup end");
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-
-  if (millis() - aliveTimer > 5000) {
-    Serial.println(aliveCounter);
-    Serial.print("type ");Serial.println(remPackage.type);
-    aliveCounter++;
-    aliveTimer = millis();
-  }
-
-  debugData.startCycleTime = millis();
-
-  debugData.lastTransmissionStart = millis();
 
   if (!eStopTriggered) {
     if (rf69_manager.available()) {
@@ -267,33 +244,25 @@ void loop() {
         } else if (remPackage.type == 1) { // join settings transmission
           analyseSettingsMessage();
         } else {
-          activateESTOP(remPackage.throttle);
+          activateESTOP(0);
         }
       }
       if (rxSettings.eStopMode < 2 && rxSettings.eStopArmed && remPackage.type == 0) {
         if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
           Serial.println("ESTOP");
-          activateESTOP(remPackage.throttle);
+          activateESTOP(0);
         } else {
           returnData.eStopArmed = true;
         }
       }
     } else {
-      activateESTOP(512);
+      activateESTOP(0);
     }
 
     controlStatusLed();
     headLight();
     breakLight();
     resetAdress();
-
-    debugData.lastTransmissionDuration = debugData.lastTransmissionStart - debugData.lastTransmissionEnd;
-    debugData.finishCycleTime = millis();
-    debugData.cycleTime = debugData.finishCycleTime - debugData.startCycleTime;
-
-    if (debugData.cycleTime > debugData.longestCycleTime) {
-      debugData.longestCycleTime = debugData.cycleTime;
-    }
 
 }
 
@@ -304,11 +273,13 @@ bool validateRemPackageEstop(){
 
   if (remPackage.type > 1 || remPackage.throttle > 1200 || remPackage.trigger > 1 || remPackage.headlight > 1) {
 
+      #ifdef DEBUG
       Serial.println("Shit package?");
       Serial.print("type ");Serial.println(remPackage.type);
       Serial.print("throttle ");Serial.println(remPackage.throttle);
       Serial.print("Trigger ");Serial.println(remPackage.trigger);
       Serial.print("headlight ");Serial.println(remPackage.headlight);
+      #endif
       setStatus(FAILED);
       return false;
   } else {
@@ -323,22 +294,26 @@ void rescueRemPackage() {
 
   Serial.println(millis());
 
+  #ifdef DEBUG
   Serial.println("Shit package?");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
   Serial.print("Trigger ");Serial.println(remPackage.trigger);
   Serial.print("headlight ");Serial.println(remPackage.headlight);
+  #endif
 
   remPackage.type = remPackageBackup.type;
   remPackage.throttle = remPackageBackup.throttle;
   remPackage.trigger = remPackageBackup.trigger;
   remPackage.headlight = remPackageBackup.headlight;
 
+  #ifdef DEBUG
   Serial.println("rescue to default");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
   Serial.print("Trigger ");Serial.println(remPackage.trigger);
   Serial.print("headlight ");Serial.println(remPackage.headlight);
+  #endif
 
   setStatus(FAILED);
 
@@ -348,31 +323,39 @@ void rescueRemPackage() {
 // checkConnection for ESTOP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void activateESTOP(uint16_t lastThrottlePos) {
+void activateESTOP(uint8_t mode) {
   uint8_t decreseThrottleValue;
 
   setStatus(ESTOP);
   Serial.println("Estop actiavted");
 
-  if (rxSettings.eStopMode == 0){
+  if (rxSettings.eStopMode == 0){ // slow estop with recover
     decreseThrottleValue = 2;
-  } else if (rxSettings.eStopMode == 1) {
-    decreseThrottleValue = 4;
+  } else if (rxSettings.eStopMode == 1) { // hard estop without recover
+    decreseThrottleValue = 3;
+  } else if (rxSettings.eStopMode == 2) { // instant recover... not reccomented
+    mode = 1;
   }
 
   eStopTriggered = true;
 
   if (!eStopFullBreak){
 
-    lastThrottlePos = 512; // hardcoded or take last throttle pos??
+    if (mode == 0) {
 
-    for (lastThrottlePos; lastThrottlePos > 256; lastThrottlePos = lastThrottlePos - decreseThrottleValue) {
-      speedControl( lastThrottlePos, remPackage.trigger );
-      delay(20);
+      eStopThrottlePos = 512;
+
+      for (eStopThrottlePos; eStopThrottlePos > 256; eStopThrottlePos = eStopThrottlePos - decreseThrottleValue) {
+        speedControl( eStopThrottlePos, 0);
+        delay(20);
+      }
+    } else if (mode == 1) {
+      eStopFullBreak = true;
     }
+
+    eStopFullBreak = true;
   }
 
-  eStopFullBreak = true;
   Serial.println("Try to recover");
 
   if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
@@ -468,10 +451,6 @@ bool analyseMessage() {
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
     Serial.print("analyse message type ");Serial.println(remPackage.type);
-    if (remPackage.throttle > 1200){
-      //rxSettings.eStopMode = 1; // hard stop for no recovery
-      //activateESTOP(512);
-    }
 
   rf69_manager.setRetries(1);
   rf69_manager.setTimeout(20);
