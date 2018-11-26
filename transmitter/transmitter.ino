@@ -122,11 +122,10 @@ typedef struct {
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
-  bool eStopArmed;                  // 20
-  short Frequency;                  // 21
-  uint8_t standbyMode;              // 22
-  uint8_t metricImperial;           // 23
-  uint8_t policeMode;               // 24
+  short Frequency;                  // 22
+  uint8_t standbyMode;              // 23
+  uint8_t metricImperial;           // 24
+  uint8_t policeMode;               // 25
 } TxSettings;
 
 TxSettings txSettings;
@@ -163,7 +162,7 @@ struct menuItems{
   {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
+  {14,  10,   0,    30,   "Throttle Deathband",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power

@@ -31,6 +31,13 @@ struct packageBackup {        // | Normal   | Setting   | Confirm
   uint8_t headlight = 0;
 } remPackageBackup;
 
+// Transmit and receive package
+struct packageEStop {
+  bool armed = false;
+  bool triggered = false;
+  bool fullBreakDone = false;
+} dataEStop;
+
 #define NORMAL 0
 #define SETTING 1
 #define CONFIRM 2
@@ -70,11 +77,10 @@ typedef struct {
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
-  bool eStopArmed;                  // 20
-  short Frequency;                  // 21
-  uint8_t standbyMode;              // 22
-  uint8_t metricImperial;           // 23
-  uint8_t policeMode;               // 24
+  short Frequency;                  // 20
+  uint8_t standbyMode;              // 21
+  uint8_t metricImperial;           // 22
+  uint8_t policeMode;               // 23
 } RxSettings;
 
 RxSettings rxSettings;
@@ -162,8 +168,6 @@ bool breaklightBlinkOn = false;
 
 // Defining alarm handling
 bool alarmActivated = false;
-bool eStopTriggered = false;
-bool eStopFullBreak = false;
 uint16_t goodTransmissions = 0;
 unsigned long goodTransissionsTimer = 0;
 
@@ -224,7 +228,7 @@ Serial.println("Setup end");
 // --------------------------------------------------------------------------------------
 void loop() {
 
-  if (!eStopTriggered) {
+  if (!dataEStop.triggered) {
     if (rf69_manager.available()) {
         if (remPackage.type == 0) {
             if (analyseMessage()) {
@@ -236,7 +240,6 @@ void loop() {
                 rescueRemPackage();
               }
             } else {
-              setStatus(FAILED);
               if (!validateRemPackageEstop()) {
                 rescueRemPackage();
               }
@@ -247,12 +250,10 @@ void loop() {
           activateESTOP(0);
         }
       }
-      if (rxSettings.eStopMode < 2 && rxSettings.eStopArmed && remPackage.type == 0) {
-        if ((millis() - debugData.lastTransmissionAvaible >= 350) || eStopTriggered){
+      if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0) {
+        if ((millis() - debugData.lastTransmissionAvaible >= 350) || dataEStop.triggered){
           Serial.println("ESTOP");
           activateESTOP(0);
-        } else {
-          returnData.eStopArmed = true;
         }
       }
     } else {
@@ -280,7 +281,6 @@ bool validateRemPackageEstop(){
       Serial.print("Trigger ");Serial.println(remPackage.trigger);
       Serial.print("headlight ");Serial.println(remPackage.headlight);
       #endif
-      setStatus(FAILED);
       return false;
   } else {
     return true;
@@ -315,8 +315,6 @@ void rescueRemPackage() {
   Serial.print("headlight ");Serial.println(remPackage.headlight);
   #endif
 
-  setStatus(FAILED);
-
 }
 
 
@@ -326,8 +324,8 @@ void rescueRemPackage() {
 void activateESTOP(uint8_t mode) {
   uint8_t decreseThrottleValue;
 
-  setStatus(ESTOP);
   Serial.println("Estop actiavted");
+  returnData.eStopArmed = false;
 
   if (rxSettings.eStopMode == 0){ // slow estop with recover
     decreseThrottleValue = 2;
@@ -337,9 +335,9 @@ void activateESTOP(uint8_t mode) {
     mode = 1;
   }
 
-  eStopTriggered = true;
+  dataEStop.triggered = true;
 
-  if (!eStopFullBreak){
+  if (!dataEStop.fullBreakDone){
 
     if (mode == 0) {
 
@@ -350,10 +348,10 @@ void activateESTOP(uint8_t mode) {
         delay(20);
       }
     } else if (mode == 1) {
-      eStopFullBreak = true;
+      dataEStop.fullBreakDone = true;
     }
 
-    eStopFullBreak = true;
+    dataEStop.fullBreakDone = true;
   }
 
   Serial.println("Try to recover");
@@ -368,8 +366,9 @@ void activateESTOP(uint8_t mode) {
           }
           if (goodTransmissions >= 20) {
             goodTransmissions = 0;
-            eStopTriggered = false;
-            eStopFullBreak = false;
+            dataEStop.triggered = false;
+            dataEStop.fullBreakDone = false;
+            returnData.eStopArmed = true;
             Serial.println("Recovered");
             Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
             updateLastTransmissionTimer();
@@ -381,7 +380,7 @@ void activateESTOP(uint8_t mode) {
         }
       } else {
         goodTransmissions = 0;
-        eStopFullBreak = true;
+        dataEStop.fullBreakDone = true;
         goodTransissionsTimer = millis();
       }
     }
@@ -393,7 +392,7 @@ void activateESTOP(uint8_t mode) {
 // --------------------------------------------------------------------------------------
 void armEstop(){
 
-  if (!rxSettings.eStopArmed) {
+  if (!dataEStop.armed) {
 
     if (millis() - goodTransissionsTimerEstop <= 2000 ){
       goodTransmissionsEstop++;
@@ -402,7 +401,9 @@ void armEstop(){
       goodTransissionsTimerEstop = millis();
     }
     if (goodTransmissionsEstop > 10) {
-      rxSettings.eStopArmed = true;
+      dataEStop.armed = true;
+      returnData.eStopArmed = true;
+      //setStatus(COMPLETE);
       Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
     }
   }
@@ -421,8 +422,8 @@ bool resetAdress() {
         rxSettings.customEncryptionKey[i] = encryptionKey[i];
       }
       rxSettings.Frequency = RF69_FREQ;
-      rxSettings.eStopArmed = false;
-      eStopTriggered = false;
+      dataEStop.armed = false;
+      dataEStop.triggered = false;
 
       updateFlashSettings();
       initiateReceiver();
