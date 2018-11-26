@@ -77,6 +77,7 @@ typedef struct {
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
+  bool eStopArmed;                  // 20
   short Frequency;                  // 20
   uint8_t standbyMode;              // 21
   uint8_t metricImperial;           // 22
@@ -250,7 +251,11 @@ void loop() {
           activateESTOP(0);
         }
       }
-      if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0) {
+      Serial.print("rxSettings.eStopMode"); Serial.println(rxSettings.eStopMode);
+      Serial.print("dataEStop.armed"); Serial.println(dataEStop.armed);
+      Serial.print("remPackage.type"); Serial.println(remPackage.type);
+      Serial.print("rxSettings.eStopArmed"); Serial.println(rxSettings.eStopArmed);
+      if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0 && rxSettings.eStopArmed) {
         if ((millis() - debugData.lastTransmissionAvaible >= 350) || dataEStop.triggered){
           Serial.println("ESTOP");
           activateESTOP(0);
@@ -394,7 +399,7 @@ void armEstop(){
 
   if (!dataEStop.armed) {
 
-    if (millis() - goodTransissionsTimerEstop <= 2000 ){
+    if (millis() - goodTransissionsTimerEstop <= 2000 && remPackage.throttle <= 550){
       goodTransmissionsEstop++;
     } else {
       goodTransmissionsEstop = 0;
@@ -403,7 +408,7 @@ void armEstop(){
     if (goodTransmissionsEstop > 10) {
       dataEStop.armed = true;
       returnData.eStopArmed = true;
-      //setStatus(COMPLETE);
+      rxSettings.eStopArmed = true;
       Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
     }
   }
@@ -509,8 +514,10 @@ void setStatus(uint8_t code) {
   short cycle = 0;
 
   switch (code) {
-    case COMPLETE:  cycle = 500;    break;
+    case TIMEOUT:  cycle = 600;    break;
     case FAILED:    cycle = 1400;   break;
+    case COMPLETE:  cycle = 100;    break;
+    case ESTOP:    cycle = 4000;   break;
   }
 
   currentMillis = millis();
@@ -694,7 +701,7 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
-  if ((remPackage.throttle <= 100) || alarmActivated) {
+  if ((remPackage.throttle <= 50) || dataEStop.triggered) {
     if (breaklightBlinkOn == true) {
           analogWrite(breakLightPin, 255);
           if (millis() - lastBreakLightBlink >= 50) {
@@ -709,7 +716,7 @@ void breakLight() {
               }
         }
 
-  } else if (remPackage.throttle <= 450) {
+  } else if (remPackage.throttle <= 400) {
     analogWrite(breakLightPin, 255);
     } else {
       analogWrite(breakLightPin, 100);
