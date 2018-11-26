@@ -120,7 +120,7 @@ const short settingRules[numOfSettings][3] {
 #define RF69_FREQ   433.0
 #define MY_ADDRESS  1
 
-RH_RF69 rf69;
+RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -185,15 +185,10 @@ short aliveCounter = 0;
 void setup() {
 
   #ifdef DEBUG
-    //UART.setDebugPort(&Serial);
+    UART.setDebugPort(&Serial);
     Serial.begin(115200);
-    while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+    Serial.println("** Esk8-remote receiver **");
   #endif
-
-  UART.setSerialPort(&Serial);
-  Serial.begin(115200);
-
-  //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
   loadFlashSettings();
 
@@ -229,7 +224,8 @@ void loop() {
               if (validateRemPackageEstop()) { // make shure the data is valid
                 armEstop();
                 speedControl(remPackage.throttle, remPackage.trigger);
-                getUartData();
+                //getUartData();
+                Serial.println("Test");
               } else { // if data is not valid, rescue data!
                 rescueRemPackage();
               }
@@ -511,8 +507,10 @@ void initiateReceiver() {
   delay(10);
 
   if (!rf69_manager.init()) {
+    Serial.println("init receiver");
     while (1);
   }
+  Serial.println("init done");
 
   if (!rf69.setFrequency(rxSettings.Frequency)) {
   }
