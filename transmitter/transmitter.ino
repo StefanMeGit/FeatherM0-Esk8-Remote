@@ -499,6 +499,7 @@ void sleep() {
       if (!connectionLost && returnData.eStopArmed) {
         String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
+          String lastTranmissionDurationStr += "ms";
         setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
       }
       returnData.eStopArmed = false;
@@ -1663,7 +1664,7 @@ void drawPage() {
     speedValue = ratioRpmSpeed * returnData.rpm;
     speedValueUnit = 1;
     distanceValue = ratioPulseDistance * returnData.tachometerAbs;
-    distanceValueUnit = 8;
+    distanceValueUnit = 2;
   }
 
   switch (displayView) {
