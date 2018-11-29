@@ -399,7 +399,7 @@ void armEstop(){
 
   if (!dataEStop.armed) {
 
-    if (millis() - goodTransissionsTimerEstop <= 2000 && remPackage.throttle <= 550){
+    if (millis() - goodTransissionsTimerEstop <= 2000 && remPackage.throttle <= 560){
       goodTransmissionsEstop++;
     } else {
       goodTransmissionsEstop = 0;
