@@ -1222,6 +1222,8 @@ void drawAnnouncement(){
 
     if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
       activateAnnouncement = false;
+      u8g2.setFontMode(0);
+      u8g2.setDrawColor(1);
     }
   } else {
     if (announcementFade) {
