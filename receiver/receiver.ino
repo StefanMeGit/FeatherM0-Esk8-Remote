@@ -376,7 +376,7 @@ void activateESTOP(uint8_t mode) {
           if (remPackage.type == 1) {
             analyseSettingsMessage();
           }
-          if (goodTransmissions >= 20) {
+          if (goodTransmissions >= 15) {
             goodTransmissions = 0;
             dataEStop.triggered = false;
             dataEStop.fullBreakDone = false;
