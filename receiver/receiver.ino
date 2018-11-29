@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -159,9 +159,10 @@ const uint16_t defaultThrottle = 512;
 
 // Defining receiver pins
 const uint8_t resetPin = 6;
-const uint8_t statusLedPin = 13;
+const uint8_t statusLedPin = 9;
 const uint8_t throttlePin = 10;
-const uint8_t breakLightPin = 12;
+const uint8_t breakLightPin = 13;
+const uint8_t headlightPin = 12;
 
 // Defining headlight/breaklight
 unsigned long lastBreakLightBlink = 0;
@@ -176,12 +177,15 @@ unsigned long goodTransissionsTimer = 0;
 uint8_t goodTransmissionsEstop = 0;
 unsigned long goodTransissionsTimerEstop = 0;
 uint16_t eStopThrottlePos = 512;
+unsigned long estopTimerDecrese = 0;
 
 // Initiate Servo class
 Servo esc;
 
 // Initiate VescUart class for UART communication
 VescUart UART;
+uint8_t uartFailCounter = 0;
+bool ignoreUartPull = false;
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -203,6 +207,7 @@ void setup() {
 
   pinMode(statusLedPin, OUTPUT);
   pinMode(breakLightPin, OUTPUT);
+  pinMode(headlightPin, OUTPUT);
   pinMode(resetPin, INPUT_PULLUP);
   pinMode(RFM69_RST, OUTPUT);
 
@@ -251,10 +256,6 @@ void loop() {
           activateESTOP(0);
         }
       }
-      Serial.print("rxSettings.eStopMode"); Serial.println(rxSettings.eStopMode);
-      Serial.print("dataEStop.armed"); Serial.println(dataEStop.armed);
-      Serial.print("remPackage.type"); Serial.println(remPackage.type);
-      Serial.print("rxSettings.eStopArmed"); Serial.println(rxSettings.eStopArmed);
       if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0 && rxSettings.eStopArmed) {
         if ((millis() - debugData.lastTransmissionAvaible >= 350) || dataEStop.triggered){
           Serial.println("ESTOP");
@@ -330,33 +331,39 @@ void activateESTOP(uint8_t mode) {
   uint8_t decreseThrottleValue;
 
   Serial.println("Estop actiavted");
-  returnData.eStopArmed = false;
 
-  if (rxSettings.eStopMode == 0){ // slow estop with recover
-    decreseThrottleValue = 2;
-  } else if (rxSettings.eStopMode == 1) { // hard estop without recover
-    decreseThrottleValue = 3;
-  } else if (rxSettings.eStopMode == 2) { // instant recover... not reccomented
-    mode = 1;
+  if (!dataEStop.triggered) {
+      eStopThrottlePos = 512;
+      returnData.eStopArmed = false;
+      dataEStop.triggered = true;
   }
 
-  dataEStop.triggered = true;
+
+  if (rxSettings.eStopMode == 0){ // slow estop with recover
+    decreseThrottleValue = 4;
+  } else if (rxSettings.eStopMode == 1) { // hard estop without recover
+    decreseThrottleValue = 6;
+  } else if (rxSettings.eStopMode == 2) { // instant recover... not reccomented
+    mode = 1;
+    decreseThrottleValue = 0;
+  }
 
   if (!dataEStop.fullBreakDone){
 
     if (mode == 0) {
 
-      eStopThrottlePos = 512;
-
-      for (eStopThrottlePos; eStopThrottlePos > 256; eStopThrottlePos = eStopThrottlePos - decreseThrottleValue) {
-        speedControl( eStopThrottlePos, 0);
-        delay(20);
+      if (millis() - estopTimerDecrese > 20){
+        if (eStopThrottlePos > 256) {
+          eStopThrottlePos - decreseThrottleValue;
+          speedControl( eStopThrottlePos, 0);
+          estopTimerDecrese = millis();
+        } else {
+          dataEStop.fullBreakDone = true;
+        }
       }
     } else if (mode == 1) {
       dataEStop.fullBreakDone = true;
     }
-
-    dataEStop.fullBreakDone = true;
   }
 
   Serial.println("Try to recover");
@@ -401,15 +408,15 @@ void armEstop(){
 
     if (millis() - goodTransissionsTimerEstop <= 2000 && remPackage.throttle <= 560){
       goodTransmissionsEstop++;
+      if (goodTransmissionsEstop > 10) {
+        dataEStop.armed = true;
+        returnData.eStopArmed = true;
+        rxSettings.eStopArmed = true;
+        Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
+      }
     } else {
       goodTransmissionsEstop = 0;
       goodTransissionsTimerEstop = millis();
-    }
-    if (goodTransmissionsEstop > 10) {
-      dataEStop.armed = true;
-      returnData.eStopArmed = true;
-      rxSettings.eStopArmed = true;
-      Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
     }
   }
 
@@ -456,7 +463,6 @@ bool analyseMessage() {
   uint8_t len = sizeof(remPackage);
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
-    Serial.print("analyse message type ");Serial.println(remPackage.type);
 
   rf69_manager.setRetries(1);
   rf69_manager.setTimeout(20);
@@ -691,8 +697,10 @@ void speedControl( uint16_t throttle , bool trigger ) {
 void headLight(){
   if (remPackage.headlight == 1) {
     returnData.headlightActive = 1;
+    digitalWrite(headlightPin, HIGH);
   } else {
     returnData.headlightActive = 0;
+    digitalWrite(headlightPin, LOW);
     }
 }
 
@@ -729,7 +737,7 @@ void breakLight() {
 // --------------------------------------------------------------------------------------
 void getUartData() {
 
-if (rxSettings.controlMode > 0) {
+if (rxSettings.controlMode > 0 && !ignoreUartPull) {
   if ( millis() - lastUartPull >= uartPullInterval ) {
 
     lastUartPull = millis();
@@ -743,7 +751,7 @@ if (rxSettings.controlMode > 0) {
       returnData.avgInputCurrent  = UART.data.avgInputCurrent;
       returnData.avgMotorCurrent  = UART.data.avgMotorCurrent;
       returnData.dutyCycleNow     = UART.data.dutyCycleNow;
-
+      uartFailCounter = 0;
     }
     else
     {
@@ -754,6 +762,12 @@ if (rxSettings.controlMode > 0) {
       returnData.avgInputCurrent    = 0.0;
       returnData.avgMotorCurrent    = 0.0;
       returnData.dutyCycleNow       = 0.0;
+
+      uartFailCounter++;
+      if (uartFailCounter > 20){
+        Serial.println("UART pull deactivated");
+        ignoreUartPull = true;
+      }
 
     }
 
