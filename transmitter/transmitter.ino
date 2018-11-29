@@ -1213,8 +1213,8 @@ void drawAnnouncement(){
     y = 2;
 
     u8g2.setFontDirection(1);
-    u8g2.setFontMode(1);
     u8g2.drawBox( 11, 0, 55, 112);
+    u8g2.setFontMode(1);
     u8g2.setDrawColor(2);
     drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_helvB12_tr  ); //u8g2_font_7x14B_tr smaller alternative
     drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
@@ -1226,7 +1226,7 @@ void drawAnnouncement(){
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
-      u8g2.setFontMode(1);
+      u8g2.setFontMode(0);
       u8g2.setDrawColor(1);
     }
   }
