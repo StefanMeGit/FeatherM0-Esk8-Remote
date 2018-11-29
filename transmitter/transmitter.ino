@@ -1903,7 +1903,7 @@ void drawBatteryBoard() {
 void drawSignal() {
 
   x = 14;
-  y = 113;
+  y = 114;
 
   if (connectionLost) {
 
@@ -1931,7 +1931,7 @@ void drawSignal() {
 void drawBatteryRemote() {
 
   x = 43;
-  y = 115;
+  y = 116;
 
   uint8_t level = batteryLevel();
 
@@ -1953,11 +1953,10 @@ void drawBatteryRemote() {
 void drawHeadlightStatus() {
 
   x = 34;
-  y = 117;
+  y = 118;
 
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_RIGHT);
   u8g2.drawDisc(x , y , 5, U8G2_DRAW_LOWER_LEFT);
-  //u8g2.drawLine(x - 1 , y - 3, x - 1, y + 3);
 
   if (remPackage.headlight == 1) {
     u8g2.drawLine(x     , y - 3, x    , y - 5);
@@ -1966,23 +1965,13 @@ void drawHeadlightStatus() {
   }
 }
 
-String uint64ToString(uint64_t number) {
-  unsigned long part1 = (unsigned long)((number >> 32)); // Bitwise Right Shift
-  unsigned long part2 = (unsigned long)((number));
-
-  if (part1 == 0) {
-    return String(part2, DEC);
-  }
-  return String(part1, DEC) + String(part2, DEC);
-}
-
 // Draw eStop
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawEStopArmed(){
 
   x = 14;
-  y = 112;
+  y = 113;
 
   u8g2.drawXBMP(x, y, 12, 15, eStopArmed);
 
@@ -1994,7 +1983,7 @@ void drawEStopArmed(){
 void drawPoliceMode(){
 
   x = 14;
-  y = 113;
+  y = 114;
 
   u8g2.drawXBMP(x, y, 14, 14, policeMode);
 
@@ -2032,4 +2021,14 @@ char hexCharToBin(char c) {
     return (c & 0xF) + 9;
   }
   return -1;
+}
+
+String uint64ToString(uint64_t number) {
+  unsigned long part1 = (unsigned long)((number >> 32)); // Bitwise Right Shift
+  unsigned long part2 = (unsigned long)((number));
+
+  if (part1 == 0) {
+    return String(part2, DEC);
+  }
+  return String(part1, DEC) + String(part2, DEC);
 }
