@@ -219,7 +219,7 @@ const char stringValues[9][3][15] = {
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[9][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi."};
-const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLE", "SIGNAL"};
+const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -507,7 +507,7 @@ void sleep() {
     if (millis() - debugData.lastTransmissionAvaible > 400) {
 
       if (!connectionLost && returnData.eStopArmed) {
-        String lastTranmissionDurationStr = "Connection lost: ";
+        String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
         setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
@@ -1193,6 +1193,7 @@ void setAnnouncement(String stringLine1, String stringLine2, short duration, boo
 
     vibIntervalDuration = 500; // interval duration for normal alarm
     vibIntervalCounterTarget = abs(duration / vibIntervalDuration);
+    u8g2.setContrast(255);
 
     activateAnnouncement = true;
     announcementTimer = millis();
@@ -1208,18 +1209,16 @@ void drawAnnouncement(){
 
   if ((millis() - announcementTimer < announcementDuration) || !announcementFade) {
 
-    x = 23;
-    y = 0;
-
-    //u8g2.drawBox(16,0,50,110);
+    x = 25;
+    y = 2;
 
     u8g2.setFontDirection(1);
     u8g2.setFontMode(1);
-    u8g2.setDrawColor(1);
-    drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_10x20_tr ); //u8g2_font_7x14B_tr smaller alternative
+    u8g2.drawBox( 11, 0, 55, 112);
+    u8g2.setDrawColor(2);
+    drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_helvB12_tr  ); //u8g2_font_7x14B_tr smaller alternative
     drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
     u8g2.setFontDirection(0);
-    u8g2.setDrawColor(1);
 
     if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
       activateAnnouncement = false;
@@ -1227,6 +1226,8 @@ void drawAnnouncement(){
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
+      u8g2.setFontMode(1);
+      u8g2.setDrawColor(1);
     }
   }
 }
@@ -1537,19 +1538,21 @@ void drawSettingsMenu() {
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawStartScreen() {
-  u8g2.firstPage();
 
-  do {
+  for (int i = -64; i < 5; i = i + 4){
+    u8g2.firstPage();
+    do {
 
-    u8g2.drawXBMP( 1, 5, 64, 77, logo);
-    drawString("Feather", 7, 5, 95, u8g2_font_profont15_tr );
-    drawString("Remote", 6, 20, 95 + 16, u8g2_font_profont15_tr );
+      u8g2.drawXBMP( 1, i, 64, 77, logo);
+      drawString("Feather", 7, 2, 95, u8g2_font_crox2h_tr  );
+      drawString("Remote", 6, 15, 95 + 16, u8g2_font_crox2h_tr  );
+      //drawString("by StefanMe", 11, A1, 122, u8g2_font_tom_thumb_4x6_tr );
+    } while ( u8g2.nextPage() );
+    Serial.println(i);
 
-    //drawString("by StefanMe", 11, 1, 122, u8g2_font_tom_thumb_4x6_tr );
 
-  } while ( u8g2.nextPage() );
-
-  delay(2000);
+  }
+  delay(500);
 }
 
 // Print a title on the OLED
