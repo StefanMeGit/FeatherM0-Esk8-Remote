@@ -8,7 +8,7 @@
 #include <RHReliableDatagram.h>
 
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -303,6 +303,10 @@ const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 
+uint8_t averageRemoteBatteryTotalCounter = 0;
+uint16_t averageRemoteBatteryTotal = 0;
+uint8_t averageRemoteBattery = 0;
+
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
 const uint16_t centerThrottle = 512;
@@ -425,26 +429,22 @@ void setup() {
 void loop() {
 
   debugData.cycleTimeStart = millis();
+
   calculateThrottlePosition();
 
   if (changeSettings == true) {
     controlSettings();
-    updateMainDisplay();
   } else {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-    if (transmitToReceiver(1,50)) {
-      //updateMainDisplay();
-    }
-    updateMainDisplay();
+    transmitToReceiver(0,20);
 
-    //if (connectionLost) {
-      //updateMainDisplay();
-      //}
 
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
   }
+
+  updateMainDisplay();
 
   debugData.cycleTimeFinish = millis();
   debugData.cycleTime = debugData.cycleTimeFinish - debugData.cycleTimeStart;
@@ -670,8 +670,8 @@ void createCustomKey() {
 bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
   debugData.transmissionTimeStart = millis();
 
-  rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(20);
+  rf69_manager.setRetries(retries);
+  rf69_manager.setTimeout(timeout);
 
   debugData.counterJoined++;
 
@@ -1267,6 +1267,8 @@ u8g2.clearBuffer();
       } else {
         drawPage();
       }
+      u8g2.setFontMode(0);
+      u8g2.setDrawColor(1);
       drawThrottle();
       drawBatteryRemote();
       drawBatteryBoard();
@@ -1289,7 +1291,7 @@ void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 10;
+  uint8_t samples = 5;
 
   if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
@@ -1307,6 +1309,8 @@ void calculateThrottlePosition()
   }
 
   hallValue = total / samples;
+
+  Serial.println(hallValue);
 
   if ( hallValue >= txSettings.centerHallValue )
   {
@@ -1341,7 +1345,7 @@ void calculateThrottlePosition()
 uint8_t batteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 5;
+  uint8_t samples = 1;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1354,7 +1358,6 @@ uint8_t batteryLevel() {
   } else if (voltage >= maxVoltage) {
     return 100;
   }
-
   return (voltage - minVoltage) * 100 / (maxVoltage - minVoltage);
 }
 
@@ -1399,9 +1402,20 @@ void checkBatteryLevel() {
 
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
-  remoteBattery = batteryLevel();
-  if ((((boardBattery > 0) && (boardBattery <= 20)) || (remoteBattery <= 15)) && returnData.eStopArmed) {
-    if (millis() - underVoltageTimer >= 1000) {
+  //remoteBattery = batteryLevel();
+
+  if (averageRemoteBatteryTotalCounter < 5) {
+    averageRemoteBatteryTotal += batteryLevel();
+    averageRemoteBatteryTotalCounter++;
+  } else {
+    averageRemoteBattery = averageRemoteBatteryTotal / 5;
+    averageRemoteBatteryTotalCounter = 0;
+    averageRemoteBatteryTotal = 0;
+  }
+
+
+  if ((((boardBattery > 0) && (boardBattery <= 20)) || (averageRemoteBattery <= 15)) && returnData.eStopArmed) {
+    if (millis() - underVoltageTimer >= 2000) {
       if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
         device = "Board: ";
         device += String(boardBatteryAbs);
@@ -1437,7 +1451,7 @@ void checkBatteryLevel() {
     boardBatteryWarningLevel = 1;
   }
 
-  if (remoteBattery >= 15 ) {
+  if (averageRemoteBattery >= 15 ) {
     remoteBatteryWanringLevel = 0;
   }
 
@@ -1546,8 +1560,11 @@ void drawStartScreen() {
     do {
 
       u8g2.drawXBMP( 1, i, 64, 77, logo);
-      drawString("Feather", 7, 2, 95, u8g2_font_crox2h_tr  );
-      drawString("Remote", 6, 15, 95 + 16, u8g2_font_crox2h_tr  );
+      String test = "Stefan";
+      test += String("s");
+      drawString(test, 7, 2, 95, u8g2_font_crox2h_tf  );
+      drawString("Feather", 7, 2, 95 + 16, u8g2_font_crox2h_tr  );
+      drawString("Remote", 6, 15, 95 + 16 +16, u8g2_font_crox2h_tr  );
       //drawString("by StefanMe", 11, A1, 122, u8g2_font_tom_thumb_4x6_tr );
     } while ( u8g2.nextPage() );
     Serial.println(i);
