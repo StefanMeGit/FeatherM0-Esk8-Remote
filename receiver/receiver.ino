@@ -167,6 +167,7 @@ const uint8_t headlightPin = 12;
 // Defining headlight/breaklight
 unsigned long lastBreakLightBlink = 0;
 bool breaklightBlinkOn = false;
+uint8_t breaklightMargin = 15;
 
 // Defining alarm handling
 bool alarmActivated = false;
@@ -732,7 +733,7 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
-  if ((remPackage.throttle <= 50) || dataEStop.triggered) {
+  if ((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) {
     if (breaklightBlinkOn == true) {
           analogWrite(breakLightPin, 255);
           if (millis() - lastBreakLightBlink >= 50) {
