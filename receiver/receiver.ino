@@ -256,8 +256,12 @@ void loop() {
           activateESTOP(0);
         }
       }
+      Serial.print("rxSettings.eStopMode "); Serial.println(rxSettings.eStopMode);
+      Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
+      Serial.print("remPackage.type "); Serial.println(remPackage.type);
+      Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
       if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0 && rxSettings.eStopArmed) {
-        if ((millis() - debugData.lastTransmissionAvaible >= 350) || dataEStop.triggered){
+        if (millis() - debugData.lastTransmissionAvaible >= 350){
           Serial.println("ESTOP");
           activateESTOP(0);
         }

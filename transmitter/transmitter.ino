@@ -133,7 +133,7 @@ typedef struct {
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
-  bool eStopArmed = false;                  // 20
+  bool eStopArmed = false;          // 20
   short Frequency;                  // 21
   uint8_t standbyMode;              // 22
   uint8_t metricImperial;           // 23
