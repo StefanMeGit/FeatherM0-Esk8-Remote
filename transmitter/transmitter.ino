@@ -8,7 +8,7 @@
 #include <RHReliableDatagram.h>
 
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 

@@ -77,11 +77,11 @@ typedef struct {
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
   float firmVersion;                // 19
-  bool eStopArmed;                  // 20
-  short Frequency;                  // 20
-  uint8_t standbyMode;              // 21
-  uint8_t metricImperial;           // 22
-  uint8_t policeMode;               // 23
+  bool eStopArmed = false;          // 20
+  short Frequency;                  // 21
+  uint8_t standbyMode;              // 22
+  uint8_t metricImperial;           // 23
+  uint8_t policeMode;               // 24
 } RxSettings;
 
 RxSettings rxSettings;
@@ -256,10 +256,10 @@ void loop() {
           activateESTOP(0);
         }
       }
-      Serial.print("rxSettings.eStopMode "); Serial.println(rxSettings.eStopMode);
-      Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
-      Serial.print("remPackage.type "); Serial.println(remPackage.type);
-      Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
+      //Serial.print("rxSettings.eStopMode "); Serial.println(rxSettings.eStopMode);
+      //Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
+      //Serial.print("remPackage.type "); Serial.println(remPackage.type);
+      //Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
       if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0 && rxSettings.eStopArmed) {
         if (millis() - debugData.lastTransmissionAvaible >= 350){
           Serial.println("ESTOP");
@@ -362,8 +362,9 @@ void activateESTOP(uint8_t mode) {
 
       if (millis() - estopTimerDecrese > 20){
         if (eStopThrottlePos > 256) {
-          eStopThrottlePos - decreseThrottleValue;
+          eStopThrottlePos = eStopThrottlePos - decreseThrottleValue;
           speedControl( eStopThrottlePos, 0);
+          Serial.println(eStopThrottlePos);
           estopTimerDecrese = millis();
         } else {
           dataEStop.fullBreakDone = true;
