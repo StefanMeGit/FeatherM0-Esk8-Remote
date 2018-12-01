@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -261,6 +261,12 @@ void loop() {
           Serial.println("ESTOP");
           activateESTOP(0);
         }
+      } else {
+        //if (millis() - debugData.lastTransmissionAvaible >= 500){
+        //  Serial.println("no connection");
+        //  activateESTOP(1);
+        //}
+        speedControl(0, 0);
       }
     } else {
       activateESTOP(0);
@@ -330,8 +336,6 @@ void rescueRemPackage() {
 void activateESTOP(uint8_t mode) {
   uint8_t decreseThrottleValue;
 
-  Serial.println("Estop actiavted");
-
   if (!dataEStop.triggered) {
       eStopThrottlePos = 512;
       returnData.eStopArmed = false;
@@ -366,15 +370,21 @@ void activateESTOP(uint8_t mode) {
     }
   }
 
-  Serial.println("Try to recover");
-
-  if (rxSettings.eStopMode == 0) { // only recover eStop in soft mode
+  if (rxSettings.eStopMode == 0 || mode == 1) { // only recover eStop in soft mode
 
     if (rf69_manager.available()){
       if ((millis() - goodTransissionsTimer) <= 2000){
         if (analyseMessage()) {
+          Serial.println("Got message");
           if (remPackage.type == 1) {
+            Serial.println("Next one is Settings");
             analyseSettingsMessage();
+            Serial.println(rxSettings.Frequency);
+            for (uint8_t i = 0; i <=15; i++){
+              Serial.print(rxSettings.customEncryptionKey[i]);
+            }
+            Serial.println("");
+
           }
           if (goodTransmissions >= 15) {
             goodTransmissions = 0;
@@ -485,7 +495,15 @@ void analyseSettingsMessage() {
 
   uint8_t len = sizeof(rxSettings);
   uint8_t from;
+
+  Serial.println("Jump into Settings");
+
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
+    Serial.println("New Settings");
+    Serial.println(rxSettings.Frequency);
+    for (uint8_t i = 0; i <=15; i++){
+      Serial.print(rxSettings.customEncryptionKey[i]);
+    }
 
     remPackage.type = 0;
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {

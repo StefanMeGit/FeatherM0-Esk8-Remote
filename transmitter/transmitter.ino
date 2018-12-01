@@ -606,8 +606,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        //createCustomKey();
-        createTestKey();
+        createCustomKey();
+        //createTestKey();
       }
 
     } else {
@@ -740,17 +740,20 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(200);
-
   if ( transmitToReceiver(1,200)) {
 
+    Serial.println("Good first phase");
+
+    rf69_manager.setRetries(1);
+    rf69_manager.setTimeout(300);
+
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
+      Serial.println("Good second phase");
       uint8_t len = sizeof(returnData);
       uint8_t from;
-      Serial.println("Told Receiver next package are Settings");
       if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 200, &from)) {
       } else {
+        Serial.println("returned something");
         remPackage.type = 0;
         useDefaultKeyForTransmission = 0;
         initiateTransmitter();
@@ -1310,8 +1313,6 @@ void calculateThrottlePosition()
 
   hallValue = total / samples;
 
-  Serial.println(hallValue);
-
   if ( hallValue >= txSettings.centerHallValue )
   {
     throttle = constrain( map(hallValue, txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax), centerThrottle, 1023 );
@@ -1567,8 +1568,6 @@ void drawStartScreen() {
       drawString("Remote", 6, 15, 95 + 16 +16, u8g2_font_crox2h_tr  );
       //drawString("by StefanMe", 11, A1, 122, u8g2_font_tom_thumb_4x6_tr );
     } while ( u8g2.nextPage() );
-    Serial.println(i);
-
 
   }
   delay(500);
