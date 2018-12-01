@@ -169,7 +169,7 @@ struct menuItems{
   {5,   14,   0,    250,  "Motor pulley",   2 , 0},       //5 Motor pully
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
-  {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {8,   1,    0,    1,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
   {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
@@ -438,7 +438,7 @@ void loop() {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
     remPackage.throttle = throttle;
-    transmitToReceiver(0,20);
+    transmitToReceiver(0,30);
 
 
     debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
@@ -459,6 +459,7 @@ void loop() {
   checkConnection();
   checkBatteryLevel();
   controlVib();
+
 }
 
 // Sleep mode handling
@@ -468,9 +469,6 @@ void loop() {
 void ISR (){}
 
 void sleep() {
-
-  txSettings.eStopArmed = false; // dissable eStop on connected Board
-  transmitSettingsToReceiver(); // transmitt Settings
 
   //sleeping
   digitalWrite(13, LOW); //swtich off LED
