@@ -412,8 +412,8 @@ void setup() {
   }
 
   if (extraButtonActive()) {
-      txSettings.eStopArmed = false;
-      transmitSettingsToReceiver();
+//      txSettings.eStopArmed = false;
+//      transmitSettingsToReceiver();
       changeSettings = true;
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);

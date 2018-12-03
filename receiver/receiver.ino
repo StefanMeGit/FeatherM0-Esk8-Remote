@@ -237,45 +237,45 @@ void loop() {
 
   if (!dataEStop.triggered) {
     if (rf69_manager.available()) {
-        if (remPackage.type == 0) {
-            if (analyseMessage()) {
-              if (validateRemPackageEstop()) { // make shure the data is valid
-                armEstop();
-                speedControl(remPackage.throttle, remPackage.trigger);
-                getUartData();
-              } else { // if data is not valid, rescue data!
-                rescueRemPackage();
-              }
-            } else {
-              if (!validateRemPackageEstop()) {
-                rescueRemPackage();
-              }
-            }
-        } else if (remPackage.type == 1) { // join settings transmission
-          analyseSettingsMessage();
+      if (remPackage.type == 0) {
+        if (analyseMessage()) {
+          if (validateRemPackageEstop()) { // make shure the data is valid
+            armEstop();
+            speedControl(remPackage.throttle, remPackage.trigger);
+            getUartData();
+          } else { // if data is not valid, rescue data!
+            rescueRemPackage();
+          }
         } else {
-          activateESTOP(0);
+          if (!validateRemPackageEstop()) {
+            rescueRemPackage();
+          }
         }
+      } else if (remPackage.type == 1) { // join settings transmission
+        analyseSettingsMessage();
+      } else {
+        activateESTOP(0);
       }
+    }
       //Serial.print("rxSettings.eStopMode "); Serial.println(rxSettings.eStopMode);
       //Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
       //Serial.print("remPackage.type "); Serial.println(remPackage.type);
       //Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
-      if (millis() - debugData.lastTransmissionAvaible >= 350) {
-        if ((rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
-          Serial.println("Estop Activated!");
-          activateESTOP(0);
-        } else {
-            speedControl(0, 0);
-          }
-    } else {
-      activateESTOP(0);
+    if (millis() - debugData.lastTransmissionAvaible >= 400) {
+      if (rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
+        Serial.println("Estop Activated!");
+        activateESTOP(0);
+      } else {
+        speedControl(0, 0);
+      }
     }
-
+  }  else {
+    activateESTOP(0);
+  }
     //controlStatusLed();
-    headLight();
-    breakLight();
-    resetAdress();
+  headLight();
+  breakLight();
+  resetAdress();
 
 }
 
@@ -342,12 +342,11 @@ void activateESTOP(uint8_t mode) {
       dataEStop.triggered = true;
   }
 
-
   if (rxSettings.eStopMode == 0){ // slow estop with recover
+    decreseThrottleValue = 2;
+  } else if (rxSettings.eStopMode == 1) { // hard estop with recover
     decreseThrottleValue = 4;
-  } else if (rxSettings.eStopMode == 1) { // hard estop without recover
-    decreseThrottleValue = 6;
-  } else if (rxSettings.eStopMode == 2) { // instant recover... not reccomented
+  } else if (rxSettings.eStopMode == 2) { // not used at the moment
     mode = 1;
     decreseThrottleValue = 0;
   }
@@ -356,48 +355,49 @@ void activateESTOP(uint8_t mode) {
 
     if (mode == 0) {
 
-      if (millis() - estopTimerDecrese > 20){
-        if (eStopThrottlePos > 256) {
+      if (millis() - estopTimerDecrese >= 20){
+        if (eStopThrottlePos >= 256) {
           eStopThrottlePos = eStopThrottlePos - decreseThrottleValue;
           speedControl( eStopThrottlePos, 0);
           Serial.println(eStopThrottlePos);
           estopTimerDecrese = millis();
         } else {
-          dataEStop.fullBreakDone = true;
+          if (millis() - estopTimerDecrese >= 3000){
+            dataEStop.fullBreakDone = true;
+            Serial.println("Full break + 5sec wait done!");
+          }
         }
       }
-    } else if (mode == 1) {
+    } else if (mode == 1) { // not used at the moment
       dataEStop.fullBreakDone = true;
     }
-  }
-
-  if (rxSettings.eStopMode == 0 || mode == 1) { // only recover eStop in soft mode
+  } else {
 
     if (rf69_manager.available()){
       if ((millis() - goodTransissionsTimer) <= 2000){
         if (analyseMessage()) {
-          Serial.println("Got message");
+          Serial.println("Got valid message...");
           if (remPackage.type == 1) {
-            Serial.println("Next one is Settings");
+            Serial.println("Next message are settings");
             analyseSettingsMessage();
             Serial.println(rxSettings.Frequency);
             for (uint8_t i = 0; i <=15; i++){
               Serial.print(rxSettings.customEncryptionKey[i]);
             }
             Serial.println("");
-
-          }
-          if (goodTransmissions >= 15) {
-            goodTransmissions = 0;
-            dataEStop.triggered = false;
-            dataEStop.fullBreakDone = false;
-            returnData.eStopArmed = true;
-            Serial.println("Recovered");
-            Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
-            updateLastTransmissionTimer();
           } else {
-            if (remPackage.throttle <= 550){
-              goodTransmissions++;
+            if (goodTransmissions >= 15) {
+              goodTransmissions = 0;
+              dataEStop.triggered = false;
+              dataEStop.fullBreakDone = false;
+              returnData.eStopArmed = true;
+              Serial.println("Recovered");
+              Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
+              updateLastTransmissionTimer();
+            } else {
+              if (remPackage.throttle <= 550){
+                goodTransmissions++;
+              }
             }
           }
         }
@@ -800,6 +800,7 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
 void setDefaultFlashSettings() {
   for ( int i = 0; i < numOfSettings; i++ ) {
     setSettingValue(i, settingRules[i][0]);
+    Serial.print("Setting number: "); Serial.print(i); Serial.print(" value: "); Serial.println(settingRules[i][0]);
   }
 
   rxSettings.firmVersion = VERSION;
