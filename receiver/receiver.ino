@@ -261,23 +261,18 @@ void loop() {
       //Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
       //Serial.print("remPackage.type "); Serial.println(remPackage.type);
       //Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
-      if (rxSettings.eStopMode < 2 && dataEStop.armed && remPackage.type == 0 && rxSettings.eStopArmed) {
-        if (millis() - debugData.lastTransmissionAvaible >= 350){
-          Serial.println("ESTOP");
+      if (millis() - debugData.lastTransmissionAvaible >= 350) {
+        if ((rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
+          Serial.println("Estop Activated!");
           activateESTOP(0);
-        }
-      } else {
-        //if (millis() - debugData.lastTransmissionAvaible >= 500){
-        //  Serial.println("no connection");
-        //  activateESTOP(1);
-        //}
-        speedControl(0, 0);
-      }
+        } else {
+            speedControl(0, 0);
+          }
     } else {
       activateESTOP(0);
     }
 
-    controlStatusLed();
+    //controlStatusLed();
     headLight();
     breakLight();
     resetAdress();
@@ -422,7 +417,7 @@ void armEstop(){
 
   if (!dataEStop.armed) {
 
-    if (millis() - goodTransissionsTimerEstop <= 2000 && remPackage.throttle <= 560){
+    if (millis() - goodTransissionsTimerEstop <= 3000 && remPackage.throttle <= 560){
       goodTransmissionsEstop++;
       if (goodTransmissionsEstop > 10) {
         dataEStop.armed = true;
