@@ -339,6 +339,7 @@ void activateESTOP(uint8_t mode) {
   if (!dataEStop.triggered) {
       eStopThrottlePos = 512;
       returnData.eStopArmed = false;
+      rxSettings.eStopArmed = false;
       dataEStop.triggered = true;
   }
 
@@ -364,7 +365,7 @@ void activateESTOP(uint8_t mode) {
         } else {
           if (millis() - estopTimerDecrese >= 3000){
             dataEStop.fullBreakDone = true;
-            Serial.println("Full break + 5sec wait done!");
+            Serial.println("Full break + 3sec wait done!");
           }
         }
       }
@@ -391,6 +392,7 @@ void activateESTOP(uint8_t mode) {
               dataEStop.triggered = false;
               dataEStop.fullBreakDone = false;
               returnData.eStopArmed = true;
+              rxSettings.eStopArmed = true;
               Serial.println("Recovered");
               Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
               updateLastTransmissionTimer();
@@ -403,7 +405,6 @@ void activateESTOP(uint8_t mode) {
         }
       } else {
         goodTransmissions = 0;
-        dataEStop.fullBreakDone = true;
         goodTransissionsTimer = millis();
       }
     }
