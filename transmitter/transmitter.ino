@@ -138,6 +138,7 @@ typedef struct {
   uint8_t standbyMode;              // 22
   uint8_t metricImperial;           // 23
   uint8_t policeMode;               // 24
+  uint8_t homeScreen;               // 25
 } TxSettings;
 
 TxSettings txSettings;
@@ -146,7 +147,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 27;
+const uint8_t numOfSettings = 28;
 
 struct menuItems{
   uint8_t ID;
@@ -177,6 +178,7 @@ struct menuItems{
   {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
+  {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
   {19,  433,  424,  442,  "Frequency",      6 , 0},            //19 Frequency
@@ -204,22 +206,23 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[9][3][15] = {
-  {"Killswitch", "Cruise", ""},
-  {"Li-ion", "LiPo", ""},
-  {"PPM", "PPM and UART", "UART only"},
-  {"soft", "hard", "off"},
-  {"off", "Always on", "with headlight"},
-  {"Beginner", "Intermidiate", "Pro"},
-  {"off", "10 minutes", "30 minutes"},
-  {"Metric", "Imperial", ""},
-  {"off", "startup", "activation"}
+const char stringValues[10][4][15] = {
+  {"Killswitch", "Cruise", "", ""},
+  {"Li-ion", "LiPo", "", ""},
+  {"PPM", "PPM and UART", "UART only", ""},
+  {"soft", "hard", "off", ""},
+  {"off", "Always on", "with headlight", ""},
+  {"Beginner", "Intermidiate", "Pro", ""},
+  {"off", "10 minutes", "30 minutes", ""},
+  {"Metric", "Imperial", "", ""},
+  {"off", "startup", "activation", ""},
+  {"SPEED", "POWER", "DUTY", "CONNECT"}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[9][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi."};
-const char dataPrefix[4][13] = {"SPEED", "POWER", "CYCLETIME", "CONNECT"};
+const char dataPrefix[4][13] = {"SPEED", "POWER", "DUTY", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -418,6 +421,8 @@ void setup() {
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
   }
+
+  displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
 
@@ -1113,6 +1118,7 @@ short getSettingValue(uint8_t index) {
     case 24:    value = txSettings.standbyMode;     break;
     case 25:    value = txSettings.metricImperial;  break;
     case 26:    value = txSettings.policeMode;      break;
+    case 27:    value = txSettings.homeScreen;      break;
 
 
     default: /* Do nothing */ break;
@@ -1147,6 +1153,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 24:        txSettings.standbyMode = value;     break;
     case 25:        txSettings.metricImperial = value;  break;
     case 26:        txSettings.policeMode = value;      break;
+    case 27:        txSettings.homeScreen = value;      break;
 
     default: /* Do nothing */ break;
   }
@@ -1664,11 +1671,14 @@ void mediumbuttonPress() {
 void longbuttonPress() {
 
   if ((throttlePosition == BOTTOM) && !triggerActive()){
+    u8g2.setDisplayRotation(U8G2_R0);
+    drawTitle("Settings", 1500);
+    changeSettings = true;
     txSettings.eStopArmed = false;
     transmitSettingsToReceiver();
-    u8g2.setDisplayRotation(U8G2_R0);
-    changeSettings = true;
-    drawTitle("Settings", 1500);
+    remPackage.throttle = 512;
+    remPackage.trigger = 0;
+    transmitToReceiver(1,50);
   } else {
     sleep();
   }
@@ -1724,26 +1734,26 @@ void drawPage() {
       unitThird = 3;
       break;
     case 2:
+      valueMain = returnData.dutyCycleNow;
+      decimalsMain = 1;
+      unitMain = 6;
+      valueSecond = returnData.avgInputCurrent;
+      decimalsSecond = 1;
+      unitSecond = 3;
+      valueThird = returnData.avgMotorCurrent;
+      decimalsThird = 1;
+      unitThird = 3;
+      break;
+    case 3:
       valueMain = debugData.rssi;
       decimalsMain = 1;
       unitMain = 5;
-      valueSecond = debugData.transmissionTime;
+      valueSecond = debugData.cycleTime;
       decimalsSecond = 1;
       unitSecond = 4;
-      valueThird = debugData.cycleTime;
+      valueThird = debugData.longestCycleTime;
       decimalsThird = 1;
       unitThird = 4;
-      break;
-    case 3:
-      valueMain = debugData.longestCycleTime;
-      decimalsMain = 0;
-      unitMain = 6;
-      valueSecond = debugData.differenceJoinedSend;
-      decimalsSecond = 1;
-      unitSecond = 6;
-      valueThird = debugData.cycleTime;
-      decimalsThird = 1;
-      unitThird = 6;
       break;
   }
 
