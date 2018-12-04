@@ -1800,7 +1800,11 @@ void drawPage() {
   drawString(tString, 10, x, y +55, u8g2_font_logisoso18_tn );
   // Display second units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 25, y +55, dataSuffix[unitSecond]);
+  if (firstSecond > 99) {
+    u8g2.drawStr( x + 37, y +55, dataSuffix[unitSecond]);
+  } else {
+    u8g2.drawStr( x + 25, y +55, dataSuffix[unitSecond]);
+  }
 
 
   // Convert valueThird to string
@@ -1814,7 +1818,11 @@ void drawPage() {
   drawString(tString, 10, x, y +75, u8g2_font_logisoso18_tn );
   // Display main units
   u8g2.setFont(u8g2_font_profont12_tr);
-  u8g2.drawStr( x + 25, y +75, dataSuffix[unitThird]);
+  if (firstThird > 99) {
+    u8g2.drawStr( x + 37, y +75, dataSuffix[unitThird]);
+  } else {
+    u8g2.drawStr( x + 25, y +75, dataSuffix[unitThird]);
+  }
 }
 
 /*

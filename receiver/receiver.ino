@@ -82,6 +82,7 @@ typedef struct {
   uint8_t standbyMode;              // 22
   uint8_t metricImperial;           // 23
   uint8_t policeMode;               // 24
+  uint8_t homeScreen;                 // 25
 } RxSettings;
 
 RxSettings rxSettings;
@@ -381,11 +382,6 @@ void activateESTOP(uint8_t mode) {
           if (remPackage.type == 1) {
             Serial.println("Next message are settings");
             analyseSettingsMessage();
-            Serial.println(rxSettings.Frequency);
-            for (uint8_t i = 0; i <=15; i++){
-              Serial.print(rxSettings.customEncryptionKey[i]);
-            }
-            Serial.println("");
           } else {
             if (goodTransmissions >= 15) {
               goodTransmissions = 0;
@@ -397,7 +393,7 @@ void activateESTOP(uint8_t mode) {
               Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
               updateLastTransmissionTimer();
             } else {
-              if (remPackage.throttle <= 550){
+              if (remPackage.throttle <= 560){
                 goodTransmissions++;
               }
             }
