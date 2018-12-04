@@ -221,7 +221,7 @@ const char stringValues[10][4][15] = {
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
-const char dataSuffix[9][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi."};
+const char dataSuffix[10][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi.", "%"};
 const char dataPrefix[4][13] = {"SPEED", "POWER", "DUTY", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
@@ -305,6 +305,8 @@ const float maxVoltage = 4.2;
 const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
+uint8_t batteryLevelRemote = 0;
+unsigned long batteryLevelRemoteTimer = 2000;
 
 uint8_t averageRemoteBatteryTotalCounter = 0;
 uint16_t averageRemoteBatteryTotal = 0;
@@ -1451,9 +1453,9 @@ void checkBatteryLevel() {
     underVoltageTimer = millis();
   }
 
-  if (boardBattery >= 25 ) {
+  if (boardBattery >= 30 ) {
     boardBatteryWarningLevel = 0;
-  } else if (boardBattery >= 15 ) {
+  } else if (boardBattery >= 20 ) {
     boardBatteryWarningLevel = 1;
   }
 
@@ -1710,14 +1712,16 @@ void drawPage() {
     distanceValueUnit = 2;
   }
 
+
+
   switch (displayView) {
     case 0:
       valueMain = speedValue;
       decimalsMain = 1;
       unitMain = speedValueUnit;
-      valueSecond = returnData.inpVoltage;
+      valueSecond = batteryPackPercentage( returnData.inpVoltage );
       decimalsSecond = 2;
-      unitSecond = 0;
+      unitSecond = 9;
       valueThird = distanceValue;
       decimalsThird = 2;
       unitThird = distanceValueUnit;
@@ -1967,14 +1971,17 @@ void drawBatteryRemote() {
   x = 43;
   y = 116;
 
-  uint8_t level = batteryLevel();
+  if (millis() - batteryLevelRemoteTimer >= 2000) {
+      batteryLevelRemote = batteryLevel();
+      batteryLevelRemoteTimer = millis();
+  }
 
   u8g2.drawFrame(x + 2, y, 18, 9);
   u8g2.drawBox(x, y + 2, 2, 5);
 
   for (uint8_t i = 0; i < 5; i++) {
     uint8_t p = round((100 / 5) * i);
-    if (p <= level)
+    if (p <= batteryLevelRemote)
     {
       u8g2.drawBox(x + 4 + (3 * i), y + 2, 2, 5);
     }
