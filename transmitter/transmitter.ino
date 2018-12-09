@@ -172,16 +172,15 @@ struct menuItems{
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    1,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  510,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
+  {10,  530,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
-  {15,  2,    0,    2,    "Driving Mode",   0 , 6},         //15 Driving Mode
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  433,  424,  442,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  433,  433,  433,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
@@ -282,7 +281,7 @@ const uint8_t vibrationActuatorPin = A4;
 #define RFM69_INT   3
 #define RFM69_RST   4
 #define DIAGLED     13
-#define RF69_FREQ   433
+#define RF69_FREQ   433.0
 #define DEST_ADDRESS   1
 #define MY_ADDRESS     2
 
@@ -417,8 +416,6 @@ void setup() {
   }
 
   if (extraButtonActive()) {
-//      txSettings.eStopArmed = false;
-//      transmitSettingsToReceiver();
       changeSettings = true;
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
@@ -662,7 +659,7 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
-  txSettings.Frequency = random(428, 438);
+  txSettings.Frequency = random(430, 436);
   Serial.print(txSettings.Frequency);
 
   updateFlashSettings();
@@ -710,14 +707,14 @@ bool transmitSettingsToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  rf69_manager.setRetries(1);
-  rf69_manager.setTimeout(200);
+  rf69_manager.setRetries(0);
+  rf69_manager.setTimeout(100);
 
-  if ( transmitToReceiver(1,200)) {
+  if ( transmitToReceiver(0,100)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(returnData);
       uint8_t from;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 200, &from)) {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 100, &from)) {
       } else {
         remPackage.type = 0;
         return false;
@@ -1568,11 +1565,11 @@ void drawStartScreen() {
     do {
 
       u8g2.drawXBMP( 1, i, 64, 77, logo);
-      String test = "Stefan";
-      test += String("s");
+      //String test = "Stefan";
+      //test += String("s");
       drawString(test, 7, 2, 95, u8g2_font_crox2h_tf  );
-      drawString("Feather", 7, 2, 95 + 16, u8g2_font_crox2h_tr  );
-      drawString("Remote", 6, 15, 95 + 16 +16, u8g2_font_crox2h_tr  );
+      drawString("Feather", 7, 2, 95, u8g2_font_crox2h_tr  );
+      drawString("Remote", 6, 15, 95 + 16, u8g2_font_crox2h_tr  );
       //drawString("by StefanMe", 11, A1, 122, u8g2_font_tom_thumb_4x6_tr );
     } while ( u8g2.nextPage() );
 
@@ -1677,10 +1674,9 @@ void longbuttonPress() {
     drawTitle("Settings", 1500);
     changeSettings = true;
     txSettings.eStopArmed = false;
-    transmitSettingsToReceiver();
     remPackage.throttle = 512;
     remPackage.trigger = 0;
-    transmitToReceiver(1,50);
+    transmitSettingsToReceiver();
   } else {
     sleep();
   }

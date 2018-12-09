@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-//#define DEBUG
+#define DEBUG
 
 #define VERSION 1.0
 
@@ -113,7 +113,7 @@ const short settingRules[numOfSettings][3] {
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
-  { 433, 424 , 442},  //19 Frequency
+  { 433, 433 , 433},  //19 Frequency
   { 0, 0 , 1},       //19 Stanby mode
   { -1, 0 , 0},       //20 Firmware
   { -1, 0, 0},        //22 Set default key
@@ -258,26 +258,21 @@ void loop() {
         activateESTOP(0);
       }
     }
-      //Serial.print("rxSettings.eStopMode "); Serial.println(rxSettings.eStopMode);
-      //Serial.print("dataEStop.armed "); Serial.println(dataEStop.armed);
-      //Serial.print("remPackage.type "); Serial.println(remPackage.type);
-      //Serial.print("rxSettings.eStopArmed "); Serial.println(rxSettings.eStopArmed);
     if (millis() - debugData.lastTransmissionAvaible >= 400) {
-      if (rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
+      if (remPackage.type == 0 && rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
         Serial.println("Estop Activated!");
         activateESTOP(0);
       } else {
-        speedControl(0, 0);
+        speedControl(512, 0);
       }
     }
   }  else {
     activateESTOP(0);
   }
-    //controlStatusLed();
+  //controlStatusLed();
   headLight();
   breakLight();
   resetAdress();
-
 }
 
 // validateRemPackage
@@ -285,7 +280,7 @@ void loop() {
 // --------------------------------------------------------------------------------------
 bool validateRemPackageEstop(){
 
-  if (remPackage.type > 1 || remPackage.throttle > 1200 || remPackage.trigger > 1 || remPackage.headlight > 1) {
+  if (remPackage.type > 1 || remPackage.throttle > 1024 || remPackage.trigger > 1 || remPackage.headlight > 1) {
 
       #ifdef DEBUG
       Serial.println("Shit package?");
@@ -364,9 +359,9 @@ void activateESTOP(uint8_t mode) {
           Serial.println(eStopThrottlePos);
           estopTimerDecrese = millis();
         } else {
-          if (millis() - estopTimerDecrese >= 3000){
+          if (millis() - estopTimerDecrese >= 2000){
             dataEStop.fullBreakDone = true;
-            Serial.println("Full break + 3sec wait done!");
+            Serial.println("Full break + 2sec wait done!");
           }
         }
       }
@@ -375,14 +370,15 @@ void activateESTOP(uint8_t mode) {
     }
   } else {
 
-    if (rf69_manager.available()){
-      if ((millis() - goodTransissionsTimer) <= 2000){
-        if (analyseMessage()) {
-          Serial.println("Got valid message...");
-          if (remPackage.type == 1) {
-            Serial.println("Next message are settings");
-            analyseSettingsMessage();
-          } else {
+    if (rf69_manager.available()) {
+      //if ((millis() - goodTransissionsTimer) <= 2000) {
+        if (remPackage.type == 1) {
+          analyseSettingsMessage();
+        } else {
+
+          if (analyseMessage()) {
+            Serial.println("Got valid message...");
+            if ((millis() - goodTransissionsTimer) <= 2000) {
             if (goodTransmissions >= 15) {
               goodTransmissions = 0;
               dataEStop.triggered = false;
@@ -397,12 +393,16 @@ void activateESTOP(uint8_t mode) {
                 goodTransmissions++;
               }
             }
+            } else {
+              goodTransmissions = 0;
+              goodTransissionsTimer = millis();
+            }
           }
         }
-      } else {
-        goodTransmissions = 0;
-        goodTransissionsTimer = millis();
-      }
+      //} else {
+      //  goodTransmissions = 0;
+      //  goodTransissionsTimer = millis();
+      //}
     }
   }
 }
@@ -497,11 +497,15 @@ void analyseSettingsMessage() {
   Serial.println("Jump into Settings");
 
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
-    Serial.println("New Settings");
-    Serial.println(rxSettings.Frequency);
+    Serial.println("New Settings loaded: ");
+    Serial.print("rxSettings.Frequency");Serial.println(rxSettings.Frequency);
     for (uint8_t i = 0; i <=15; i++){
       Serial.print(rxSettings.customEncryptionKey[i]);
     }
+    Serial.println("");
+    Serial.print("boardID: "); Serial.println(rxSettings.boardID);
+    Serial.print("triggerMode: "); Serial.println(rxSettings.triggerMode);
+
 
     remPackage.type = 0;
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
@@ -512,7 +516,8 @@ void analyseSettingsMessage() {
     updateFlashSettings();
     initiateReceiver();
   }
-  Serial.println("Settings");
+
+  Serial.println("Going out of settings");
    Serial.println(rxSettings.Frequency);
    for (uint8_t i = 0; i <=15; i++){
      Serial.print(rxSettings.customEncryptionKey[i]);
@@ -676,9 +681,8 @@ void setThrottle( uint16_t throttle ) {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void speedControl( uint16_t throttle , bool trigger ) {
+
   // Kill switch
-  #ifdef DEBUG
-  #endif
   if ( rxSettings.triggerMode == 0 ) {
     if ( trigger == true || throttle < 512 ) {
       setThrottle( throttle );
@@ -725,7 +729,7 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
-  if ((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) {
+  if (((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) && dataEStop.armed) {
     if (breaklightBlinkOn == true) {
           analogWrite(breakLightPin, 255);
           if (millis() - lastBreakLightBlink >= 50) {
@@ -848,10 +852,10 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 9:         rxSettings.minHallValue = value;    break;
     case 10:        rxSettings.centerHallValue = value; break;
     case 11:        rxSettings.maxHallValue = value;    break;
-    case 12:        rxSettings.eStopMode = value;    break;
-    case 13:        rxSettings.breaklightMode = value;    break;
-    case 14:        rxSettings.throttleDeath = value;    break;
-    case 15:        rxSettings.drivingMode = value;    break;
+    case 12:        rxSettings.eStopMode = value;       break;
+    case 13:        rxSettings.breaklightMode = value;  break;
+    case 14:        rxSettings.throttleDeath = value;   break;
+    case 15:        rxSettings.drivingMode = value;     break;
     case 17:        rxSettings.transmissionPower = value; break;
 
     default: /* Do nothing */ break;
