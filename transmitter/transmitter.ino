@@ -300,7 +300,7 @@ bool connectionLost = false;
 
 
 // Battery monitering
-const float minVoltage = 3.1;
+const float minVoltage = 3.2;
 const float maxVoltage = 4.2;
 const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
