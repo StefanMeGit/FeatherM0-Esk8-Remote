@@ -180,7 +180,7 @@ struct menuItems{
   {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  433,  433,  433,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  433,  430,  436,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
@@ -846,10 +846,12 @@ bool pairNewBoard() {
 
   initiateTransmitter();
 
-  if (transmitToReceiver(1,200)) {
+  remPackage.mode = 0;
+
+  if (transmitToReceiver(0,200)) {
     drawMessage("Complete", "New board paired!", 1000);
   } else {
-    drawMessage("Fail", "Board not paired", 2000);
+    drawMessage("Fail", "Board not paired", 1000);
   }
 
   Serial.print("Exit pairNewBoard()");
@@ -1567,7 +1569,7 @@ void drawStartScreen() {
       u8g2.drawXBMP( 1, i, 64, 77, logo);
       //String test = "Stefan";
       //test += String("s");
-      drawString(test, 7, 2, 95, u8g2_font_crox2h_tf  );
+      //drawString(test, 7, 2, 95, u8g2_font_crox2h_tf  );
       drawString("Feather", 7, 2, 95, u8g2_font_crox2h_tr  );
       drawString("Remote", 6, 15, 95 + 16, u8g2_font_crox2h_tr  );
       //drawString("by StefanMe", 11, A1, 122, u8g2_font_tom_thumb_4x6_tr );

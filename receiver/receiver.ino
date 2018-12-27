@@ -7,7 +7,7 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define VERSION 1.0
 
@@ -170,6 +170,9 @@ unsigned long lastBreakLightBlink = 0;
 bool breaklightBlinkOn = false;
 uint8_t breaklightMargin = 15;
 
+bool valueHigher = false;
+uint16_t ledValue = 100;
+
 // Defining alarm handling
 bool alarmActivated = false;
 uint16_t goodTransmissions = 0;
@@ -180,6 +183,7 @@ uint8_t goodTransmissionsEstop = 0;
 unsigned long goodTransissionsTimerEstop = 0;
 uint16_t eStopThrottlePos = 512;
 unsigned long estopTimerDecrese = 0;
+unsigned long releaseBreakTimer = 0;
 
 // Initiate Servo class
 Servo esc;
@@ -237,6 +241,7 @@ Serial.println("Setup end");
 void loop() {
 
   if (!dataEStop.triggered) {
+    Serial.prtin("Mode: "); Serial.prtinln(remPackage.type);
     if (rf69_manager.available()) {
       if (remPackage.type == 0) {
         if (analyseMessage()) {
@@ -361,6 +366,7 @@ void activateESTOP(uint8_t mode) {
         } else {
           if (millis() - estopTimerDecrese >= 2000){
             dataEStop.fullBreakDone = true;
+            releaseBreakTimer = millis();
             Serial.println("Full break + 2sec wait done!");
           }
         }
@@ -369,6 +375,18 @@ void activateESTOP(uint8_t mode) {
       dataEStop.fullBreakDone = true;
     }
   } else {
+
+    if ((millis() - releaseBreakTimer) > 10000) {
+      speedControl( 512, 0);
+      goodTransmissions = 0;
+      dataEStop.triggered = false;
+      dataEStop.fullBreakDone = false;
+      returnData.eStopArmed = false;
+      rxSettings.eStopArmed = false;
+      dataEStop.armed = false;
+      updateLastTransmissionTimer();
+      Serial.println("release break and go on");
+    }
 
     if (rf69_manager.available()) {
       //if ((millis() - goodTransissionsTimer) <= 2000) {
@@ -472,7 +490,7 @@ bool analyseMessage() {
   uint8_t from;
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
 
-  rf69_manager.setRetries(1);
+  rf69_manager.setRetries(0);
   rf69_manager.setTimeout(20);
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
@@ -496,6 +514,8 @@ void analyseSettingsMessage() {
 
   Serial.println("Jump into Settings");
 
+  remPackage.type = 0;
+
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
     Serial.println("New Settings loaded: ");
     Serial.print("rxSettings.Frequency");Serial.println(rxSettings.Frequency);
@@ -507,12 +527,10 @@ void analyseSettingsMessage() {
     Serial.print("triggerMode: "); Serial.println(rxSettings.triggerMode);
 
 
-    remPackage.type = 0;
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       updateLastTransmissionTimer();
     }
 
-    remPackage.type = 0;
     updateFlashSettings();
     initiateReceiver();
   }
@@ -523,7 +541,6 @@ void analyseSettingsMessage() {
      Serial.print(rxSettings.customEncryptionKey[i]);
    }
    Serial.println("");
-   remPackage.type = 0;
 }
 
 // update last transmission
@@ -729,26 +746,45 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
-  if (((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) && dataEStop.armed) {
-    if (breaklightBlinkOn == true) {
+  if (!dataEStop.armed) {
+    Serial.print("valueHigher: "); Serial.println(valueHigher);
+    if (valueHigher) {
+        ledValue = ledValue + 1;
+        if (ledValue >= 250){
+          valueHigher = false;
+        }
+    } else {
+        ledValue = ledValue - 1;
+        if (ledValue <= 5){
+          valueHigher = true;
+        }
+    }
+    delay(3);
+    analogWrite(breakLightPin, ledValue);
+    Serial.print("ledValue: "); Serial.println(ledValue);
+  } else {
+
+    if ((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) {
+      if (breaklightBlinkOn == true) {
           analogWrite(breakLightPin, 255);
           if (millis() - lastBreakLightBlink >= 50) {
-            lastBreakLightBlink = millis();
-            breaklightBlinkOn = false;
-            }
-      } else if (breaklightBlinkOn == false){
-            analogWrite(breakLightPin, 0);
-            if (millis() - lastBreakLightBlink >= 50) {
               lastBreakLightBlink = millis();
-              breaklightBlinkOn = true;
+              breaklightBlinkOn = false;
               }
-        }
+          } else if (breaklightBlinkOn == false){
+              analogWrite(breakLightPin, 0);
+              if (millis() - lastBreakLightBlink >= 50) {
+                lastBreakLightBlink = millis();
+                breaklightBlinkOn = true;
+                }
+            }
 
-  } else if (remPackage.throttle <= 400) {
-    analogWrite(breakLightPin, 255);
-    } else {
-      analogWrite(breakLightPin, 100);
+      }else if (remPackage.throttle <= 400) {
+        analogWrite(breakLightPin, 255);
+      } else {
+        analogWrite(breakLightPin, 100);
       }
+  }
 
 }
 
