@@ -387,7 +387,6 @@ void activateESTOP(uint8_t mode) {
     }
 
     if (rf69_manager.available()) {
-      //if ((millis() - goodTransissionsTimer) <= 2000) {
         if (remPackage.type == 1) {
           analyseSettingsMessage();
         } else {
@@ -415,10 +414,6 @@ void activateESTOP(uint8_t mode) {
             }
           }
         }
-      //} else {
-      //  goodTransmissions = 0;
-      //  goodTransissionsTimer = millis();
-      //}
     }
   }
 }
@@ -643,27 +638,6 @@ void setCruise ( bool cruise = true, uint16_t setPoint = defaultThrottle ) {
 
     setThrottle( setPoint );
 
-  }
-  else if ( rxSettings.controlMode == 2 ) {
-
-    // Setpoint not used (PID by VESC)
-    UART.nunchuck.lowerButton = cruise;
-    esc.detach();
-
-    // Make sure the motor doesn't begin to spin wrong way under high load (and don't allow cruise backwards)
-    if ( returnData.rpm < 0 ) {
-
-      UART.nunchuck.lowerButton = false;
-      UART.nunchuck.valueY = 127;
-      UART.setNunchuckValues();
-      UART.setCurrent(0.0);
-
-    } else {
-
-      UART.nunchuck.valueY = 127;
-      UART.setNunchuckValues();
-
-    }
   }
 }
 

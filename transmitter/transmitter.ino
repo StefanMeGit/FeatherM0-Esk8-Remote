@@ -315,7 +315,7 @@ uint8_t averageRemoteBattery = 0;
 uint16_t hallValue, throttle;
 const uint16_t centerThrottle = 512;
 uint8_t hallNoiseMargin = 10;
-const uint8_t hallMenuMargin = 100;
+const uint8_t hallMenuMargin = 50;
 uint8_t throttlePosition;
 
 #define TOP 0
@@ -501,19 +501,25 @@ void sleep() {
 // --------------------------------------------------------------------------------------
  void checkConnection() {
 
-   if (returnData.eStopArmed && !eStopAnnounced) {
+   if (returnData.eStopArmed && !eStopAnnounced && txSettings.eStopMode <= 1) {
      setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
+     eStopAnnounced = true;
+   } else if (returnData.eStopArmed && !eStopAnnounced){
+     setAnnouncement("Ready!!!", "Connection ok", 5000, true);
      eStopAnnounced = true;
    }
 
     if (millis() - debugData.lastTransmissionAvaible > 400) {
 
-      if (!connectionLost && returnData.eStopArmed) {
+      if (!connectionLost && returnData.eStopArmed && txSettings.eStopMode <= 1 ) {
         String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
         setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
+      } else if (!connectionLost){
+        setAnnouncement("Signal!!!", "Connection lost", 5000, true);
       }
+
       returnData.eStopArmed = false;
 
       connectionLost = true;
@@ -846,7 +852,7 @@ bool pairNewBoard() {
 
   initiateTransmitter();
 
-  remPackage.mode = 0;
+  remPackage.type = 0;
 
   if (transmitToReceiver(0,200)) {
     drawMessage("Complete", "New board paired!", 1000);
@@ -976,7 +982,7 @@ void controlSettings() {
           drawMessage("Failed", "No communication", 2000);
         } else {
           updateFlashSettings();
-          drawMessage("Complete", "Changed!", 2000);
+          drawMessage("Complete", "Restart Board!", 2000);
         }
       }
       updateFlashSettings();
@@ -1300,7 +1306,7 @@ void calculateThrottlePosition()
 {
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
-  uint8_t samples = 5;
+  uint8_t samples = 10;
 
   if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
