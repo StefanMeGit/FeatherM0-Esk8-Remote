@@ -709,7 +709,7 @@ void speedControl( uint16_t throttle , bool trigger ) {
 
   //Cruise control
   else if ( rxSettings.triggerMode == 1 ) {
-    if ( trigger == true ) {
+    if ( (trigger == true) && (throttle >= 500)) {
 
       if ( cruising == false ) {
         cruiseThrottle = throttle;

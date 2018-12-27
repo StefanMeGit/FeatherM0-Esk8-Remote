@@ -1969,7 +1969,7 @@ void drawBatteryRemote() {
   x = 43;
   y = 116;
 
-  if (millis() - batteryLevelRemoteTimer >= 2000) {
+  if (millis() - batteryLevelRemoteTimer >= 1000) {
       batteryLevelRemote = batteryLevel();
       batteryLevelRemoteTimer = millis();
   }
