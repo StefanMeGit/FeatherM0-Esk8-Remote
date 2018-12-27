@@ -239,7 +239,7 @@ struct callback {
 // defining button data
 unsigned long buttonPrevMillis = 0;
 const unsigned long buttonSampleIntervalsMs = 100;
-uint8_t longbuttonPressCountMax = 12;    // 80 * 25 = 2000 ms
+uint8_t longbuttonPressCountMax = 20;    // 80 * 25 = 2000 ms
 uint8_t mediumbuttonPressCountMin = 5;    // 20 * 25 = 500 ms
 uint8_t buttonPressCount = 0;
 byte prevButtonState = HIGH;         // button is active low

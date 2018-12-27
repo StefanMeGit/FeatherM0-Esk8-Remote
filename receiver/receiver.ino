@@ -172,6 +172,7 @@ uint8_t breaklightMargin = 15;
 
 bool valueHigher = false;
 uint16_t ledValue = 100;
+unsigned long fadeTimer = 0;
 
 // Defining alarm handling
 bool alarmActivated = false;
@@ -207,8 +208,6 @@ void setup() {
   UART.setSerialPort(&Serial1);
   Serial1.begin(115200);
 
-  while (!Serial1) { delay(1); } // wait until serial console is open, remove if not tethered to computer
-
   loadFlashSettings();
 
   pinMode(statusLedPin, OUTPUT);
@@ -241,7 +240,6 @@ Serial.println("Setup end");
 void loop() {
 
   if (!dataEStop.triggered) {
-    Serial.prtin("Mode: "); Serial.prtinln(remPackage.type);
     if (rf69_manager.available()) {
       if (remPackage.type == 0) {
         if (analyseMessage()) {
@@ -438,7 +436,7 @@ void armEstop(){
         dataEStop.armed = true;
         returnData.eStopArmed = true;
         rxSettings.eStopArmed = true;
-        Serial.print("Arm Estop time: "); Serial.println(goodTransissionsTimer);
+        Serial.print("Arm Estop time: "); Serial.println(millis() - goodTransissionsTimerEstop);
       }
     } else {
       goodTransmissionsEstop = 0;
@@ -746,22 +744,24 @@ void headLight(){
 // --------------------------------------------------------------------------------------
 void breakLight() {
 
+  if (((rxSettings.breaklightMode == 2) && (returnData.headlightActive == 1)) || ((rxSettings.breaklightMode == 2) && (dataEStop.triggered)) || (rxSettings.breaklightMode == 1)) {
   if (!dataEStop.armed) {
-    Serial.print("valueHigher: "); Serial.println(valueHigher);
-    if (valueHigher) {
-        ledValue = ledValue + 1;
-        if (ledValue >= 250){
-          valueHigher = false;
+    if (millis() - fadeTimer >= 3) {
+      if (valueHigher) {
+          ledValue = ledValue + 1;
+          if (ledValue >= 250){
+            valueHigher = false;
+          }
+        } else {
+          ledValue = ledValue - 1;
+          if (ledValue <= 5){
+            valueHigher = true;
+          }
         }
-    } else {
-        ledValue = ledValue - 1;
-        if (ledValue <= 5){
-          valueHigher = true;
-        }
-    }
-    delay(3);
+        fadeTimer = millis();
+      }
+
     analogWrite(breakLightPin, ledValue);
-    Serial.print("ledValue: "); Serial.println(ledValue);
   } else {
 
     if ((remPackage.throttle <= breaklightMargin) || dataEStop.triggered) {
@@ -785,6 +785,9 @@ void breakLight() {
         analogWrite(breakLightPin, 100);
       }
   }
+} else {
+  analogWrite(breakLightPin, 0);
+}
 
 }
 
@@ -820,8 +823,7 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       returnData.dutyCycleNow       = 0.0;
 
       uartFailCounter++;
-      if (uartFailCounter > 20){
-        Serial.println("UART pull deactivated");
+      if (uartFailCounter > 3){
         ignoreUartPull = true;
       }
 
