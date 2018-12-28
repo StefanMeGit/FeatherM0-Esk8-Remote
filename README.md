@@ -7,7 +7,7 @@ Feature list:
 - Vibration alarm analog to announcments (like low battery)
 - Different main pages for individual informations
 - headlight control from remote
-  - FeatherReceiver Advanced -> headlight connectors up to 3A
+  - FeatherReceiver Advanced -> headlight connectors up to 24W
 - adaptive breaklight control
   - FeatherReceiver Advanced -> breaklight fully controlled via throttle position including force breaklight
 - one remote for up to 200 different boards with FeatherReceiver
