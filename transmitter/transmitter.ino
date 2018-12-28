@@ -1449,7 +1449,7 @@ void checkBatteryLevel() {
         remoteBatteryWanringLevel = 1;
       }
     }
-  } else if (returnData.inpVoltage >= 42.0 && throttlePosition == BOTTOM){
+  } else if (returnData.inpVoltage >= ((txSettings.batteryCells*4.2)+0.5) && throttlePosition == BOTTOM){
       if ((millis() - overchargeTimer) >= 5000) {
         setAnnouncement("Overcharge!", "Caution!", 3000, true);
       }
