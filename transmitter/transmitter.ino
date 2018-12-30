@@ -10,7 +10,7 @@
 
 //#define DEBUG
 
-#define VERSION 1.0
+#define VERSION 3.0
 
 // Defining the type of display used (128x64)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -315,7 +315,7 @@ uint8_t averageRemoteBattery = 0;
 uint16_t hallValue, throttle;
 const uint16_t centerThrottle = 512;
 uint8_t hallNoiseMargin = 10;
-const uint8_t hallMenuMargin = 50;
+const uint8_t hallMenuMargin = 75;
 uint8_t throttlePosition;
 
 #define TOP 0
@@ -505,7 +505,7 @@ void sleep() {
      setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
      eStopAnnounced = true;
    } else if (returnData.eStopArmed && !eStopAnnounced){
-     setAnnouncement("Ready!!!", "Connection ok", 5000, true);
+     setAnnouncement("Ready!!!", "Connection ok", 2000, true);
      eStopAnnounced = true;
    }
 
@@ -1681,10 +1681,8 @@ void longbuttonPress() {
     u8g2.setDisplayRotation(U8G2_R0);
     drawTitle("Settings", 1500);
     changeSettings = true;
-    txSettings.eStopArmed = false;
     remPackage.throttle = 512;
     remPackage.trigger = 0;
-    transmitSettingsToReceiver();
   } else {
     sleep();
   }

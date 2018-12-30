@@ -9,7 +9,7 @@
 
 //#define DEBUG
 
-#define VERSION 1.0
+#define VERSION 2.0
 
 struct debug {
   unsigned long lastTransmissionAvaible = 0;
@@ -511,12 +511,6 @@ void analyseSettingsMessage() {
 
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
     Serial.println("New Settings loaded: ");
-    Serial.print("rxSettings.Frequency");Serial.println(rxSettings.Frequency);
-    for (uint8_t i = 0; i <=15; i++){
-      Serial.print(rxSettings.customEncryptionKey[i]);
-    }
-    Serial.println("");
-    Serial.print("boardID: "); Serial.println(rxSettings.boardID);
     Serial.print("triggerMode: "); Serial.println(rxSettings.triggerMode);
 
 
@@ -527,13 +521,6 @@ void analyseSettingsMessage() {
     updateFlashSettings();
     initiateReceiver();
   }
-
-  Serial.println("Going out of settings");
-   Serial.println(rxSettings.Frequency);
-   for (uint8_t i = 0; i <=15; i++){
-     Serial.print(rxSettings.customEncryptionKey[i]);
-   }
-   Serial.println("");
 }
 
 // update last transmission
