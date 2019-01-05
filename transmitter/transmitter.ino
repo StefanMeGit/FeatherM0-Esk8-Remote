@@ -296,6 +296,7 @@ uint8_t useDefaultKeyForTransmission = 0;
 // Dont put this on the stack:
 uint8_t transmissionFailCounter = 0;
 bool connectionLost = false;
+bool connectionInit = false;
 
 
 // Battery monitering
@@ -507,6 +508,7 @@ void sleep() {
    } else if (returnData.eStopArmed && !eStopAnnounced){
      setAnnouncement("Ready!!!", "Connection ok", 2000, true);
      eStopAnnounced = true;
+     connectionInit = true;
    }
 
     if (millis() - debugData.lastTransmissionAvaible > 400) {
@@ -516,8 +518,9 @@ void sleep() {
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
         setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
-      } else if (!connectionLost){
+      } else if (!connectionLost && connectionInit){
         setAnnouncement("Signal!!!", "Connection lost", 5000, true);
+        connectionInit = false;
       }
 
       returnData.eStopArmed = false;
