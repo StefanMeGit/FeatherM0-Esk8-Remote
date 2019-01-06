@@ -7,9 +7,24 @@
 #include <RHReliableDatagram.h>
 #include <VescUart.h>
 
+// - Activate DEBUG via serial console
 //#define DEBUG
 
-#define VERSION 2.0
+// - Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU
+//#define RFM_USA
+
+
+// -------- DO NOT ANYTHING CHANGE BEYOND HERE
+#define VERSION 4.0
+
+#ifdef RFM_EU
+  #define RF69_FREQ   433.0
+#endif
+
+#ifdef RFM_USA
+  #define RF69_FREQ   915.0
+#endif
 
 struct debug {
   unsigned long lastTransmissionAvaible = 0;
@@ -82,7 +97,7 @@ typedef struct {
   uint8_t standbyMode;              // 22
   uint8_t metricImperial;           // 23
   uint8_t policeMode;               // 24
-  uint8_t homeScreen;                 // 25
+  uint8_t homeScreen;               // 25
 } RxSettings;
 
 RxSettings rxSettings;
@@ -113,7 +128,7 @@ const short settingRules[numOfSettings][3] {
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
-  { 433, 433 , 433},  //19 Frequency
+  { RF69_FREQ, RF69_FREQ - 2, RF69_FREQ +2},  //19 Frequency
   { 0, 0 , 1},       //19 Stanby mode
   { -1, 0 , 0},       //20 Firmware
   { -1, 0, 0},        //22 Set default key
@@ -125,7 +140,6 @@ const short settingRules[numOfSettings][3] {
 #define RFM69_CS    8
 #define RFM69_INT   3
 #define RFM69_RST   4
-#define RF69_FREQ   433.0
 #define MY_ADDRESS  1
 
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
@@ -425,7 +439,7 @@ void armEstop(){
 
   if (!dataEStop.armed) {
 
-    if (millis() - goodTransissionsTimerEstop <= 3000 && remPackage.throttle <= 560){
+    if (millis() - goodTransissionsTimerEstop <= 2500 && remPackage.throttle <= 560){
       goodTransmissionsEstop++;
       if (goodTransmissionsEstop > 10) {
         dataEStop.armed = true;
@@ -512,7 +526,6 @@ void analyseSettingsMessage() {
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
     Serial.println("New Settings loaded: ");
     Serial.print("triggerMode: "); Serial.println(rxSettings.triggerMode);
-
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       updateLastTransmissionTimer();

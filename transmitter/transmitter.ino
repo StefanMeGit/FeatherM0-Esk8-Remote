@@ -1,4 +1,4 @@
-// FeatherFly Transmitter - eSk8 Remote
+// FeatherFly Transmitter - eSk8 Remote 05012019
 
 #include <U8g2lib.h>
 #include <Wire.h>
@@ -7,10 +7,24 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
-
+// - Activate DEBUG via serial console
 //#define DEBUG
 
-#define VERSION 3.0
+// Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU
+//#define RFM_USA
+
+
+// -------- DO NOT CHANGE ANYTHING BEYOND HERE
+#define VERSION 4.0
+
+#ifdef RFM_EU
+  RF69_FREQ   433.0
+#endif
+
+#ifdef RFM_USA
+  RF69_FREQ   915.0
+#endif
 
 // Defining the type of display used (128x64)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -180,7 +194,7 @@ struct menuItems{
   {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  433,  430,  436,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  RF69_FREQ,  RF69_FREQ - 2,  RF69_FREQ + 2,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
@@ -281,7 +295,6 @@ const uint8_t vibrationActuatorPin = A4;
 #define RFM69_INT   3
 #define RFM69_RST   4
 #define DIAGLED     13
-#define RF69_FREQ   433.0
 #define DEST_ADDRESS   1
 #define MY_ADDRESS     2
 
@@ -437,12 +450,20 @@ void loop() {
 
   calculateThrottlePosition();
 
-  if (changeSettings == true) {
+  if (changeSettings) {
     controlSettings();
   } else {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
-    remPackage.throttle = throttle;
+    if (connectionInit) {
+      remPackage.throttle = throttle;
+    } else {
+      if (throttle >= 512){
+        remPackage.throttle = 512;
+      } else {
+        remPackage.throttle = throttle;
+      }
+    }
     transmitToReceiver(0,30);
 
 
@@ -668,7 +689,7 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
-  txSettings.Frequency = random(430, 436);
+  txSettings.Frequency = random(RF69_FREQ - 2, RF69_FREQ + 2);
   Serial.print(txSettings.Frequency);
 
   updateFlashSettings();
@@ -1683,9 +1704,10 @@ void longbuttonPress() {
   if ((throttlePosition == BOTTOM) && !triggerActive()){
     u8g2.setDisplayRotation(U8G2_R0);
     drawTitle("Settings", 1500);
-    changeSettings = true;
     remPackage.throttle = 512;
     remPackage.trigger = 0;
+    transmitToReceiver(0,30);
+    changeSettings = true;
   } else {
     sleep();
   }
