@@ -11,19 +11,19 @@
 //#define DEBUG
 
 // Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-#define RFM_EU
-//#define RFM_USA
+//#define RFM_EU
+#define RFM_USA
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
 #define VERSION 4.0
 
 #ifdef RFM_EU
-  RF69_FREQ   433.0
+  #define RF69_FREQ   433.0
 #endif
 
 #ifdef RFM_USA
-  RF69_FREQ   915.0
+  #define RF69_FREQ   915.0
 #endif
 
 // Defining the type of display used (128x64)
@@ -113,9 +113,6 @@ struct debug {
   unsigned long cycleTime = 0;
   unsigned long transmissionTime = 0;
   int8_t rssi;
-  unsigned long counterJoined = 0;
-  unsigned long counterSend = 0;
-  unsigned long differenceJoinedSend = 0;
   unsigned long longestCycleTime = 0;
   unsigned long lastTransmissionAvaible = 0;
   unsigned short transmissionTimeStart = 0;
@@ -248,6 +245,7 @@ struct callback {
   float avgMotorCurrent;
   float dutyCycleNow;
   bool eStopArmed = false;
+  int8_t receiverRssi;
 } returnData;
 
 // defining button data
@@ -466,8 +464,6 @@ void loop() {
     }
     transmitToReceiver(0,30);
 
-
-    debugData.differenceJoinedSend = debugData.counterJoined - debugData.counterSend;
   }
 
   updateMainDisplay();
@@ -526,19 +522,20 @@ void sleep() {
    if (returnData.eStopArmed && !eStopAnnounced && txSettings.eStopMode <= 1) {
      setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
      eStopAnnounced = true;
+     connectionInit = true;
    } else if (returnData.eStopArmed && !eStopAnnounced){
      setAnnouncement("Ready!!!", "Connection ok", 2000, true);
      eStopAnnounced = true;
      connectionInit = true;
    }
 
-    if (millis() - debugData.lastTransmissionAvaible > 400) {
+    if (millis() - debugData.lastTransmissionAvaible > 600) {
 
       if (!connectionLost && returnData.eStopArmed && txSettings.eStopMode <= 1 ) {
         String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
-        setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 10000, false);
+        setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 5000, true);
       } else if (!connectionLost && connectionInit){
         setAnnouncement("Signal!!!", "Connection lost", 5000, true);
         connectionInit = false;
@@ -705,16 +702,12 @@ bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
   rf69_manager.setRetries(retries);
   rf69_manager.setTimeout(timeout);
 
-  debugData.counterJoined++;
-
   uint8_t len = sizeof(remPackage);
 
   if (rf69_manager.sendtoWait((uint8_t*)&remPackage, len, DEST_ADDRESS)) {
     updateLastTransmissionTimer();
     uint8_t len = sizeof(returnData);
     uint8_t from;
-
-    debugData.counterSend++;
 
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
       updateLastTransmissionTimer();
@@ -723,7 +716,9 @@ bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
       debugData.rssi = rf69.lastRssi();
       return true;
     } else {
-      return false;
+      debugData.transmissionTimeFinish = millis();
+      debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
+      return true;
     }
   } else {
     return false;
@@ -1259,11 +1254,13 @@ void drawAnnouncement(){
     drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
     u8g2.setFontDirection(0);
 
-    if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
-      activateAnnouncement = false;
-      u8g2.setFontMode(0);
-      u8g2.setDrawColor(1);
-    }
+
+
+    //if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
+      //activateAnnouncement = false;
+      //u8g2.setFontMode(0);
+    //  u8g2.setDrawColor(1);
+    //}
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
@@ -1776,15 +1773,15 @@ void drawPage() {
       unitThird = 3;
       break;
     case 3:
-      valueMain = debugData.rssi;
+      valueMain = debugData.cycleTime;
       decimalsMain = 1;
-      unitMain = 5;
-      valueSecond = debugData.cycleTime;
+      unitMain = 4;
+      valueSecond = debugData.rssi;
       decimalsSecond = 1;
-      unitSecond = 4;
-      valueThird = debugData.longestCycleTime;
+      unitSecond = 5;
+      valueThird = returnData.receiverRssi;
       decimalsThird = 1;
-      unitThird = 4;
+      unitThird = 5;
       break;
   }
 

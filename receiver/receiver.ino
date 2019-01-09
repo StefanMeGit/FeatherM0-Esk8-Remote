@@ -11,8 +11,8 @@
 //#define DEBUG
 
 // - Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-#define RFM_EU
-//#define RFM_USA
+//#define RFM_EU
+#define RFM_USA
 
 
 // -------- DO NOT ANYTHING CHANGE BEYOND HERE
@@ -68,6 +68,7 @@ struct callback {
   float avgMotorCurrent;
   float dutyCycleNow;
   bool eStopArmed;
+  int8_t receiverRssi;
 } returnData;
 
 // Defining struct to hold setting values while remote is turned on.
@@ -272,10 +273,11 @@ void loop() {
       } else if (remPackage.type == 1) { // join settings transmission
         analyseSettingsMessage();
       } else {
-        activateESTOP(0);
+        speedControl(512, 0);
+        remPackage.type = 0;
       }
     }
-    if (millis() - debugData.lastTransmissionAvaible >= 400) {
+    if (millis() - debugData.lastTransmissionAvaible >= 500) {
       if (remPackage.type == 0 && rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
         Serial.println("Estop Activated!");
         activateESTOP(0);
@@ -297,7 +299,7 @@ void loop() {
 // --------------------------------------------------------------------------------------
 bool validateRemPackageEstop(){
 
-  if (remPackage.type > 1 || remPackage.throttle > 1024 || remPackage.trigger > 1 || remPackage.headlight > 1) {
+  if (remPackage.type > 1 || remPackage.throttle > 1050 || remPackage.trigger > 1 || remPackage.headlight > 1) {
 
       #ifdef DEBUG
       Serial.println("Shit package?");
@@ -388,7 +390,7 @@ void activateESTOP(uint8_t mode) {
     }
   } else {
 
-    if ((millis() - releaseBreakTimer) > 10000) {
+    if ((millis() - releaseBreakTimer) > 5000) {
       speedControl( 512, 0);
       goodTransmissions = 0;
       dataEStop.triggered = false;
@@ -499,10 +501,13 @@ bool analyseMessage() {
 
   rf69_manager.setRetries(0);
   rf69_manager.setTimeout(20);
+  updateLastTransmissionTimer();
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
+      return true;
     } else {
       updateLastTransmissionTimer();
+      returnData.receiverRssi = rf69.lastRssi();
       return true;
     }
 
