@@ -11,12 +11,12 @@
 //#define DEBUG
 
 // Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-//#define RFM_EU
-#define RFM_USA
+#define RFM_EU
+//#define RFM_USA
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
-#define VERSION 5.0
+#define VERSION 6.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0

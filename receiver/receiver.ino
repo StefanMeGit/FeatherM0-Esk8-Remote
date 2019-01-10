@@ -14,22 +14,22 @@
 //#define DEBUG             // Activate DEBUG via serial console
 
 // - Choose frequency:
-//#define RFM_EU            // RFM_EU for 415Mhz in Europe
-#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU            // RFM_EU for 415Mhz in Europe
+//#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose board version:
-//#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
-#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+//#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
 
 // - Choose UART protocoll:
-#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
-//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
+//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
 // --------------------------------------------------------------------------------------
 // -------- DO NOT ANYTHING CHANGE BEYOND HERE
 // --------------------------------------------------------------------------------------
-#define VERSION 5.0
+#define VERSION 6.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
@@ -237,7 +237,12 @@ unsigned long releaseBreakTimer = 0;
 Servo esc;
 
 // Initiate VescUart class for UART communication
-VescUartUnity UART;
+#ifdef ESC_UNITY
+  VescUartUnity UART;
+#endif
+#ifdef ESC_VESC
+  VescUart UART;
+#endif
 uint8_t uartFailCounter = 0;
 bool ignoreUartPull = false;
 
@@ -834,9 +839,9 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       #endif
       #ifdef ESC_VESC
       returnData.filteredFetTemp0   = UART.data.filteredFetTemp;
-      returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
+      //returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
       returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp;
-      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
+      //returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
       returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
       returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
       #endif
@@ -845,7 +850,6 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       returnData.rpm                = UART.data.rpm;
       returnData.tachometerAbs      = UART.data.tachometerAbs;
       returnData.avgInputCurrent    = UART.data.avgInputCurrent;
-      returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
       uartFailCounter = 0;
     }
     else
