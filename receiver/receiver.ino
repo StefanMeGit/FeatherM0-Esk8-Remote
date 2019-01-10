@@ -14,16 +14,16 @@
 //#define DEBUG             // Activate DEBUG via serial console
 
 // - Choose frequency:
-#define RFM_EU            // RFM_EU for 415Mhz in Europe
-//#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
+//#define RFM_EU            // RFM_EU for 415Mhz in Europe
+#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose board version:
 #define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
 //#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
 
 // - Choose UART protocoll:
-//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
-#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
+#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
 // --------------------------------------------------------------------------------------

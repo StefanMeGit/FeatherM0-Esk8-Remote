@@ -11,8 +11,8 @@
 //#define DEBUG
 
 // Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-#define RFM_EU
-//#define RFM_USA
+//#define RFM_EU
+#define RFM_USA
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
@@ -1766,13 +1766,13 @@ void drawPage() {
       unitThird = 3;
       break;
     case 2:
-      valueMain = returnData.filteredFetTemp0;
+      valueMain = returnData.inpVoltage;
       decimalsMain = 1;
-      unitMain = 10;
-      valueSecond = returnData.filteredMotorTemp0;
+      unitMain = 0;
+      valueSecond = returnData.filteredFetTemp0;
       decimalsSecond = 1;
       unitSecond = 10;
-      valueThird = returnData.filteredMotorTemp1;
+      valueThird = returnData.filteredMotorTemp0;
       decimalsThird = 1;
       unitThird = 10;
       break;
