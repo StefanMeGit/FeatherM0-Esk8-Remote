@@ -242,10 +242,14 @@ struct callback {
   long tachometerAbs;
   uint8_t headlightActive;
   float avgInputCurrent;
-  float avgMotorCurrent;
-  float dutyCycleNow;
-  bool eStopArmed = false;
+  float avgMotorCurrent0;
+  float dutyCycleNow0;
+  bool eStopArmed;
   int8_t receiverRssi;
+  float filteredFetTemp0;
+  float filteredFetTemp1;
+  float filteredMotorTemp0;
+  float filteredMotorTemp1;
 } returnData;
 
 // defining button data
@@ -1757,18 +1761,18 @@ void drawPage() {
       valueSecond = returnData.avgInputCurrent;
       decimalsSecond = 1;
       unitSecond = 3;
-      valueThird = returnData.avgMotorCurrent;
+      valueThird = returnData.avgMotorCurrent0;
       decimalsThird = 1;
       unitThird = 3;
       break;
     case 2:
-      valueMain = returnData.dutyCycleNow;
+      valueMain = returnData.dutyCycleNow0;
       decimalsMain = 1;
       unitMain = 6;
       valueSecond = returnData.avgInputCurrent;
       decimalsSecond = 1;
       unitSecond = 3;
-      valueThird = returnData.avgMotorCurrent;
+      valueThird = returnData.avgMotorCurrent0;
       decimalsThird = 1;
       unitThird = 3;
       break;

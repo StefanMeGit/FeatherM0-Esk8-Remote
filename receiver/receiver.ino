@@ -5,25 +5,44 @@
 #include <FlashStorage.h>
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
-#include <VescUart.h>
 
-// - Activate DEBUG via serial console
-//#define DEBUG
+// --------------------------------------------------------------------------------------
+// -------- SETUP
+// --------------------------------------------------------------------------------------
 
-// - Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-//#define RFM_EU
-#define RFM_USA
+// - Debug
+//#define DEBUG             // Activate DEBUG via serial console
+
+// - Choose frequency:
+//#define RFM_EU            // RFM_EU for 415Mhz in Europe
+#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
+
+// - Choose board version:
+//#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+
+// - Choose UART protocoll:
+#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
+// --------------------------------------------------------------------------------------
 // -------- DO NOT ANYTHING CHANGE BEYOND HERE
+// --------------------------------------------------------------------------------------
 #define VERSION 4.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
 #endif
-
 #ifdef RFM_USA
   #define RF69_FREQ   915.0
+#endif
+
+#ifdef ESC_VESC
+  #include <VescUart.h>
+#endif
+#ifdef ESC_UNITY
+  #include <VescUartUnity.h>
 #endif
 
 struct debug {
@@ -65,10 +84,14 @@ struct callback {
   long tachometerAbs;
   uint8_t headlightActive;
   float avgInputCurrent;
-  float avgMotorCurrent;
-  float dutyCycleNow;
+  float avgMotorCurrent0;
+  float dutyCycleNow0;
   bool eStopArmed;
   int8_t receiverRssi;
+  float filteredFetTemp0;
+  float filteredFetTemp1;
+  float filteredMotorTemp0;
+  float filteredMotorTemp1;
 } returnData;
 
 // Defining struct to hold setting values while remote is turned on.
@@ -149,12 +172,13 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
 
-// Current mode of receiver - 0: Connected | 1: Timeout | 2: Updating settings
-#define CONNECTED 0
-#define TIMEOUT 1
-#define COMPLETE 2
+// Current mode of receiver
+#define IDLE 0
+#define COMPLETE 1
+#define TIMEOUT 2
 #define FAILED 3
 #define ESTOP 4
+#define RESET 5
 
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
@@ -175,10 +199,18 @@ const uint16_t defaultThrottle = 512;
 
 // Defining receiver pins
 const uint8_t resetPin = 6;
-const uint8_t statusLedPin = 9;
 const uint8_t throttlePin = 10;
-const uint8_t breakLightPin = 13;
-const uint8_t headlightPin = 12;
+
+#ifdef BOARD_V0_1
+  const uint8_t breakLightPin = 13;
+  const uint8_t headlightPin = 12;
+  const uint8_t statusLedPin = 9;
+#endif
+#ifdef BOARD_V0_2
+  const uint8_t breakLightPin = 12;
+  const uint8_t headlightPin = 11;
+  const uint8_t statusLedPin = 13;
+#endif
 
 // Defining headlight/breaklight
 unsigned long lastBreakLightBlink = 0;
@@ -262,8 +294,10 @@ void loop() {
             armEstop();
             speedControl(remPackage.throttle, remPackage.trigger);
             getUartData();
+            setStatus(COMPLETE);
           } else { // if data is not valid, rescue data!
             rescueRemPackage();
+            setStatus(FAILED);
           }
         } else {
           if (!validateRemPackageEstop()) {
@@ -276,6 +310,8 @@ void loop() {
         speedControl(512, 0);
         remPackage.type = 0;
       }
+    } else {
+      setStatus(IDLE);
     }
     if (millis() - debugData.lastTransmissionAvaible >= 500) {
       if (remPackage.type == 0 && rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
@@ -288,10 +324,10 @@ void loop() {
   }  else {
     activateESTOP(0);
   }
-  //controlStatusLed();
   headLight();
   breakLight();
   resetAdress();
+  controlStatusLed();
 }
 
 // validateRemPackage
@@ -356,6 +392,7 @@ void activateESTOP(uint8_t mode) {
       returnData.eStopArmed = false;
       rxSettings.eStopArmed = false;
       dataEStop.triggered = true;
+      setStatus(ESTOP);
   }
 
   if (rxSettings.eStopMode == 0){ // slow estop with recover
@@ -378,7 +415,7 @@ void activateESTOP(uint8_t mode) {
           Serial.println(eStopThrottlePos);
           estopTimerDecrese = millis();
         } else {
-          if (millis() - estopTimerDecrese >= 2000){
+          if (millis() - estopTimerDecrese >= 5000){
             dataEStop.fullBreakDone = true;
             releaseBreakTimer = millis();
             Serial.println("Full break + 2sec wait done!");
@@ -434,7 +471,7 @@ void activateESTOP(uint8_t mode) {
   }
 }
 
-// reset Adress
+// arm Estop
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void armEstop(){
@@ -475,12 +512,13 @@ bool resetAdress() {
       updateFlashSettings();
       initiateReceiver();
 
+      setStatus(RESET);
       Serial.println("Reset");
-       Serial.println(rxSettings.Frequency);
-       for (uint8_t i = 0; i <=15; i++){
-         Serial.print(rxSettings.customEncryptionKey[i]);
-       }
-       Serial.println("");
+      Serial.println(rxSettings.Frequency);
+      for (uint8_t i = 0; i <=15; i++){
+        Serial.print(rxSettings.customEncryptionKey[i]);
+      }
+      Serial.println("");
     }
   }
 }
@@ -556,15 +594,17 @@ void setStatus(uint8_t code) {
   short cycle = 0;
 
   switch (code) {
-    case TIMEOUT:  cycle = 600;    break;
+    case TIMEOUT:   cycle = 500;    break;
     case FAILED:    cycle = 1400;   break;
     case COMPLETE:  cycle = 100;    break;
-    case ESTOP:    cycle = 4000;   break;
+    case ESTOP:     cycle = 1200;   break;
+    case IDLE:      cycle = 1000;   break;
+    case RESET:     cycle = 2000;   break;
   }
 
   currentMillis = millis();
 
-  if (currentMillis - startCycleMillis >= statusCycleTime) {
+  if ((currentMillis - startCycleMillis >= statusCycleTime) || statusCode < code) {
     statusCode = code;
     statusCycleTime = cycle;
     startCycleMillis = currentMillis;
@@ -579,10 +619,12 @@ void controlStatusLed() {
   short oninterval, offinterval, cycle;
 
   switch (statusCode) {
-    case TIMEOUT:   oninterval = 300;   offinterval = 300;  break;
-    case COMPLETE:  oninterval = 50;    offinterval = 50;   break;
+    case TIMEOUT:   oninterval = 250;   offinterval = 250;  break;
     case FAILED:    oninterval = 500;   offinterval = 200;  break;
-    case ESTOP:    oninterval = 1000;   offinterval = 200;  break;
+    case COMPLETE:  oninterval = 50;    offinterval = 50;   break;
+    case ESTOP:     oninterval = 1000;  offinterval = 200;  break;
+    case IDLE:      oninterval = 50;    offinterval = 950;  break;
+    case RESET:     oninterval = 200;   offinterval = 200;  break;
   }
 
   currentMillis = millis();
@@ -782,13 +824,17 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
 
     if ( UART.getVescValues() )
     {
-      returnData.ampHours         = UART.data.ampHours;
-      returnData.inpVoltage       = UART.data.inpVoltage;
-      returnData.rpm              = UART.data.rpm;
-      returnData.tachometerAbs    = UART.data.tachometerAbs;
-      returnData.avgInputCurrent  = UART.data.avgInputCurrent;
-      returnData.avgMotorCurrent  = UART.data.avgMotorCurrent;
-      returnData.dutyCycleNow     = UART.data.dutyCycleNow;
+      returnData.ampHours           = UART.data.ampHours;
+      returnData.inpVoltage         = UART.data.inpVoltage;
+      returnData.rpm                = UART.data.rpm;
+      returnData.tachometerAbs      = UART.data.tachometerAbs;
+      returnData.avgInputCurrent    = UART.data.avgInputCurrent;
+      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
+      returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
+      returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
+      returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
+      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp0;
+      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp1;
       uartFailCounter = 0;
     }
     else
@@ -798,8 +844,10 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       returnData.rpm                = 0;
       returnData.tachometerAbs      = 0;
       returnData.avgInputCurrent    = 0.0;
-      returnData.avgMotorCurrent    = 0.0;
-      returnData.dutyCycleNow       = 0.0;
+      returnData.avgMotorCurrent0   = 0.0;
+      returnData.dutyCycleNow0      = 0.0;
+      returnData.filteredFetTemp0   = 0.0;
+      returnData.filteredMotorTemp0 = 0.0;
 
       uartFailCounter++;
       if (uartFailCounter > 3){
