@@ -16,7 +16,7 @@
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
-#define VERSION 4.0
+#define VERSION 5.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
@@ -226,13 +226,13 @@ const char stringValues[10][4][15] = {
   {"off", "10 minutes", "30 minutes", ""},
   {"Metric", "Imperial", "", ""},
   {"off", "startup", "activation", ""},
-  {"SPEED", "POWER", "DUTY", "CONNECT"}
+  {"SPEED", "POWER", "TEMP", "CONNECT"}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
-const char dataSuffix[10][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi.", "%"};
-const char dataPrefix[4][13] = {"SPEED", "POWER", "DUTY", "CONNECT"};
+const char dataSuffix[11][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi.", "%", "C"};
+const char dataPrefix[4][13] = {"SPEED", "POWER", "TEMP", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -1766,15 +1766,15 @@ void drawPage() {
       unitThird = 3;
       break;
     case 2:
-      valueMain = returnData.dutyCycleNow0;
+      valueMain = returnData.filteredFetTemp0;
       decimalsMain = 1;
-      unitMain = 6;
-      valueSecond = returnData.avgInputCurrent;
+      unitMain = 10;
+      valueSecond = returnData.filteredMotorTemp0;
       decimalsSecond = 1;
-      unitSecond = 3;
-      valueThird = returnData.avgMotorCurrent0;
+      unitSecond = 10;
+      valueThird = returnData.filteredMotorTemp1;
       decimalsThird = 1;
-      unitThird = 3;
+      unitThird = 10;
       break;
     case 3:
       valueMain = debugData.cycleTime;

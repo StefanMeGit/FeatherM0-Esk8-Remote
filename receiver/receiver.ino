@@ -29,7 +29,7 @@
 // --------------------------------------------------------------------------------------
 // -------- DO NOT ANYTHING CHANGE BEYOND HERE
 // --------------------------------------------------------------------------------------
-#define VERSION 4.0
+#define VERSION 5.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
@@ -237,7 +237,7 @@ unsigned long releaseBreakTimer = 0;
 Servo esc;
 
 // Initiate VescUart class for UART communication
-VescUart UART;
+VescUartUnity UART;
 uint8_t uartFailCounter = 0;
 bool ignoreUartPull = false;
 
@@ -824,17 +824,28 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
 
     if ( UART.getVescValues() )
     {
+      #ifdef ESC_UNITY
+      returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
+      returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
+      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp0;
+      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp1;
+      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
+      returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
+      #endif
+      #ifdef ESC_VESC
+      returnData.filteredFetTemp0   = UART.data.filteredFetTemp;
+      returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
+      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp;
+      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
+      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
+      returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
+      #endif
       returnData.ampHours           = UART.data.ampHours;
       returnData.inpVoltage         = UART.data.inpVoltage;
       returnData.rpm                = UART.data.rpm;
       returnData.tachometerAbs      = UART.data.tachometerAbs;
       returnData.avgInputCurrent    = UART.data.avgInputCurrent;
-      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
       returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
-      returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
-      returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
-      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp0;
-      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp1;
       uartFailCounter = 0;
     }
     else
