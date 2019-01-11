@@ -11,8 +11,8 @@
 //#define DEBUG
 
 // Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-//#define RFM_EU
-#define RFM_USA
+#define RFM_EU
+//#define RFM_USA
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
@@ -158,7 +158,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 28;
+const uint8_t numOfSettings = 27;
 
 struct menuItems{
   uint8_t ID;
@@ -895,9 +895,15 @@ void controlSettings() {
   if (changeThisSetting == true) {
 
     if (menuItems[currentSetting].ID == EXIT) {
+      currentSetting = 0;
       u8g2.setDisplayRotation(U8G2_R3);
       u8g2.begin();
       changeSettings = false;
+      changeThisSetting  = false;
+      settingsLoopFlag   = false;
+      triggerFlag = false;
+      settingScrollFlag  = false;
+      settingsChangeValueFlag = false;
     }
 
     if (settingsLoopFlag == false && menuItems[currentSetting].standart != -1) {
@@ -967,7 +973,7 @@ void controlSettings() {
           drawMessage("Failed", "No communication", 2000);
         } else {
           updateFlashSettings();
-          drawMessage("Complete", "Trigger mode changed", 2000);
+          drawMessage("Complete", "Mode changed", 2000);
         }
       } else if (menuItems[currentSetting].ID == TXPOWER) {
         txSettings.transmissionPower = getSettingValue(menuItems[currentSetting].ID);
@@ -1417,7 +1423,7 @@ float batteryPackPercentage( float voltage ) {
     minCellVoltage = 3.4;
   }
 
-  float percentage = (100 - ( (maxCellVoltage - voltage / txSettings.batteryCells) / ((maxCellVoltage - minCellVoltage)) ) * 100);
+  float percentage = (100 - ( (maxCellVoltage - voltage / txSettings.batteryCells) / (maxCellVoltage - minCellVoltage) ) * 100);
 
   if (percentage > 100.0) {
     return 100.0;
@@ -1450,10 +1456,17 @@ void checkBatteryLevel() {
     averageRemoteBatteryTotalCounter = 0;
     averageRemoteBatteryTotal = 0;
   }
-
+  #ifdef DEBUG
+    Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
+    Serial.print("Battery percentage: "); Serial.println(boardBattery);
+    Serial.print("Battery percentage absolute: "); Serial.println(boardBatteryAbs);
+    Serial.print("Battery Voltage: "); Serial.println(returnData.inpVoltage);
+  #endif
 
   if ((((boardBattery > 0) && (boardBattery <= 20)) || (averageRemoteBattery <= 15)) && returnData.eStopArmed) {
+    Serial.print("Under voltage in percent: "); Serial.println(boardBattery);
     if (millis() - underVoltageTimer >= 2000) {
+      Serial.print("Under voltage for more than 2000ms in percent: "); Serial.println(boardBattery);
       if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
         device = "Board: ";
         device += String(boardBatteryAbs);
@@ -1478,6 +1491,7 @@ void checkBatteryLevel() {
       if ((millis() - overchargeTimer) >= 5000) {
         setAnnouncement("Overcharge!", "Caution!", 3000, true);
       }
+      underVoltageTimer = millis();
   } else {
     overchargeTimer = millis();
     underVoltageTimer = millis();
@@ -1514,7 +1528,7 @@ void drawSettingsMenu() {
   //shiftTextPixel = 64 - (u8g2.getStrWidth(menuItems[ currentSetting ].name)/2);
   shiftTextPixel = 64 - (u8g2.getStrWidth(menuItems[ currentSetting ].name)/2);
   u8g2.drawStr(shiftTextPixel, y, menuItems[ currentSetting ].name);
-  if (currentSetting != 22){
+  if (currentSetting != numOfSettings){
     u8g2.drawTriangle(123, 0, 123, 10, 128, 5);
   }
 
