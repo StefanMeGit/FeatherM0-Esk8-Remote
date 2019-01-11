@@ -122,6 +122,7 @@ typedef struct {
   uint8_t metricImperial;           // 23
   uint8_t policeMode;               // 24
   uint8_t homeScreen;               // 25
+  uint8_t voltageAlarm;             // 26
 } RxSettings;
 
 RxSettings rxSettings;

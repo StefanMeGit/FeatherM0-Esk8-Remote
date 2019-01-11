@@ -10,9 +10,9 @@
 // - Activate DEBUG via serial console
 //#define DEBUG
 
-// Choose frequency: RFM_EU for 415Mhz in Europe / RFM_USA for 915Mhz in USA and AUS
-#define RFM_EU
-//#define RFM_USA
+// Choose frequency:
+#define RFM_EU        // RFM_EU for 415Mhz in Europe
+//#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
@@ -150,6 +150,7 @@ typedef struct {
   uint8_t metricImperial;           // 23
   uint8_t policeMode;               // 24
   uint8_t homeScreen;               // 25
+  uint8_t voltageAlarm;             // 26
 } TxSettings;
 
 TxSettings txSettings;
@@ -158,7 +159,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 27;
+const uint8_t numOfSettings = 28;
 
 struct menuItems{
   uint8_t ID;
@@ -188,6 +189,7 @@ struct menuItems{
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
+  {28,  1,    0,    1,    "Voltage alarm", 0 , 11},         //22 activate voltage alarm
   {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
@@ -216,7 +218,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[10][4][15] = {
+const char stringValues[11][4][15] = {
   {"Killswitch", "Cruise", "", ""},
   {"Li-ion", "LiPo", "", ""},
   {"PPM", "PPM and UART", "UART only", ""},
@@ -226,7 +228,8 @@ const char stringValues[10][4][15] = {
   {"off", "10 minutes", "30 minutes", ""},
   {"Metric", "Imperial", "", ""},
   {"off", "startup", "activation", ""},
-  {"SPEED", "POWER", "TEMP", "CONNECT"}
+  {"SPEED", "POWER", "TEMP", "CONNECT"},
+  {"off","on",""}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
@@ -483,7 +486,9 @@ void loop() {
       displayView = 0;
   }
   checkConnection();
-  checkBatteryLevel();
+  if (txSettings.voltageAlarm == 1) {
+    checkBatteryLevel();
+  }
   controlVib();
 
 }
@@ -1155,6 +1160,7 @@ short getSettingValue(uint8_t index) {
     case 25:    value = txSettings.metricImperial;  break;
     case 26:    value = txSettings.policeMode;      break;
     case 27:    value = txSettings.homeScreen;      break;
+    case 28:    value = txSettings.voltageAlarm;    break;
 
 
     default: /* Do nothing */ break;
@@ -1190,6 +1196,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 25:        txSettings.metricImperial = value;  break;
     case 26:        txSettings.policeMode = value;      break;
     case 27:        txSettings.homeScreen = value;      break;
+    case 28:        txSettings.voltageAlarm = value;    break;
 
     default: /* Do nothing */ break;
   }
