@@ -11,8 +11,13 @@
 //#define DEBUG
 
 // Choose frequency:
-#define RFM_EU        // RFM_EU for 415Mhz in Europe
-//#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
+//#define RFM_EU        // RFM_EU for 415Mhz in Europe
+#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
+
+// - Choose UART protocoll:
+//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
+
 
 
 // -------- DO NOT CHANGE ANYTHING BEYOND HERE
@@ -235,7 +240,8 @@ const char stringValues[11][4][15] = {
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[11][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi.", "%", "C"};
-const char dataPrefix[4][13] = {"SPEED", "POWER", "TEMP", "CONNECT"};
+const char dataPrefix[4][13] = {"SPEED", "BATTERY", "MOSFET", "CONNECT"};
+const char dataPrefix2[4][13] = {"SPEED", "MOTORS", "MOTORS", "CONNECT"};
 
 // Defining struct to handle callback data (auto ack)
 struct callback {
@@ -246,6 +252,7 @@ struct callback {
   uint8_t headlightActive;
   float avgInputCurrent;
   float avgMotorCurrent0;
+  float avgMotorCurrent1;
   float dutyCycleNow0;
   bool eStopArmed;
   int8_t receiverRssi;
@@ -1318,7 +1325,16 @@ u8g2.clearBuffer();
       if (activateAnnouncement){
         drawAnnouncement();
       } else {
-        drawPage();
+        #ifdef ESC_VESC
+          drawPage();
+        #endif
+        #ifdef ESC_UNITY
+          if (displayView == 0 || displayView == 3){
+            drawPage();
+          } else {
+            drawDetailPage();
+          }
+        #endif
       }
       u8g2.setFontMode(0);
       u8g2.setDrawColor(1);
@@ -1761,8 +1777,6 @@ void drawPage() {
     distanceValueUnit = 2;
   }
 
-
-
   switch (displayView) {
     case 0:
       valueMain = speedValue;
@@ -1878,9 +1892,179 @@ void drawPage() {
   }
 }
 
-/*
-   Prepare a string to be displayed on the OLED
-*/
+// draw main page
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawDetailPage() {
+
+  uint8_t decimalsFirst, decimalsSecond, decimalsThird, decimalsFourth;
+  float valueFirst, valueSecond, valueThird, valueFourth, speedValue, distanceValue;
+  int unitFirst, unitSecond, unitThird, unitFourth;
+  uint16_t firstFirst, firstSecond, firstThird, firstFourth, speedValueUnit, distanceValueUnit;
+
+  x = 15;
+  y = 10;
+
+  if (txSettings.metricImperial == 1){
+    speedValue = (ratioRpmSpeed * returnData.rpm) * 0.621371;
+    speedValueUnit = 7;
+    distanceValue = (ratioPulseDistance * returnData.tachometerAbs) * 0.621371;
+    distanceValueUnit = 8;
+  } else {
+    speedValue = ratioRpmSpeed * returnData.rpm;
+    speedValueUnit = 1;
+    distanceValue = ratioPulseDistance * returnData.tachometerAbs;
+    distanceValueUnit = 2;
+  }
+
+
+
+  switch (displayView) {
+    case 0:
+      valueFirst = 1;
+      decimalsFirst = 1;
+      unitFirst = speedValueUnit;
+      valueSecond = 2;
+      decimalsSecond = 1;
+      unitSecond = 9;
+      valueThird = 3;
+      decimalsThird = 1;
+      unitThird = 4;
+      valueFourth = 4;
+      decimalsFourth = 1;
+      unitFourth = 1;
+      break;
+    case 1:
+      valueFirst = returnData.inpVoltage;
+      decimalsFirst = 1;
+      unitFirst = 0;
+      valueSecond = returnData.avgInputCurrent;
+      decimalsSecond = 1;
+      unitSecond = 3;
+      valueThird = returnData.avgMotorCurrent0;
+      decimalsThird = 1;
+      unitThird = 3;
+      valueFourth = returnData.avgMotorCurrent1;
+      decimalsFourth = 1;
+      unitFourth = 3;
+      break;
+    case 2:
+      valueFirst = returnData.filteredMotorTemp0;
+      decimalsFirst = 1;
+      unitFirst = 10;
+      valueSecond = returnData.filteredMotorTemp1;
+      decimalsSecond = 1;
+      unitSecond = 10;
+      valueThird = returnData.filteredFetTemp0;
+      decimalsThird = 1;
+      unitThird = 10;
+      valueFourth = returnData.filteredFetTemp1;
+      decimalsFourth = 1;
+      unitFourth = 10;
+      break;
+    case 3:
+      valueFirst = speedValue;
+      decimalsFirst = 1;
+      unitFirst = speedValueUnit;
+      valueSecond = 2;
+      decimalsSecond = 1;
+      unitSecond = 5;
+      valueThird = 3;
+      decimalsThird = 1;
+      unitThird = 5;
+      valueFourth = 4;
+      decimalsFourth = 1;
+      unitFourth = 1;
+      break;
+  }
+
+  // Display prefix (title)
+  u8g2.setFont(u8g2_font_profont12_tr);
+  u8g2.drawStr(x, y - 1, dataPrefix[ displayView ] );
+
+  // Convert valueSecond to string
+  firstFirst = abs( floor(valueFirst) );
+  // Display second numbers
+  if ( firstFirst <= 9 ) {
+    tString = "0" + String(firstFirst);
+  } else {
+    tString = firstFirst;
+  }
+  drawString(tString, 10, x, y +20, u8g2_font_logisoso18_tn );
+  // Display second units
+  u8g2.setFont(u8g2_font_profont12_tr);
+  if (firstFirst > 99) {
+    u8g2.drawStr( x + 37, y +20, dataSuffix[unitFirst]);
+  } else {
+    u8g2.drawStr( x + 25, y +20, dataSuffix[unitFirst]);
+  }
+
+
+  // Convert valueSecond to string
+  firstSecond = abs( floor(valueSecond) );
+  // Display second numbers
+  if ( firstSecond <= 9 ) {
+    tString = "0" + String(firstSecond);
+  } else {
+    tString = firstSecond;
+  }
+  drawString(tString, 10, x, y +40, u8g2_font_logisoso18_tn );
+  // Display second units
+  u8g2.setFont(u8g2_font_profont12_tr);
+  if (firstSecond > 99) {
+    u8g2.drawStr( x + 37, y +40, dataSuffix[unitSecond]);
+  } else {
+    u8g2.drawStr( x + 25, y +40, dataSuffix[unitSecond]);
+  }
+
+  // Display seocnd prefix (title)
+  u8g2.setFont(u8g2_font_profont12_tr);
+  u8g2.drawStr(x, y + 51, dataPrefix2[ displayView ] );
+
+  // Convert valueThird to string
+  firstThird = abs( floor(valueThird) );
+  // Display second numbers
+  if ( firstThird <= 9 ) {
+    tString = "0" + String(firstThird);
+  } else {
+    tString = firstThird;
+  }
+  // Display third numbers
+  drawString(tString, 10, x, y +72, u8g2_font_logisoso18_tn );
+  // Display main units
+  u8g2.setFont(u8g2_font_profont12_tr);
+  if (firstThird > 99) {
+    u8g2.drawStr( x + 37, y +72, dataSuffix[unitThird]);
+  } else {
+    u8g2.drawStr( x + 25, y +72, dataSuffix[unitThird]);
+  }
+
+
+  // TEST
+  firstFourth = abs( floor(valueFourth) );
+  // Display second numbers
+  if ( firstFourth <= 9 ) {
+    tString = "0" + String(firstFourth);
+  } else {
+    tString = firstFourth;
+  }
+  // Display third numbers
+  drawString(tString, 10, x, y +92, u8g2_font_logisoso18_tn );
+  // Display main units
+  u8g2.setFont(u8g2_font_profont12_tr);
+  if (firstFourth > 99) {
+    u8g2.drawStr( x + 37, y +92, dataSuffix[unitFourth]);
+  } else {
+    u8g2.drawStr( x + 25, y +92, dataSuffix[unitFourth]);
+  }
+
+
+}
+
+
+// Prepare a string to be displayed on the OLED
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
 void drawString(String string, uint8_t lenght, uint8_t x, uint8_t y, const uint8_t *font) {
 
   static char cache[40];
