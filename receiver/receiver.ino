@@ -27,9 +27,9 @@
 
 
 // --------------------------------------------------------------------------------------
-// -------- DO NOT ANYTHING CHANGE BEYOND HERE
+// -------- DO NOT ANYTHING CHANGE FROM HERE
 // --------------------------------------------------------------------------------------
-#define VERSION 6.0
+#define VERSION 7.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
@@ -76,7 +76,8 @@ struct packageEStop {
 #define SETTING 1
 #define CONFIRM 2
 
-// Defining struct to handle callback data (auto ack)
+#ifdef ESC_UNITY
+// Defining struct to handle callback data for UNITY
 struct callback {
   float ampHours;
   float inpVoltage;
@@ -87,6 +88,7 @@ struct callback {
   float avgMotorCurrent0;
   float avgMotorCurrent1;
   float dutyCycleNow0;
+  float dutyCycleNow1;
   bool eStopArmed;
   int8_t receiverRssi;
   float filteredFetTemp0;
@@ -94,6 +96,25 @@ struct callback {
   float filteredMotorTemp0;
   float filteredMotorTemp1;
 } returnData;
+#endif
+
+#ifdef ESC_VESC
+// Defining struct to handle callback data for VESC
+struct callback {
+  float ampHours;
+  float inpVoltage;
+  long rpm;
+  long tachometerAbs;
+  uint8_t headlightActive;
+  float avgInputCurrent;
+  float avgMotorCurrent0;
+  float dutyCycleNow0;
+  bool eStopArmed;
+  int8_t receiverRssi;
+  float filteredFetTemp0;
+  float filteredMotorTemp0;
+} returnData;
+#endif
 
 // Defining struct to hold setting values while remote is turned on.
 typedef struct {
@@ -185,6 +206,9 @@ uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
 uint16_t uartPullInterval = 200;
+uint8_t uartFailCounter = 0;
+bool ignoreUartPull = false;
+uint8_t uartFailCounterLimit = 5;
 
 // Cruise control
 uint16_t cruiseThrottle;
@@ -245,8 +269,6 @@ Servo esc;
 #ifdef ESC_VESC
   VescUart UART;
 #endif
-uint8_t uartFailCounter = 0;
-bool ignoreUartPull = false;
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -827,26 +849,30 @@ void getUartData() {
 if (rxSettings.controlMode > 0 && !ignoreUartPull) {
   if ( millis() - lastUartPull >= uartPullInterval ) {
 
+    #ifdef DEBUG
+    Serial.print("UART pull: "); Serial.println(lastUartPull);
+    #endif
+
     lastUartPull = millis();
 
     if ( UART.getVescValues() )
     {
       #ifdef ESC_UNITY
-      returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
-      returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
-      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp0;
-      returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp1;
-      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
-      returnData.avgMotorCurrent1   = UART.data.avgMotorCurrent1;
-      returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
+        returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
+        returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
+        returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp0;
+        returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp1;
+        returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
+        returnData.avgMotorCurrent1   = UART.data.avgMotorCurrent1;
+        returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
       #endif
       #ifdef ESC_VESC
-      returnData.filteredFetTemp0   = UART.data.filteredFetTemp;
-      //returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
-      returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp;
-      //returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
-      returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
-      returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
+        returnData.filteredFetTemp0   = UART.data.filteredFetTemp;
+        //returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
+        returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp;
+        //returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
+        returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
+        returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
       #endif
       returnData.ampHours           = UART.data.ampHours;
       returnData.inpVoltage         = UART.data.inpVoltage;
@@ -854,6 +880,18 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       returnData.tachometerAbs      = UART.data.tachometerAbs;
       returnData.avgInputCurrent    = UART.data.avgInputCurrent;
       uartFailCounter = 0;
+
+      #ifdef DEBUG
+      Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
+      Serial.print("returnData.filteredMotorTemp0: "); Serial.println(returnData.filteredMotorTemp0);
+      Serial.print("returnData.avgMotorCurrent0: "); Serial.println(returnData.avgMotorCurrent0);
+      Serial.print("returnData.dutyCycleNow0: "); Serial.println(returnData.dutyCycleNow0);
+      Serial.print("returnData.ampHours: "); Serial.println(returnData.ampHours);
+      Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
+      Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
+      Serial.print("returnData.tachometerAbs: "); Serial.println(returnData.tachometerAbs);
+      Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
+      #endif
     }
     else
     {
@@ -866,9 +904,14 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
       returnData.dutyCycleNow0      = 0.0;
       returnData.filteredFetTemp0   = 0.0;
       returnData.filteredMotorTemp0 = 0.0;
-
+      #ifdef ESC_UNITY
+        returnData.avgMotorCurrent1   = 0.0;
+        returnData.dutyCycleNow1      = 0.0;
+        returnData.filteredFetTemp1   = 0.0;
+        returnData.filteredMotorTemp1 = 0.0;
+      #endif
       uartFailCounter++;
-      if (uartFailCounter > 3){
+      if (uartFailCounter > uartFailCounterLimit){
         ignoreUartPull = true;
       }
 

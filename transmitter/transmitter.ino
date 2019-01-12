@@ -7,6 +7,11 @@
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
 
+// --------------------------------------------------------------------------------------
+// -------- SETUP
+// --------------------------------------------------------------------------------------
+
+
 // - Activate DEBUG via serial console
 //#define DEBUG
 
@@ -19,9 +24,11 @@
 #define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
+// --------------------------------------------------------------------------------------
+// -------- DO NOT ANYTHING CHANGE FROM HERE
+// --------------------------------------------------------------------------------------
 
-// -------- DO NOT CHANGE ANYTHING BEYOND HERE
-#define VERSION 6.0
+#define VERSION 7.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
@@ -243,7 +250,8 @@ const char dataSuffix[11][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi
 const char dataPrefix[4][13] = {"SPEED", "BATTERY", "MOSFET", "CONNECT"};
 const char dataPrefix2[4][13] = {"SPEED", "MOTORS", "MOTORS", "CONNECT"};
 
-// Defining struct to handle callback data (auto ack)
+#ifdef ESC_UNITY
+// Defining struct to handle callback data for UNITY
 struct callback {
   float ampHours;
   float inpVoltage;
@@ -254,6 +262,7 @@ struct callback {
   float avgMotorCurrent0;
   float avgMotorCurrent1;
   float dutyCycleNow0;
+  float dutyCycleNow1;
   bool eStopArmed;
   int8_t receiverRssi;
   float filteredFetTemp0;
@@ -261,6 +270,25 @@ struct callback {
   float filteredMotorTemp0;
   float filteredMotorTemp1;
 } returnData;
+#endif
+
+#ifdef ESC_VESC
+// Defining struct to handle callback data for VESC
+struct callback {
+  float ampHours;
+  float inpVoltage;
+  long rpm;
+  long tachometerAbs;
+  uint8_t headlightActive;
+  float avgInputCurrent;
+  float avgMotorCurrent0;
+  float dutyCycleNow0;
+  bool eStopArmed;
+  int8_t receiverRssi;
+  float filteredFetTemp0;
+  float filteredMotorTemp0;
+} returnData;
+#endif
 
 // defining button data
 unsigned long buttonPrevMillis = 0;
@@ -1892,6 +1920,7 @@ void drawPage() {
   }
 }
 
+#ifdef ESC_UNITY
 // draw main page
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
@@ -2060,6 +2089,7 @@ void drawDetailPage() {
 
 
 }
+#endif
 
 
 // Prepare a string to be displayed on the OLED
