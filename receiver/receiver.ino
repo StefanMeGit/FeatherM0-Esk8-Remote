@@ -12,8 +12,8 @@
 
 // - Activate DEBUG - receiver will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-#define DEBUG                 //activate serial monitor
-#define DEBUG_TELEMETRY       //activate UART (telemetry) debugging
+//#define DEBUG                 //activate serial monitor
+//#define DEBUG_TELEMETRY       //activate UART (telemetry) debugging
 
 // - Choose frequency:
 //#define RFM_EU            // RFM_EU for 415Mhz in Europe
@@ -370,7 +370,7 @@ bool validateRemPackageEstop(){
 
   if (remPackage.type > 1 || remPackage.throttle > 1050 || remPackage.trigger > 1 || remPackage.headlight > 1) {
 
-      #ifdef DEBUG
+      #ifdef DEBUG_TELEMETRY
       Serial.println("Shit package?");
       Serial.print("type ");Serial.println(remPackage.type);
       Serial.print("throttle ");Serial.println(remPackage.throttle);
@@ -390,7 +390,7 @@ void rescueRemPackage() {
 
   Serial.println(millis());
 
-  #ifdef DEBUG
+  #ifdef DEBUG_TELEMETRY
   Serial.println("Shit package?");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
@@ -403,7 +403,7 @@ void rescueRemPackage() {
   remPackage.trigger = remPackageBackup.trigger;
   remPackage.headlight = remPackageBackup.headlight;
 
-  #ifdef DEBUG
+  #ifdef DEBUG_TELEMETRY
   Serial.println("rescue to default");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);

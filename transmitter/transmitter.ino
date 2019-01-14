@@ -14,9 +14,9 @@
 
 // - Activate DEBUG - remote will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-#define DEBUG                 //activate serial monitor
-#define DEBUG_BATTERY         //activate battery debugging
-#define DEBUG_TRANSMISSION    //activate transmission debugging
+//#define DEBUG                 //activate serial monitor
+//#define DEBUG_BATTERY         //activate battery debugging
+//#define DEBUG_TRANSMISSION    //activate transmission debugging
 
 // - Choose frequency:
 //#define RFM_EU        // RFM_EU for 415Mhz in Europe
