@@ -1,4 +1,4 @@
-// FeatherFly Transmitter - eSk8 Remote 05012019
+// FeatherFly Transmitter - eSk8 Remote
 
 #include <U8g2lib.h>
 #include <Wire.h>
@@ -12,10 +12,13 @@
 // --------------------------------------------------------------------------------------
 
 
-// - Activate DEBUG via serial console
-//#define DEBUG
+// - Activate DEBUG - remote will not start up when its not connected to pc
+//    and monitor in Arduino IDE is open (Baudrate: 115200)
+#define DEBUG                 //activate serial monitor
+#define DEBUG_BATTERY         //activate battery debugging
+#define DEBUG_TRANSMISSION    //activate transmission debugging
 
-// Choose frequency:
+// - Choose frequency:
 //#define RFM_EU        // RFM_EU for 415Mhz in Europe
 #define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
 
@@ -360,6 +363,7 @@ unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 uint8_t batteryLevelRemote = 0;
 unsigned long batteryLevelRemoteTimer = 2000;
+unsigned long remoteBatteryCheckTimer = 0;
 
 uint8_t averageRemoteBatteryTotalCounter = 0;
 uint16_t averageRemoteBatteryTotal = 0;
@@ -505,7 +509,6 @@ void loop() {
       }
     }
     transmitToReceiver(0,30);
-
   }
 
   updateMainDisplay();
@@ -749,19 +752,44 @@ bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
   uint8_t len = sizeof(remPackage);
 
   if (rf69_manager.sendtoWait((uint8_t*)&remPackage, len, DEST_ADDRESS)) {
+
+    #ifdef DEBUG_TRANSMISSION
+      Serial.println("Successfully send remPackage to receiver with ack");
+      Serial.print("remPackage.type: "); Serial.println(remPackage.type);
+      Serial.print("remPackage.trigger: "); Serial.println(remPackage.trigger);
+      Serial.print("remPackage.throttle: "); Serial.println(remPackage.throttle);
+      Serial.print("remPackage.headlight: "); Serial.println(remPackage.headlight);
+    #endif
+
     updateLastTransmissionTimer();
     uint8_t len = sizeof(returnData);
     uint8_t from;
 
-    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) { // TEST!
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
       updateLastTransmissionTimer();
       debugData.transmissionTimeFinish = millis();
       debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
       debugData.rssi = rf69.lastRssi();
+
+      #ifdef DEBUG_TRANSMISSION
+        Serial.println("Successfully received returnData from receiver");
+        Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("returnData.receiverRssi: "); Serial.println(returnData.receiverRssi);
+        Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
+        Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
+        Serial.println("....");
+      #endif
+
       return true;
     } else {
+      updateLastTransmissionTimer();
       debugData.transmissionTimeFinish = millis();
       debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
+
+      #ifdef DEBUG_TRANSMISSION
+        Serial.println("Failed receiving returnData from receiver by timeout");
+      #endif
+
       return true;
     }
   } else {
@@ -1437,10 +1465,10 @@ void calculateThrottlePosition()
 // Calculate the remotes battery level
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-uint8_t batteryLevel() {
+uint8_t remoteBatteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 1;
+  uint8_t samples = 2;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1497,27 +1525,29 @@ void checkBatteryLevel() {
 
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
-  //remoteBattery = batteryLevel();
 
-  if (averageRemoteBatteryTotalCounter < 5) {
-    averageRemoteBatteryTotal += batteryLevel();
-    averageRemoteBatteryTotalCounter++;
-  } else {
-    averageRemoteBattery = averageRemoteBatteryTotal / 5;
-    averageRemoteBatteryTotalCounter = 0;
-    averageRemoteBatteryTotal = 0;
+  if (millis() - remoteBatteryCheckTimer >= 1000) {
+      remoteBattery = remoteBatteryLevel();
+      remoteBatteryCheckTimer = millis();
   }
-  #ifdef DEBUG
+
+  #ifdef DEBUG_BATTERY
     Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
     Serial.print("Battery percentage: "); Serial.println(boardBattery);
     Serial.print("Battery percentage absolute: "); Serial.println(boardBatteryAbs);
     Serial.print("Battery Voltage: "); Serial.println(returnData.inpVoltage);
   #endif
 
-  if ((((boardBattery > 0) && (boardBattery <= 20)) || (averageRemoteBattery <= 15)) && returnData.eStopArmed) {
-    Serial.print("Under voltage in percent: "); Serial.println(boardBattery);
-    if (millis() - underVoltageTimer >= 2000) {
-      Serial.print("Under voltage for more than 2000ms in percent: "); Serial.println(boardBattery);
+  if ((boardBattery <= 20 && boardBattery != 0 && !connectionLost) || (remoteBattery <= 15)) {
+    #ifdef DEBUG_BATTERY
+    Serial.print("Low voltage in percent: "); Serial.println(boardBattery);
+    #endif
+    if (millis() - underVoltageTimer >= 5000) {
+      #ifdef DEBUG_BATTERY
+      Serial.println("Low voltage for more than 5000ms: ");
+      Serial.print("boardBattery: "); Serial.println(boardBattery);
+      Serial.print("remoteBattery: "); Serial.println(remoteBattery);
+      #endif
       if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
         device = "Board: ";
         device += String(boardBatteryAbs);
@@ -2235,7 +2265,7 @@ void drawBatteryRemote() {
   y = 116;
 
   if (millis() - batteryLevelRemoteTimer >= 1000) {
-      batteryLevelRemote = batteryLevel();
+      batteryLevelRemote = remoteBatteryLevel();
       batteryLevelRemoteTimer = millis();
   }
 

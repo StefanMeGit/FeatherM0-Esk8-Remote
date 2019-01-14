@@ -10,8 +10,10 @@
 // -------- SETUP
 // --------------------------------------------------------------------------------------
 
-// - Debug
-//#define DEBUG             // Activate DEBUG via serial console
+// - Activate DEBUG - receiver will not start up when its not connected to pc
+//    and monitor in Arduino IDE is open (Baudrate: 115200)
+#define DEBUG                 //activate serial monitor
+#define DEBUG_TELEMETRY       //activate UART (telemetry) debugging
 
 // - Choose frequency:
 //#define RFM_EU            // RFM_EU for 415Mhz in Europe
@@ -29,6 +31,7 @@
 // --------------------------------------------------------------------------------------
 // -------- DO NOT ANYTHING CHANGE FROM HERE
 // --------------------------------------------------------------------------------------
+
 #define VERSION 7.0
 
 #ifdef RFM_EU
@@ -208,7 +211,8 @@ unsigned long lastUartPull;
 uint16_t uartPullInterval = 200;
 uint8_t uartFailCounter = 0;
 bool ignoreUartPull = false;
-uint8_t uartFailCounterLimit = 5;
+uint8_t uartFailCounterLimit = 10;
+bool uartPullAutoOff = true;
 
 // Cruise control
 uint16_t cruiseThrottle;
@@ -846,7 +850,7 @@ void breakLight() {
 // --------------------------------------------------------------------------------------
 void getUartData() {
 
-if (rxSettings.controlMode > 0 && !ignoreUartPull) {
+if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
   if ( millis() - lastUartPull >= uartPullInterval ) {
 
     #ifdef DEBUG
@@ -857,6 +861,7 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
 
     if ( UART.getVescValues() )
     {
+
       #ifdef ESC_UNITY
         returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
         returnData.filteredFetTemp1   = UART.data.filteredFetTemp1;
@@ -865,32 +870,49 @@ if (rxSettings.controlMode > 0 && !ignoreUartPull) {
         returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
         returnData.avgMotorCurrent1   = UART.data.avgMotorCurrent1;
         returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
+
+        #ifdef DEBUG_TELEMETRY
+          Serial.println("UNITY specific telemetry");
+          Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
+          Serial.print("returnData.filteredFetTemp1: "); Serial.println(returnData.filteredFetTemp1);
+          Serial.print("returnData.filteredMotorTemp0: "); Serial.println(returnData.filteredMotorTemp0);
+          Serial.print("returnData.filteredMotorTemp1: "); Serial.println(returnData.filteredMotorTemp1);
+          Serial.print("returnData.avgMotorCurrent0: "); Serial.println(returnData.avgMotorCurrent0);
+          Serial.print("returnData.avgMotorCurrent1: "); Serial.println(returnData.avgMotorCurrent1);
+          Serial.print("returnData.dutyCycleNow0: "); Serial.println(returnData.dutyCycleNow0);
+        #endif
       #endif
+
       #ifdef ESC_VESC
         returnData.filteredFetTemp0   = UART.data.filteredFetTemp;
-        //returnData.filteredFetTemp1   = UART.data.filteredFetTemp;
         returnData.filteredMotorTemp0 = UART.data.filteredMotorTemp;
-        //returnData.filteredMotorTemp1 = UART.data.filteredMotorTemp;
         returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
         returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
+
+        #ifdef DEBUG_TELEMETRY
+          Serial.println("VESC specific telemetry");
+          Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
+          Serial.print("returnData.filteredMotorTemp0: "); Serial.println(returnData.filteredMotorTemp0);
+          Serial.print("returnData.avgMotorCurrent0: "); Serial.println(returnData.avgMotorCurrent0);
+          Serial.print("returnData.dutyCycleNow0: "); Serial.println(returnData.dutyCycleNow0);
+        #endif
       #endif
+
       returnData.ampHours           = UART.data.ampHours;
       returnData.inpVoltage         = UART.data.inpVoltage;
       returnData.rpm                = UART.data.rpm;
       returnData.tachometerAbs      = UART.data.tachometerAbs;
       returnData.avgInputCurrent    = UART.data.avgInputCurrent;
+
       uartFailCounter = 0;
 
-      #ifdef DEBUG
-      Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
-      Serial.print("returnData.filteredMotorTemp0: "); Serial.println(returnData.filteredMotorTemp0);
-      Serial.print("returnData.avgMotorCurrent0: "); Serial.println(returnData.avgMotorCurrent0);
-      Serial.print("returnData.dutyCycleNow0: "); Serial.println(returnData.dutyCycleNow0);
-      Serial.print("returnData.ampHours: "); Serial.println(returnData.ampHours);
-      Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
-      Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
-      Serial.print("returnData.tachometerAbs: "); Serial.println(returnData.tachometerAbs);
-      Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
+      #ifdef DEBUG_TELEMETRY
+        Serial.println("Basic telemetry");
+        Serial.print("returnData.ampHours: "); Serial.println(returnData.ampHours);
+        Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
+        Serial.print("returnData.tachometerAbs: "); Serial.println(returnData.tachometerAbs);
+        Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
       #endif
     }
     else
