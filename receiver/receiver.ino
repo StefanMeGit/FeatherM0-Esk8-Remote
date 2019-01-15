@@ -574,6 +574,9 @@ bool analyseMessage() {
   rf69_manager.setTimeout(20);
   updateLastTransmissionTimer();
 
+  Serial.println("Received message: ");
+  Serial.print("remPackage.type: "); Serial.println(remPackage.type);
+
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       return true;
     } else {
