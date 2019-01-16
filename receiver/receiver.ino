@@ -13,15 +13,18 @@
 // - Activate DEBUG - receiver will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
 //#define DEBUG                 //activate serial monitor
+//#define DEBUG_TRANSMISSION    //activate transmission debugging
 //#define DEBUG_TELEMETRY       //activate UART (telemetry) debugging
+//#define DEBUG_ESTOP           //activate UART (telemetry) debugging
+//#define DEBUG_SETTINGS        //activate settings debugging
 
 // - Choose frequency:
-//#define RFM_EU            // RFM_EU for 415Mhz in Europe
-#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU                // RFM_EU for 415Mhz in Europe
+//#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose board version:
-#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
-//#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+//#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
+#define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
 
 // - Choose UART protocoll:
 //#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
@@ -304,12 +307,9 @@ void setup() {
 
 delay(50);
 
-Serial.println(rxSettings.Frequency);
-for (uint8_t i = 0; i <=15; i++){
-  Serial.print(rxSettings.customEncryptionKey[i]);
-}
-Serial.println("");
-Serial.println("Setup end");
+#ifdef DEBUG
+  Serial.println("Startup finished");
+#endif
 
 }
 
@@ -348,7 +348,9 @@ void loop() {
     }
     if (millis() - debugData.lastTransmissionAvaible >= 500) {
       if (remPackage.type == 0 && rxSettings.eStopMode < 2 && dataEStop.armed && rxSettings.eStopArmed) {
-        Serial.println("Estop Activated!");
+        #ifdef DEBUG_ESTOP
+          Serial.println("Estop Activated!");
+        #endif
         activateESTOP(0);
       } else {
         speedControl(512, 0);
@@ -370,7 +372,7 @@ bool validateRemPackageEstop(){
 
   if (remPackage.type > 1 || remPackage.throttle > 1050 || remPackage.trigger > 1 || remPackage.headlight > 1) {
 
-      #ifdef DEBUG_TELEMETRY
+      #ifdef DEBUG_TRANSMISSION
       Serial.println("Shit package?");
       Serial.print("type ");Serial.println(remPackage.type);
       Serial.print("throttle ");Serial.println(remPackage.throttle);
@@ -388,9 +390,7 @@ bool validateRemPackageEstop(){
 // --------------------------------------------------------------------------------------
 void rescueRemPackage() {
 
-  Serial.println(millis());
-
-  #ifdef DEBUG_TELEMETRY
+  #ifdef DEBUG_TRANSMISSION
   Serial.println("Shit package?");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
@@ -403,7 +403,7 @@ void rescueRemPackage() {
   remPackage.trigger = remPackageBackup.trigger;
   remPackage.headlight = remPackageBackup.headlight;
 
-  #ifdef DEBUG_TELEMETRY
+  #ifdef DEBUG_TRANSMISSION
   Serial.println("rescue to default");
   Serial.print("type ");Serial.println(remPackage.type);
   Serial.print("throttle ");Serial.println(remPackage.throttle);
@@ -421,6 +421,9 @@ void activateESTOP(uint8_t mode) {
   uint8_t decreseThrottleValue;
 
   if (!dataEStop.triggered) {
+      #ifdef DEBUG_ESTOP
+        Serial.println("E-Stop triggered");
+      #endif
       eStopThrottlePos = 512;
       returnData.eStopArmed = false;
       rxSettings.eStopArmed = false;
@@ -445,13 +448,17 @@ void activateESTOP(uint8_t mode) {
         if (eStopThrottlePos >= 256) {
           eStopThrottlePos = eStopThrottlePos - decreseThrottleValue;
           speedControl( eStopThrottlePos, 0);
-          Serial.println(eStopThrottlePos);
+          #ifdef DEBUG_ESTOP
+            Serial.print("Simulate throttle position: "); Serial.println(eStopThrottlePos);
+          #endif
           estopTimerDecrese = millis();
         } else {
-          if (millis() - estopTimerDecrese >= 5000){
+          if (millis() - estopTimerDecrese >= 2000){
             dataEStop.fullBreakDone = true;
             releaseBreakTimer = millis();
-            Serial.println("Full break + 2sec wait done!");
+            #ifdef DEBUG_ESTOP
+              Serial.println("Full break done, wait 2 seconds");
+            #endif
           }
         }
       }
@@ -469,7 +476,9 @@ void activateESTOP(uint8_t mode) {
       rxSettings.eStopArmed = false;
       dataEStop.armed = false;
       updateLastTransmissionTimer();
-      Serial.println("release break and go on");
+      #ifdef DEBUG_ESTOP
+        Serial.println("Release break after 5 seconds and reset eStop");
+      #endif
     }
 
     if (rf69_manager.available()) {
@@ -478,7 +487,9 @@ void activateESTOP(uint8_t mode) {
         } else {
 
           if (analyseMessage()) {
-            Serial.println("Got valid message...");
+            #ifdef DEBUG_ESTOP
+              Serial.println("Got valid message...");
+            #endif
             if ((millis() - goodTransissionsTimer) <= 2000) {
             if (goodTransmissions >= 15) {
               goodTransmissions = 0;
@@ -486,8 +497,10 @@ void activateESTOP(uint8_t mode) {
               dataEStop.fullBreakDone = false;
               returnData.eStopArmed = true;
               rxSettings.eStopArmed = true;
-              Serial.println("Recovered");
-              Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
+              #ifdef DEBUG_ESTOP
+                Serial.println("Recovered");
+                Serial.print("Recover time: "); Serial.println(millis() - goodTransissionsTimer);
+              #endif
               updateLastTransmissionTimer();
             } else {
               if (remPackage.throttle <= 560){
@@ -517,7 +530,9 @@ void armEstop(){
         dataEStop.armed = true;
         returnData.eStopArmed = true;
         rxSettings.eStopArmed = true;
-        Serial.print("Arm Estop time: "); Serial.println(millis() - goodTransissionsTimerEstop);
+        #ifdef DEBUG_ESTOP
+          Serial.print("Arm Estop time: "); Serial.println(millis() - goodTransissionsTimerEstop);
+        #endif
       }
     } else {
       goodTransmissionsEstop = 0;
@@ -535,6 +550,10 @@ bool resetAdress() {
   if (millis() - debugData.lastTransmissionAvaible > 5000) {
     if (!digitalRead(resetPin)) {
 
+      #ifdef DEBUG_SETTINGS
+        Serial.println("Reset encryptionKey");
+      #endif
+
       for (int i = 0; i <=15; i++) {
         rxSettings.customEncryptionKey[i] = encryptionKey[i];
       }
@@ -546,12 +565,6 @@ bool resetAdress() {
       initiateReceiver();
 
       setStatus(RESET);
-      Serial.println("Reset");
-      Serial.println(rxSettings.Frequency);
-      for (uint8_t i = 0; i <=15; i++){
-        Serial.print(rxSettings.customEncryptionKey[i]);
-      }
-      Serial.println("");
     }
   }
 }
@@ -574,10 +587,23 @@ bool analyseMessage() {
   rf69_manager.setTimeout(20);
   updateLastTransmissionTimer();
 
-  Serial.println("Received message: ");
-  Serial.print("remPackage.type: "); Serial.println(remPackage.type);
+  #ifdef DEBUG_TRANSMISSION
+    Serial.println("Received message: ");
+    Serial.print("remPackage.type: "); Serial.println(remPackage.type);
+    Serial.print("remPackage.throttle: "); Serial.println(remPackage.throttle);
+    Serial.print("remPackage.trigger: "); Serial.println(remPackage.trigger);
+    Serial.print("remPackage.headlight: "); Serial.println(remPackage.headlight);
+  #endif
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
+      #ifdef DEBUG_TRANSMISSION
+        Serial.println("Send message back: ");
+        Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("returnData.receiverRssi: "); Serial.println(returnData.receiverRssi);
+        Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
+        Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
+        Serial.println("....");
+      #endif
       return true;
     } else {
       updateLastTransmissionTimer();
@@ -598,13 +624,15 @@ void analyseSettingsMessage() {
   uint8_t len = sizeof(rxSettings);
   uint8_t from;
 
-  Serial.println("Jump into Settings");
-
   remPackage.type = 0;
 
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
-    Serial.println("New Settings loaded: ");
-    Serial.print("triggerMode: "); Serial.println(rxSettings.triggerMode);
+    #ifdef DEBUG_SETTINGS
+      Serial.println("New Settings received, restart RFM69 modul");
+      for ( int i = 0; i < numOfSettings; i++ ) {
+          Serial.print("Setting number: "); Serial.print(i); Serial.print(" value: "); Serial.println(settingRules[i][0]);
+        }
+    #endif
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       updateLastTransmissionTimer();
@@ -685,6 +713,9 @@ void controlStatusLed() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void initiateReceiver() {
+  #ifdef DEBUG_TRANSMISSION
+    Serial.print("Initiate RFM69 modul: ");
+  #endif
   digitalWrite(RFM69_RST, HIGH);
   delay(10);
   digitalWrite(RFM69_RST, LOW);
@@ -699,11 +730,14 @@ void initiateReceiver() {
   rf69.setTxPower(20);
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
 
-  Serial.println(rxSettings.Frequency);
-  for (uint8_t i = 0; i <=15; i++){
-    Serial.print(rxSettings.customEncryptionKey[i]);
-  }
-  Serial.println("");
+  #ifdef DEBUG_TRANSMISSION
+    Serial.print("Frequency: "); Serial.println(rxSettings.Frequency);
+    Serial.print("encryptionKey: ");
+    for (uint8_t i = 0; i <=15; i++){
+      Serial.print(rxSettings.customEncryptionKey[i]);
+    }
+    Serial.println("");
+  #endif
 
 
 }
@@ -856,14 +890,33 @@ void getUartData() {
 if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
   if ( millis() - lastUartPull >= uartPullInterval ) {
 
-    #ifdef DEBUG
-    Serial.print("UART pull: "); Serial.println(lastUartPull);
+    #ifdef DEBUG_TELEMETRY
+      Serial.print("New UART pull after: "); Serial.print(millis() - lastUartPull); Serial.println("ms");
     #endif
 
     lastUartPull = millis();
 
     if ( UART.getVescValues() )
     {
+
+      #ifdef DEBUG_TELEMETRY
+        Serial.println("Successfully pulled UART data");
+      #endif
+
+      returnData.inpVoltage         = UART.data.inpVoltage;
+      returnData.ampHours           = UART.data.ampHours;
+      returnData.rpm                = UART.data.rpm;
+      returnData.tachometerAbs      = UART.data.tachometerAbs;
+      returnData.avgInputCurrent    = UART.data.avgInputCurrent;
+
+      #ifdef DEBUG_TELEMETRY
+        Serial.println("Basic telemetry");
+        Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
+        Serial.print("returnData.ampHours: "); Serial.println(returnData.ampHours);
+        Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
+        Serial.print("returnData.tachometerAbs: "); Serial.println(returnData.tachometerAbs);
+        Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
+      #endif
 
       #ifdef ESC_UNITY
         returnData.filteredFetTemp0   = UART.data.filteredFetTemp0;
@@ -873,6 +926,19 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
         returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent0;
         returnData.avgMotorCurrent1   = UART.data.avgMotorCurrent1;
         returnData.dutyCycleNow0      = UART.data.dutyCycleNow0;
+
+        if (returnData.filteredFetTemp1 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredFetTemp1 temp -> 0");
+          #endif
+          returnData.filteredFetTemp1   = 0.0;
+        }
+        if (returnData.filteredMotorTemp1 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredMotorTemp1 temp -> 0");
+          #endif
+          returnData.filteredMotorTemp1   = 0.0;
+        }
 
         #ifdef DEBUG_TELEMETRY
           Serial.println("UNITY specific telemetry");
@@ -892,6 +958,19 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
         returnData.avgMotorCurrent0   = UART.data.avgMotorCurrent;
         returnData.dutyCycleNow0      = UART.data.dutyCycleNow;
 
+        if (returnData.filteredFetTemp0 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredFetTemp0 temp -> 0");
+          #endif
+          returnData.filteredFetTemp0   = 0.0;
+        }
+        if (returnData.filteredMotorTemp0 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredMotorTemp0 temp -> 0");
+          #endif
+          returnData.filteredMotorTemp0   = 0.0;
+        }
+
         #ifdef DEBUG_TELEMETRY
           Serial.println("VESC specific telemetry");
           Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
@@ -901,22 +980,8 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
         #endif
       #endif
 
-      returnData.ampHours           = UART.data.ampHours;
-      returnData.inpVoltage         = UART.data.inpVoltage;
-      returnData.rpm                = UART.data.rpm;
-      returnData.tachometerAbs      = UART.data.tachometerAbs;
-      returnData.avgInputCurrent    = UART.data.avgInputCurrent;
-
       uartFailCounter = 0;
 
-      #ifdef DEBUG_TELEMETRY
-        Serial.println("Basic telemetry");
-        Serial.print("returnData.ampHours: "); Serial.println(returnData.ampHours);
-        Serial.print("returnData.inpVoltage: "); Serial.println(returnData.inpVoltage);
-        Serial.print("returnData.rpm: "); Serial.println(returnData.rpm);
-        Serial.print("returnData.tachometerAbs: "); Serial.println(returnData.tachometerAbs);
-        Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
-      #endif
     }
     else
     {
@@ -936,10 +1001,16 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
         returnData.filteredMotorTemp1 = 0.0;
       #endif
       uartFailCounter++;
+      #ifdef DEBUG_TELEMETRY
+        Serial.print("uartFailCounter: "); Serial.println(uartFailCounter);
+        Serial.print("uartFailCounterLimit: : "); Serial.println(uartFailCounterLimit);
+      #endif
       if (uartFailCounter > uartFailCounterLimit){
         ignoreUartPull = true;
+        #ifdef DEBUG_TELEMETRY
+          Serial.println("uartFailcounter max reached > deactivate UART PULL until restart");
+        #endif
       }
-
     }
 
   }
@@ -950,9 +1021,18 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void setDefaultFlashSettings() {
+
+  #ifdef DEBUG_SETTINGS
+    Serial.println("Load default settings");
+  #endif
+
   for ( int i = 0; i < numOfSettings; i++ ) {
     setSettingValue(i, settingRules[i][0]);
-    Serial.print("Setting number: "); Serial.print(i); Serial.print(" value: "); Serial.println(settingRules[i][0]);
+
+    #ifdef DEBUG_SETTINGS
+      Serial.print("Setting number: "); Serial.print(i); Serial.print(" value: "); Serial.println(settingRules[i][0]);
+    #endif
+
   }
 
   rxSettings.firmVersion = VERSION;

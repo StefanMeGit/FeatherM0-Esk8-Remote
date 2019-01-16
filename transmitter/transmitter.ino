@@ -19,8 +19,8 @@
 //#define DEBUG_TRANSMISSION    //activate transmission debugging
 
 // - Choose frequency:
-//#define RFM_EU        // RFM_EU for 415Mhz in Europe
-#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU        // RFM_EU for 415Mhz in Europe
+//#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose UART protocoll:
 //#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
@@ -1797,7 +1797,7 @@ void mediumbuttonPress() {
 
 void longbuttonPress() {
 
-  if ((throttlePosition == BOTTOM) && !triggerActive()){
+  if ((throttlePosition == BOTTOM) && !triggerActive() && extraButtonActive()){
     u8g2.setDisplayRotation(U8G2_R0);
     drawTitle("Settings", 1500);
     remPackage.throttle = 512;
