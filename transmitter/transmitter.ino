@@ -250,8 +250,16 @@ const char stringValues[11][4][15] = {
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
 
 const char dataSuffix[11][4] = {"V", "KMH", "km", "A","ms","dBm", "", "MPH", "mi.", "%", "C"};
+
+#ifdef ESC_UNITY
 const char dataPrefix[4][13] = {"SPEED", "BATTERY", "MOSFET", "CONNECT"};
 const char dataPrefix2[4][13] = {"SPEED", "MOTORS", "MOTORS", "CONNECT"};
+#endif
+
+#ifdef ESC_VESC
+const char dataPrefix[4][13] = {"SPEED", "POWER", "TEMP", "CONNECT"};
+const char dataPrefix2[4][13] = {"SPEED", "MOTORS", "MOTORS", "CONNECT"};
+#endif
 
 #ifdef ESC_UNITY
 // Defining struct to handle callback data for UNITY
