@@ -2016,16 +2016,16 @@ void drawDetailPage() {
       unitFourth = 3;
       break;
     case 2:
-      valueFirst = returnData.filteredMotorTemp0;
+      valueFirst = returnData.filteredFetTemp0;
       decimalsFirst = 1;
       unitFirst = 10;
-      valueSecond = returnData.filteredMotorTemp1;
+      valueSecond = returnData.filteredFetTemp1;
       decimalsSecond = 1;
       unitSecond = 10;
-      valueThird = returnData.filteredFetTemp0;
+      valueThird = returnData.filteredMotorTemp0;
       decimalsThird = 1;
       unitThird = 10;
-      valueFourth = returnData.filteredFetTemp1;
+      valueFourth = returnData.filteredMotorTemp1;
       decimalsFourth = 1;
       unitFourth = 10;
       break;

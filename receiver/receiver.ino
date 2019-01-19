@@ -211,7 +211,7 @@ uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
-uint16_t uartPullInterval = 200;
+uint16_t uartPullInterval = 250;
 uint8_t uartFailCounter = 0;
 bool ignoreUartPull = false;
 uint8_t uartFailCounterLimit = 10;
@@ -940,6 +940,19 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
           returnData.filteredMotorTemp1   = 0.0;
         }
 
+        if (returnData.filteredFetTemp0 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredFetTemp0 temp -> 0");
+          #endif
+          returnData.filteredFetTemp0   = 0.0;
+        }
+        if (returnData.filteredMotorTemp0 <= 0.0) {
+          #ifdef DEBUG_TELEMETRY
+            Serial.println("No valid filteredMotorTemp0 temp -> 0");
+          #endif
+          returnData.filteredMotorTemp0   = 0.0;
+        }
+
         #ifdef DEBUG_TELEMETRY
           Serial.println("UNITY specific telemetry");
           Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
@@ -970,6 +983,8 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
           #endif
           returnData.filteredMotorTemp0   = 0.0;
         }
+
+
 
         #ifdef DEBUG_TELEMETRY
           Serial.println("VESC specific telemetry");
