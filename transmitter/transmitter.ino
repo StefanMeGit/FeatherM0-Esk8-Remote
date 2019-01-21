@@ -371,7 +371,8 @@ unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 uint8_t batteryLevelRemote = 0;
 unsigned long batteryLevelRemoteTimer = 2000;
-unsigned long remoteBatteryCheckTimer = 0;
+uint8_t remoteBatteryCheckCycleCounter = 0;
+uint16_t remoteBatterySample = 0;
 
 uint8_t averageRemoteBatteryTotalCounter = 0;
 uint16_t averageRemoteBatteryTotal = 0;
@@ -1476,7 +1477,7 @@ void calculateThrottlePosition()
 uint8_t remoteBatteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 2;
+  uint8_t samples = 1;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1527,16 +1528,24 @@ float batteryPackPercentage( float voltage ) {
 //---------------------------------------------------------------------------------------
 void checkBatteryLevel() {
   float boardBattery;
-  uint16_t remoteBattery;
+  uint8_t remoteBattery;
   uint16_t boardBatteryAbs;
   String device;
+
+  #ifdef DEBUG_BATTERY
+    Serial.println("------------------------------------------------------------");
+  #endif
 
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
 
-  if (millis() - remoteBatteryCheckTimer >= 1000) {
-      remoteBattery = remoteBatteryLevel();
-      remoteBatteryCheckTimer = millis();
+  if (remoteBatteryCheckCycleCounter <= 5) {
+      remoteBatterySample =+ remoteBatteryLevel();
+      remoteBatteryCheckCycleCounter++;
+  } else {
+    remoteBattery = remoteBatterySample / 5;
+    remoteBatterySample = 0;
+    remoteBatteryCheckCycleCounter = 0;
   }
 
   #ifdef DEBUG_BATTERY
@@ -1546,7 +1555,7 @@ void checkBatteryLevel() {
     Serial.print("Battery Voltage: "); Serial.println(returnData.inpVoltage);
   #endif
 
-  if ((boardBattery <= 20 && boardBattery != 0 && !connectionLost) || (remoteBattery <= 15)) {
+  if ((boardBattery <= 20 && !connectionLost) || (remoteBattery <= 15)) {
     #ifdef DEBUG_BATTERY
     Serial.print("Low voltage in percent: "); Serial.println(boardBattery);
     #endif
@@ -1557,23 +1566,41 @@ void checkBatteryLevel() {
       Serial.print("remoteBattery: "); Serial.println(remoteBattery);
       #endif
       if (boardBattery <= 10 && boardBatteryWarningLevel <= 1) {
+        #ifdef DEBUG_BATTERY
+        Serial.println("Announce battery low <= 10%");
+        Serial.print("boardBattery: "); Serial.println(boardBattery);
+        #endif
         device = "Board: ";
         device += String(boardBatteryAbs);
         device += "%";
         setAnnouncement("Low Battery!", device, 10000, true);
         boardBatteryWarningLevel = 2;
       } else if (boardBattery <= 20 && boardBatteryWarningLevel <= 0) {
+        #ifdef DEBUG_BATTERY
+        Serial.println("Announce battery low <= 20%");
+        Serial.print("boardBattery: "); Serial.println(boardBattery);
+        #endif
         device = "Board: ";
         device += String(boardBatteryAbs);
         device += "%";
         setAnnouncement("Low Battery!!!", device, 5000, true);
         boardBatteryWarningLevel = 1;
-      } else {
+      } else if (remoteBattery <= 15){
+        #ifdef DEBUG_BATTERY
+        Serial.println("Announce battery low <= 10%");
+        Serial.print("remoteBattery: "); Serial.println(remoteBattery);
+        #endif
         device = "Remote: ";
         device += String(remoteBattery);
         device += "%";
         setAnnouncement("Low Battery!", device, 5000, true);
         remoteBatteryWanringLevel = 1;
+      } else {
+        #ifdef DEBUG_BATTERY
+        Serial.println("Wrong battey alarm?");
+        Serial.print("boardBattery: "); Serial.println(boardBattery);
+        Serial.print("remoteBattery: "); Serial.println(remoteBattery);
+        #endif
       }
     }
   } else if (returnData.inpVoltage >= ((txSettings.batteryCells*4.2)+0.5) && throttlePosition == BOTTOM){
