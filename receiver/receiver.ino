@@ -291,6 +291,7 @@ void setup() {
   UART.setSerialPort(&Serial1);
   Serial1.begin(115200);
 
+
   loadFlashSettings();
 
   pinMode(statusLedPin, OUTPUT);
@@ -309,6 +310,24 @@ delay(50);
 
 #ifdef DEBUG
   Serial.println("Startup finished");
+  #ifdef RFM_EU
+    Serial.println("RFM_EU");
+  #endif
+  #ifdef RFM_USA
+    Serial.println("RFM_USA");
+  #endif
+  #ifdef BOARD_V0_1
+    Serial.println("BOARD_V0_1");
+  #endif
+  #ifdef BOARD_V0_2
+    Serial.println("BOARD_V0_2");
+  #endif
+  #ifdef ESC_UNITY
+    Serial.println("ESC_UNITY");
+  #endif
+  #ifdef ESC_VESC
+    Serial.println("ESC_VESC");
+  #endif
 #endif
 
 }
@@ -896,8 +915,7 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
 
     lastUartPull = millis();
 
-    if ( UART.getVescValues() )
-    {
+    if ( UART.getVescValues() ) {
 
       #ifdef DEBUG_TELEMETRY
         Serial.println("Successfully pulled UART data");
@@ -984,8 +1002,6 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
           returnData.filteredMotorTemp0   = 0.0;
         }
 
-
-
         #ifdef DEBUG_TELEMETRY
           Serial.println("VESC specific telemetry");
           Serial.print("returnData.filteredFetTemp0: "); Serial.println(returnData.filteredFetTemp0);
@@ -997,9 +1013,7 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
 
       uartFailCounter = 0;
 
-    }
-    else
-    {
+    } else {
       returnData.ampHours           = 0.0;
       returnData.inpVoltage         = 0.0;
       returnData.rpm                = 0;
