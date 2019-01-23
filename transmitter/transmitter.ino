@@ -434,6 +434,8 @@ uint8_t remoteBatteryWanringLevel = 0;
 
 bool eStopAnnounced = false;
 
+bool displayOFF = false;
+
 // SETUP
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -457,10 +459,16 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
-  u8g2.setDisplayRotation(U8G2_R3);
-  u8g2.begin();
+  if (extraButtonActive() && triggerActive() && (throttlePosition == MIDDLE)) {
+    displayOFF = true;
+  }
 
-  drawStartScreen();
+  if (!displayOFF) {
+    u8g2.setDisplayRotation(U8G2_R3);
+    u8g2.begin();
+
+    drawStartScreen();
+  }
 
   loadFlashSettings();
 
@@ -482,7 +490,7 @@ void setup() {
     }
   }
 
-  if (extraButtonActive()) {
+  if (extraButtonActive() && !displayOFF) {
       changeSettings = true;
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
@@ -520,17 +528,20 @@ void loop() {
     transmitToReceiver(0,30);
   }
 
-  updateMainDisplay();
+  if (!displayOFF) {
+    updateMainDisplay();
+    detectButtonPress();
+    if (displayView >= 4) {
+        displayView = 0;
+    }
+  } else {
+    delay(20);
+  }
 
   debugData.cycleTimeFinish = millis();
   debugData.cycleTime = debugData.cycleTimeFinish - debugData.cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
-  }
-
-  detectButtonPress();
-  if (displayView >= 4) {
-      displayView = 0;
   }
   checkConnection();
   if (txSettings.voltageAlarm == 1) {
@@ -1832,7 +1843,7 @@ void mediumbuttonPress() {
 
 void longbuttonPress() {
 
-  if ((throttlePosition == BOTTOM) && !triggerActive() && extraButtonActive()){
+  if ((throttlePosition == BOTTOM) && !triggerActive() && extraButtonActive() && !displayOFF){
     u8g2.setDisplayRotation(U8G2_R0);
     drawTitle("Settings", 1500);
     remPackage.throttle = 512;
