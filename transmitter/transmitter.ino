@@ -552,7 +552,7 @@ void loop() {
   }
   checkConnection();
   if (txSettings.voltageAlarm == 1) {
-    //checkBatteryLevel();
+    checkBatteryLevel();
   }
   controlVib();
 
@@ -1500,7 +1500,7 @@ void calculateThrottlePosition()
 uint8_t remoteBatteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 1;
+  uint8_t samples = 3;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
@@ -1562,14 +1562,7 @@ void checkBatteryLevel() {
   boardBattery = batteryPackPercentage( returnData.inpVoltage );
   boardBatteryAbs = abs( floor(boardBattery) );
 
-  if (remoteBatteryCheckCycleCounter <= 5) {
-      remoteBatterySample =+ remoteBatteryLevel();
-      remoteBatteryCheckCycleCounter++;
-  } else {
-    remoteBattery = remoteBatterySample / 5;
-    remoteBatterySample = 0;
-    remoteBatteryCheckCycleCounter = 0;
-  }
+  remoteBattery = remoteBatteryLevel();
 
   #ifdef DEBUG_BATTERY
     Serial.print("Battery voltage: "); Serial.println(returnData.inpVoltage);
@@ -1578,7 +1571,7 @@ void checkBatteryLevel() {
     Serial.print("Battery Voltage: "); Serial.println(returnData.inpVoltage);
   #endif
 
-  if ((boardBattery <= 20 && !connectionLost) || (remoteBattery <= 15)) {
+  if ((boardBattery <= 20 && boardBattery != 0 && !connectionLost) || (remoteBattery <= 15)) {
     #ifdef DEBUG_BATTERY
     Serial.print("Low voltage in percent: "); Serial.println(boardBattery);
     #endif
@@ -1610,7 +1603,7 @@ void checkBatteryLevel() {
         boardBatteryWarningLevel = 1;
       } else if (remoteBattery <= 15){
         #ifdef DEBUG_BATTERY
-        Serial.println("Announce battery low <= 10%");
+        Serial.println("Announce battery low <= 15%");
         Serial.print("remoteBattery: "); Serial.println(remoteBattery);
         #endif
         device = "Remote: ";
