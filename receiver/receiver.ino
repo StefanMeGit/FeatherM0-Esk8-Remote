@@ -35,7 +35,7 @@
 // -------- DO NOT ANYTHING CHANGE FROM HERE
 // --------------------------------------------------------------------------------------
 
-#define VERSION 7.0
+#define VERSION 8.0
 
 #ifdef RFM_EU
   #define RF69_FREQ   433.0
