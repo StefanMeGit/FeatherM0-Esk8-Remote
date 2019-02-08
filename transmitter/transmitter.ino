@@ -14,9 +14,9 @@
 
 // - Activate DEBUG - remote will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-//#define DEBUG                 //activate serial monitor
+#define DEBUG                 //activate serial monitor
 //#define DEBUG_BATTERY         //activate battery debugging
-//#define DEBUG_TRANSMISSION    //activate transmission debugging
+#define DEBUG_TRANSMISSION    //activate transmission debugging
 
 // - Choose frequency:
 #define RFM_EU        // RFM_EU for 415Mhz in Europe
@@ -459,15 +459,24 @@ void setup() {
 
   digitalWrite(RFM69_RST, LOW);
 
+  calculateThrottlePosition();
+
   if (extraButtonActive() && triggerActive() && (throttlePosition == MIDDLE)) {
     displayOFF = true;
   }
 
   if (!displayOFF) {
+    #ifdef DEBUG
+      Serial.println("Screen on");
+    #endif
     u8g2.setDisplayRotation(U8G2_R3);
     u8g2.begin();
 
     drawStartScreen();
+  } else {
+    #ifdef DEBUG
+      Serial.println("Screen off");
+    #endif
   }
 
   loadFlashSettings();
@@ -480,9 +489,7 @@ void setup() {
     policeModeActive = true;
   }
 
-  calculateThrottlePosition();
-
-  if ((txSettings.policeMode == 1) && (throttlePosition == BOTTOM) && triggerActive() ){
+  if ((txSettings.policeMode == 1) && (throttlePosition == BOTTOM) && triggerActive() && !displayOFF){
     policeModeActive = false;
   } else {
     if (txSettings.policeMode == 1) {
@@ -535,7 +542,7 @@ void loop() {
         displayView = 0;
     }
   } else {
-    delay(20);
+    delay(10);
   }
 
   debugData.cycleTimeFinish = millis();
@@ -545,7 +552,7 @@ void loop() {
   }
   checkConnection();
   if (txSettings.voltageAlarm == 1) {
-    checkBatteryLevel();
+    //checkBatteryLevel();
   }
   controlVib();
 
@@ -564,8 +571,10 @@ void sleep() {
   digitalWrite(13, LOW); //swtich off LED
   rf69.sleep(); // switch off radio
   drawMessage("See You!", "Switching off...", 2000);
-  updateMainDisplay();
-  u8g2.setPowerSave(1); // set OLED into sleep
+  if (!displayOFF) {
+    updateMainDisplay();
+    u8g2.setPowerSave(1); // set OLED into sleep
+  }
   delay(100);
   attachInterrupt(6, ISR, LOW);
   delay(100);
@@ -574,11 +583,13 @@ void sleep() {
 
   //wake up
   changeSettings = false;
-  u8g2.setPowerSave(0);
-  drawMessage("Lets Ride!", "Switching on...", 2000);
-  updateMainDisplay();
+  if (!displayOFF) {
+    u8g2.setPowerSave(0);
+    u8g2.setDisplayRotation(U8G2_R3);
+    drawMessage("Lets Ride!", "Switching on...", 2000);
+    updateMainDisplay();
+  }
   detachInterrupt(6);
-  u8g2.setDisplayRotation(U8G2_R3);
   updateLastTransmissionTimer();
 
 }
@@ -589,11 +600,15 @@ void sleep() {
  void checkConnection() {
 
    if (returnData.eStopArmed && !eStopAnnounced && txSettings.eStopMode <= 1) {
-     setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
+     if (!displayOFF) {
+       setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
+     }
      eStopAnnounced = true;
      connectionInit = true;
    } else if (returnData.eStopArmed && !eStopAnnounced){
-     setAnnouncement("Ready!!!", "Connection ok", 2000, true);
+     if (!displayOFF) {
+       setAnnouncement("Ready!!!", "Connection ok", 2000, true);
+     }
      eStopAnnounced = true;
      connectionInit = true;
    }
@@ -604,9 +619,13 @@ void sleep() {
         String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
-        setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 5000, true);
+        if (!displayOFF) {
+          setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 5000, true);
+        }
       } else if (!connectionLost && connectionInit){
-        setAnnouncement("Signal!!!", "Connection lost", 5000, true);
+        if (!displayOFF) {
+          setAnnouncement("Signal!!!", "Connection lost", 5000, true);
+        }
         connectionInit = false;
       }
 
@@ -704,8 +723,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        createCustomKey();
-        //createTestKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
