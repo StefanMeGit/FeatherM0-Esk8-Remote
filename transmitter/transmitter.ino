@@ -560,6 +560,7 @@ void ISR (){}
 void sleep() {
 
   //sleeping
+  changeSettings = false;
   digitalWrite(13, LOW); //swtich off LED
   rf69.sleep(); // switch off radio
   drawMessage("See You!", "Switching off...", 2000);
@@ -572,6 +573,7 @@ void sleep() {
   __WFI();
 
   //wake up
+  changeSettings = false;
   u8g2.setPowerSave(0);
   drawMessage("Lets Ride!", "Switching on...", 2000);
   updateMainDisplay();
