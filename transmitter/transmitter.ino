@@ -600,15 +600,11 @@ void sleep() {
  void checkConnection() {
 
    if (returnData.eStopArmed && !eStopAnnounced && txSettings.eStopMode <= 1) {
-     if (!displayOFF) {
        setAnnouncement("EStop Armed!", "Safe ride!", 2000, true);
-     }
      eStopAnnounced = true;
      connectionInit = true;
    } else if (returnData.eStopArmed && !eStopAnnounced){
-     if (!displayOFF) {
        setAnnouncement("Ready!!!", "Connection ok", 2000, true);
-     }
      eStopAnnounced = true;
      connectionInit = true;
    }
@@ -619,13 +615,9 @@ void sleep() {
         String lastTranmissionDurationStr = "Time: ";
         lastTranmissionDurationStr += String(millis() - debugData.lastTransmissionAvaible);
         lastTranmissionDurationStr += "ms";
-        if (!displayOFF) {
           setAnnouncement("E-Stop!!!", lastTranmissionDurationStr, 5000, true);
-        }
       } else if (!connectionLost && connectionInit){
-        if (!displayOFF) {
           setAnnouncement("Signal!!!", "Connection lost", 5000, true);
-        }
         connectionInit = false;
       }
 
@@ -723,8 +715,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        createCustomKey();
-        //createTestKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
@@ -1339,7 +1331,7 @@ bool extraButtonActive() {
 // --------------------------------------------------------------------------------------
 void setAnnouncement(String stringLine1, String stringLine2, short duration, bool fade) {
 
-  if (!activateAnnouncement) {
+  if (!activateAnnouncement && !displayOFF) {
 
     announcementStringLine1 = stringLine1;
     announcementStringLine2 = stringLine2;
@@ -1348,7 +1340,7 @@ void setAnnouncement(String stringLine1, String stringLine2, short duration, boo
 
     vibIntervalDuration = 500; // interval duration for normal alarm
     vibIntervalCounterTarget = abs(duration / vibIntervalDuration);
-    u8g2.setContrast(255);
+        u8g2.setContrast(255);
 
     activateAnnouncement = true;
     announcementTimer = millis();
@@ -1364,17 +1356,16 @@ void drawAnnouncement(){
 
   if ((millis() - announcementTimer < announcementDuration) || !announcementFade) {
 
-    x = 25;
-    y = 2;
+      x = 25;
+      y = 2;
 
-    u8g2.setFontDirection(1);
-    u8g2.drawBox( 11, 0, 55, 112);
-    u8g2.setFontMode(1);
-    u8g2.setDrawColor(2);
-    drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_helvB12_tr  ); //u8g2_font_7x14B_tr smaller alternative
-    drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
-    u8g2.setFontDirection(0);
-
+      u8g2.setFontDirection(1);
+      u8g2.drawBox( 11, 0, 55, 112);
+      u8g2.setFontMode(1);
+      u8g2.setDrawColor(2);
+      drawString(announcementStringLine1, announcementStringLine1.length(), x + 23 , y , u8g2_font_helvB12_tr  ); //u8g2_font_7x14B_tr smaller alternative
+      drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
+      u8g2.setFontDirection(0);
 
 
     //if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
@@ -1385,8 +1376,8 @@ void drawAnnouncement(){
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
-      u8g2.setFontMode(0);
-      u8g2.setDrawColor(1);
+        u8g2.setFontMode(0);
+        u8g2.setDrawColor(1);
     }
   }
 }
