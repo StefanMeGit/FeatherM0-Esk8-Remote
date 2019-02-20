@@ -19,8 +19,8 @@
 //#define DEBUG_SETTINGS        //activate settings debugging
 
 // - Choose frequency:
-#define RFM_EU                // RFM_EU for 415Mhz in Europe
-//#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
+//#define RFM_EU                // RFM_EU for 415Mhz in Europe
+#define RFM_USA             // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose board version:
 //#define BOARD_V0_1        // BOARD_V0_1 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9

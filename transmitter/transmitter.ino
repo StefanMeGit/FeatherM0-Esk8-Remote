@@ -715,8 +715,8 @@ void checkEncryptionKey() {
 
       if (i == 15 ) {
         Serial.println("Default key detected => createCustomKey()");
-        //createCustomKey();
-        createTestKey();
+        createCustomKey();
+        //createTestKey();
       }
 
     } else {
