@@ -41,6 +41,8 @@
   #define RF69_FREQ   915.0
 #endif
 
+
+
 // Defining the type of display used (128x64)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -650,45 +652,62 @@ void sleep() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void initiateTransmitter() {
+
+
+  #ifdef DEBUG_TRANSMISSION
+      Serial.println("Initiate RFM module...");
+  #endif
   digitalWrite(RFM69_RST, HIGH);
   delay(10);
   digitalWrite(RFM69_RST, LOW);
   delay(10);
   if (!rf69_manager.init()) {
     while (1);
+  } else {
+    #ifdef DEBUG_TRANSMISSION
+        Serial.println("RFM module successfully started");
+    #endif
   }
 
   rf69.setTxPower(20);
+  #ifdef DEBUG_TRANSMISSION
+    Serial.println("set power: 20 dBm");
+    Serial.print("useDefaultKeyForTransmission: "); Serial.println(useDefaultKeyForTransmission);
+  #endif
 
   if (useDefaultKeyForTransmission == 1) {
-    Serial.println("useDefaultKeyForTransmission == 1");
     rf69.setFrequency(RF69_FREQ);
     rf69.setEncryptionKey(encryptionKey);
-    Serial.println(RF69_FREQ);
-    for (uint8_t i = 0; i <=15; i++){
-      Serial.print(encryptionKey[i]);
-    }
-    Serial.println("");
+    #ifdef DEBUG_TRANSMISSION
+      Serial.print("set frequency: "); Serial.print(RF69_FREQ); Serial.println("Mhz");
+      Serial.print("set encryption key: ");
+      for (uint8_t i = 0; i <=15; i++){
+        Serial.print(encryptionKey[i]);
+      }
+      Serial.println("");
+    #endif
 
   } else if (useDefaultKeyForTransmission == 2){
-    Serial.println("useDefaultKeyForTransmission == 2");
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
     rf69.setFrequency(txSettings.Frequency);
-    Serial.println(txSettings.Frequency);
-    for (uint8_t i = 0; i <=15; i++){
-      Serial.print(encryptionKey[i]);
-    }
-    Serial.println("");
+    #ifdef DEBUG_TRANSMISSION
+      Serial.print("set frequency: "); Serial.print(txSettings.Frequency); Serial.println("Mhz");
+      for (uint8_t i = 0; i <=15; i++){
+        Serial.print(encryptionKey[i]);
+      }
+      Serial.println("");
+    #endif
 
   } else if (useDefaultKeyForTransmission == 0){
-    Serial.println("useDefaultKeyForTransmission == 0");
     rf69.setFrequency(txSettings.Frequency);
     rf69.setEncryptionKey(txSettings.customEncryptionKey);
-    Serial.println(txSettings.Frequency);
-    for (uint8_t i = 0; i <=15; i++){
-      Serial.print(txSettings.customEncryptionKey[i]);
-    }
-    Serial.println("");
+    #ifdef DEBUG_TRANSMISSION
+      Serial.print("set frequency: "); Serial.print(txSettings.Frequency); Serial.println("Mhz");
+      for (uint8_t i = 0; i <=15; i++){
+        Serial.print(txSettings.customEncryptionKey[i]);
+      }
+      Serial.println("");
+    #endif
   }
 
   delay(20);
@@ -708,19 +727,22 @@ void updateLastTransmissionTimer (){
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
 
+  Serial.print("Stored encryptionKey: ");
+
   for (uint8_t i = 0; i < 16; i++) {
-    Serial.print("Stored encryptionKey: "); Serial.println(txSettings.customEncryptionKey[i]);
+    Serial.print(txSettings.customEncryptionKey[i]);
 
     if (txSettings.customEncryptionKey[i] == 0) {
 
       if (i == 15 ) {
+        Serial.println("");
         Serial.println("Default key detected => createCustomKey()");
         createCustomKey();
         //createTestKey();
       }
 
     } else {
-
+      Serial.println("");
       Serial.println("Custom key detected => setup/loop");
       break;
 
@@ -755,6 +777,7 @@ void createTestKey() {
 void createCustomKey() {
   uint8_t generatedCustomEncryptionKey[16];
 
+  Serial.print("Custom encryption key: ");
   for (uint8_t i = 0; i < 16; i++) {
     generatedCustomEncryptionKey[i] = random(255);
     Serial.print(generatedCustomEncryptionKey[i]);
@@ -766,8 +789,9 @@ void createCustomKey() {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
 
+  Serial.print("Custom frequency: ");
   txSettings.Frequency = random(RF69_FREQ - 2, RF69_FREQ + 2);
-  Serial.print(txSettings.Frequency);
+  Serial.println(txSettings.Frequency);
 
   updateFlashSettings();
 
