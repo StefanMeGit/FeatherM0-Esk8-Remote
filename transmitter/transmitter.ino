@@ -210,7 +210,7 @@ struct menuItems{
   {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  RF69_FREQ,  RF69_FREQ - 2,  RF69_FREQ + 2,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  RF69_FREQ,  RF69_FREQ - 10,  RF69_FREQ + 10,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
@@ -937,9 +937,9 @@ bool transmitKeyToReceiver() {
 // --------------------------------------------------------------------------------------
 bool transmitFreqToReceiver() {
 
-  useDefaultKeyForTransmission = 2;
+  //useDefaultKeyForTransmission = 2;
 
-  initiateTransmitter();
+  //initiateTransmitter();
 
   remPackage.type = 1;
   txSettings.eStopArmed = false;
