@@ -589,6 +589,7 @@ void sleep() {
     u8g2.setPowerSave(0);
     u8g2.setDisplayRotation(U8G2_R3);
     drawMessage("Lets Ride!", "Switching on...", 2000);
+    u8g2.setDisplayRotation(U8G2_R3);
     updateMainDisplay();
   }
   detachInterrupt(6);
