@@ -1,4 +1,4 @@
-// FeatherFly Transmitter - eSk8 Remote
+// FeatherFly SMD Transmitter - eSk8 Remote
 
 #include <U8g2lib.h>
 #include <Wire.h>
@@ -6,6 +6,7 @@
 #include <FlashStorage.h>
 #include <RH_RF69.h>
 #include <RHReliableDatagram.h>
+#include <math.h>
 
 // --------------------------------------------------------------------------------------
 // -------- SETUP
@@ -200,17 +201,17 @@ struct menuItems{
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    1,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {9,   275,  0,    400,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  530,  400,  600,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  794,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {9,   435,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
+  {10,  638,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  930,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  {14,  10,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
+  {14,  1,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {28,  1,    0,    1,    "Voltage alarm", 0 , 11},         //22 activate voltage alarm
-  {27,  0,    0,    3,    "Home screen", 0 , 10},         //22 start page
+  {27,  3,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  RF69_FREQ,  RF69_FREQ - 2,  RF69_FREQ + 2,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  431,  RF69_FREQ - 2,  RF69_FREQ + 2,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
@@ -218,6 +219,7 @@ struct menuItems{
   {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
   {23,  -1,   0,    0,    "Exit",           0 , 0}         //22 Exit
 };
+
 
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define BOARDID     0
@@ -341,7 +343,7 @@ const uint8_t triggerPin = 5;
 const uint8_t extraButtonPin = 6;
 const uint8_t batteryMeasurePin = 9;
 const uint8_t hallSensorPin = A5;
-const uint8_t vibrationActuatorPin = A4;
+const uint8_t vibrationActuatorPin = 10;
 
 // Definition for RFM69HW radio on Feather m0
 #define RFM69_CS     8
@@ -510,6 +512,10 @@ void setup() {
   updateLastTransmissionTimer();
 
 }
+
+#ifdef DEBUG
+  Serial.println("Setup Done");
+#endif
 
 // loop
 // --------------------------------------------------------------------------------------
@@ -737,8 +743,8 @@ void checkEncryptionKey() {
       if (i == 15 ) {
         Serial.println("");
         Serial.println("Default key detected => createCustomKey()");
-        createCustomKey();
-        //createTestKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
@@ -766,6 +772,8 @@ void createTestKey() {
   for (uint8_t i = 0; i < 16; i++) {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
   }
+
+  txSettings.Frequency = 433;
 
   updateFlashSettings();
 
@@ -944,8 +952,8 @@ bool transmitFreqToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(1,200)) {
-    Serial.println("FirstTrans ok");
+  if ( transmitToReceiver(0,200)) {
+    Serial.println("First transmission ok -> remPackage.type = 1");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       Serial.println("SettingsSend ok");
       uint8_t len = sizeof(remPackage);
@@ -1473,6 +1481,7 @@ void calculateThrottlePosition()
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
   uint8_t samples = 10;
+  uint16_t uncompensatedThrottle;
 
   if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
@@ -1491,11 +1500,11 @@ void calculateThrottlePosition()
 
   hallValue = total / samples;
 
-  if ( hallValue >= txSettings.centerHallValue )
+   if ( hallValue >= txSettings.centerHallValue )
   {
-    throttle = constrain( map(hallValue, txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax), centerThrottle, 1023 );
+    throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 4), centerThrottle, 1023 );
   } else {
-    throttle = constrain( map(hallValue, txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle), 0, centerThrottle );
+    throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -4), 0, centerThrottle );
   }
 
   // Remove hall center noise
@@ -1517,6 +1526,76 @@ void calculateThrottlePosition()
     throttlePosition = MIDDLE;
   }
 }
+
+
+// fscale function test
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float fscale( float originalMin, float originalMax, float newBegin, float
+newEnd, float inputValue, float curve){
+
+  float OriginalRange = 0;
+  float NewRange = 0;
+  float zeroRefCurVal = 0;
+  float normalizedCurVal = 0;
+  float rangedValue = 0;
+  boolean invFlag = 0;
+
+
+  // condition curve parameter
+  // limit range
+
+  if (curve > 10) curve = 10;
+  if (curve < -10) curve = -10;
+
+  curve = (curve * -.1) ; // - invert and scale - this seems more intuitive - postive numbers give more weight to high end on output
+  curve = pow(10, curve); // convert linear scale into lograthimic exponent for other pow function
+
+  /*
+   Serial.println(curve * 100, DEC);   // multply by 100 to preserve resolution
+   Serial.println();
+   */
+
+  // Check for out of range inputValues
+  if (inputValue < originalMin) {
+    inputValue = originalMin;
+  }
+  if (inputValue > originalMax) {
+    inputValue = originalMax;
+  }
+
+  // Zero Refference the values
+  OriginalRange = originalMax - originalMin;
+
+  if (newEnd > newBegin){
+    NewRange = newEnd - newBegin;
+  }
+  else
+  {
+    NewRange = newBegin - newEnd;
+    invFlag = 1;
+  }
+
+  zeroRefCurVal = inputValue - originalMin;
+  normalizedCurVal  =  zeroRefCurVal / OriginalRange;   // normalize to 0 - 1 float
+
+  // Check for originalMin > originalMax  - the math for all other cases i.e. negative numbers seems to work out fine
+  if (originalMin > originalMax ) {
+    return 0;
+  }
+
+  if (invFlag == 0){
+    rangedValue =  (pow(normalizedCurVal, curve) * NewRange) + newBegin;
+
+  }
+  else     // invert the ranges
+  {
+    rangedValue =  newBegin - (pow(normalizedCurVal, curve) * NewRange);
+  }
+
+  return rangedValue;
+}
+
 
 // Calculate the remotes battery level
 //---------------------------------------------------------------------------------------
@@ -1945,7 +2024,7 @@ void drawPage() {
       unitThird = 10;
       break;
     case 3:
-      valueMain = debugData.cycleTime;
+      valueMain = throttle;
       decimalsMain = 1;
       unitMain = 4;
       valueSecond = debugData.rssi;
