@@ -249,7 +249,7 @@ const char stringValues[12][6][15] = {
   {"off", "startup", "activation", ""},
   {"SPEED", "POWER", "TEMP", "CONNECT"},
   {"off","on",""},
-  {"0/20","0/40","2720", "5/20", "5/40", "0/100"}
+  {"0/20","0/40","2/20", "5/20", "5/40", "0/100"}
 };
 
 const uint16_t transmissionModes[6][2] = {
