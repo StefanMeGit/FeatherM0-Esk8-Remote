@@ -237,7 +237,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[12][5][15] = {
+const char stringValues[12][6][15] = {
   {"Killswitch", "Cruise", "", ""},
   {"Li-ion", "LiPo", "", ""},
   {"PPM", "PPM and UART", "UART only", ""},
@@ -249,7 +249,16 @@ const char stringValues[12][5][15] = {
   {"off", "startup", "activation", ""},
   {"SPEED", "POWER", "TEMP", "CONNECT"},
   {"off","on",""},
-  {"0/20","0/40","2,20", "5,20", "5,40"}
+  {"0/20","0/40","2720", "5/20", "5/40", "0/100"}
+};
+
+const uint16_t transmissionModes[6][2] = {
+  {0,20},
+  {0,40},
+  {2,20},
+  {5,20},
+  {5,40},
+  {0,100}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
@@ -538,65 +547,15 @@ void loop() {
       }
     }
 
-    if (txSettings.transmissionMode == 0) {
-      if (transmitToReceiver(0,20)) {
-        if (!displayOFF) {
-          updateMainDisplay();
-          detectButtonPress();
-          if (displayView >= 4) {
-              displayView = 0;
-          }
-        } else {
-          delay(10);
+    if (transmitToReceiver(txSettings.transmissionMode)) {
+      if (!displayOFF) {
+        updateMainDisplay();
+        detectButtonPress();
+        if (displayView >= 4) {
+            displayView = 0;
         }
-      }
-    } else if (txSettings.transmissionMode == 1) {
-      if (transmitToReceiver(0,40)) {
-        if (!displayOFF) {
-          updateMainDisplay();
-          detectButtonPress();
-          if (displayView >= 4) {
-              displayView = 0;
-          }
-        } else {
-          delay(10);
-        }
-      }
-    } else if (txSettings.transmissionMode == 2) {
-      if (transmitToReceiver(2,20)) {
-        if (!displayOFF) {
-          updateMainDisplay();
-          detectButtonPress();
-          if (displayView >= 4) {
-              displayView = 0;
-          }
-        } else {
-          delay(10);
-        }
-      }
-    } else if (txSettings.transmissionMode == 3) {
-      if (transmitToReceiver(5,20)) {
-        if (!displayOFF) {
-          updateMainDisplay();
-          detectButtonPress();
-          if (displayView >= 4) {
-              displayView = 0;
-          }
-        } else {
-          delay(10);
-        }
-      }
-    } else if (txSettings.transmissionMode == 4) {
-      if (transmitToReceiver(5,40)) {
-        if (!displayOFF) {
-          updateMainDisplay();
-          detectButtonPress();
-          if (displayView >= 4) {
-              displayView = 0;
-          }
-        } else {
-          delay(10);
-        }
+      } else {
+        delay(10);
       }
     }
   }
@@ -857,11 +816,11 @@ void createCustomKey() {
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
+bool transmitToReceiver(uint8_t transmissionMode) {
   debugData.transmissionTimeStart = millis();
 
-  rf69_manager.setRetries(retries);
-  rf69_manager.setTimeout(timeout);
+  rf69_manager.setRetries(transmissionModes[transmissionMode][0]);
+  rf69_manager.setTimeout(transmissionModes[transmissionMode][1]);
 
   uint8_t len = sizeof(remPackage);
 
@@ -921,7 +880,7 @@ bool transmitSettingsToReceiver() {
   rf69_manager.setRetries(0);
   rf69_manager.setTimeout(100);
 
-  if ( transmitToReceiver(0,100)) {
+  if ( transmitToReceiver(5)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(returnData);
       uint8_t from;
@@ -953,7 +912,7 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(1,200)) {
+  if ( transmitToReceiver(5)) {
 
     Serial.println("Good first phase");
 
@@ -1001,7 +960,7 @@ bool transmitFreqToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(1,200)) {
+  if ( transmitToReceiver(5)) {
     Serial.println("FirstTrans ok");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       Serial.println("SettingsSend ok");
@@ -1059,7 +1018,7 @@ bool pairNewBoard() {
 
   remPackage.type = 0;
 
-  if (transmitToReceiver(0,200)) {
+  if (transmitToReceiver(5)) {
     drawMessage("Complete", "New board paired!", 1000);
   } else {
     drawMessage("Fail", "Board not paired", 1000);
@@ -1936,7 +1895,7 @@ void longbuttonPress() {
     drawTitle("Settings", 1500);
     remPackage.throttle = 512;
     remPackage.trigger = 0;
-    transmitToReceiver(0,30);
+    transmitToReceiver(5);
     changeSettings = true;
   } else {
     sleep();
