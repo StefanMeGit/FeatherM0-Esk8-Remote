@@ -603,7 +603,7 @@ bool analyseMessage() {
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
 
   rf69_manager.setRetries(0);
-  rf69_manager.setTimeout(20);
+  rf69_manager.setTimeout(10);
   updateLastTransmissionTimer();
 
   #ifdef DEBUG_TRANSMISSION

@@ -168,6 +168,7 @@ typedef struct {
   uint8_t policeMode;               // 24
   uint8_t homeScreen;               // 25
   uint8_t voltageAlarm;             // 26
+  uint8_t transmissionMode = 2;     // 27
 } TxSettings;
 
 TxSettings txSettings;
@@ -176,7 +177,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 28;
+const uint8_t numOfSettings = 29;
 
 struct menuItems{
   uint8_t ID;
@@ -212,6 +213,7 @@ struct menuItems{
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
   {19,  RF69_FREQ,  RF69_FREQ - 10,  RF69_FREQ + 10,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
+  {28,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
@@ -235,7 +237,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[11][4][15] = {
+const char stringValues[12][5][15] = {
   {"Killswitch", "Cruise", "", ""},
   {"Li-ion", "LiPo", "", ""},
   {"PPM", "PPM and UART", "UART only", ""},
@@ -246,7 +248,8 @@ const char stringValues[11][4][15] = {
   {"Metric", "Imperial", "", ""},
   {"off", "startup", "activation", ""},
   {"SPEED", "POWER", "TEMP", "CONNECT"},
-  {"off","on",""}
+  {"off","on",""},
+  {"0/20","0/40","2,20", "5,20", "5,40"}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
@@ -534,17 +537,68 @@ void loop() {
         remPackage.throttle = throttle;
       }
     }
-    transmitToReceiver(0,30);
-  }
 
-  if (!displayOFF) {
-    updateMainDisplay();
-    detectButtonPress();
-    if (displayView >= 4) {
-        displayView = 0;
+    if (txSettings.transmissionMode == 0) {
+      if (transmitToReceiver(0,20)) {
+        if (!displayOFF) {
+          updateMainDisplay();
+          detectButtonPress();
+          if (displayView >= 4) {
+              displayView = 0;
+          }
+        } else {
+          delay(10);
+        }
+      }
+    } else if (txSettings.transmissionMode == 1) {
+      if (transmitToReceiver(0,40)) {
+        if (!displayOFF) {
+          updateMainDisplay();
+          detectButtonPress();
+          if (displayView >= 4) {
+              displayView = 0;
+          }
+        } else {
+          delay(10);
+        }
+      }
+    } else if (txSettings.transmissionMode == 2) {
+      if (transmitToReceiver(2,20)) {
+        if (!displayOFF) {
+          updateMainDisplay();
+          detectButtonPress();
+          if (displayView >= 4) {
+              displayView = 0;
+          }
+        } else {
+          delay(10);
+        }
+      }
+    } else if (txSettings.transmissionMode == 3) {
+      if (transmitToReceiver(5,20)) {
+        if (!displayOFF) {
+          updateMainDisplay();
+          detectButtonPress();
+          if (displayView >= 4) {
+              displayView = 0;
+          }
+        } else {
+          delay(10);
+        }
+      }
+    } else if (txSettings.transmissionMode == 4) {
+      if (transmitToReceiver(5,40)) {
+        if (!displayOFF) {
+          updateMainDisplay();
+          detectButtonPress();
+          if (displayView >= 4) {
+              displayView = 0;
+          }
+        } else {
+          delay(10);
+        }
+      }
     }
-  } else {
-    delay(10);
   }
 
   debugData.cycleTimeFinish = millis();
@@ -628,6 +682,8 @@ void sleep() {
 
       connectionLost = true;
       eStopAnnounced = false;
+      updateMainDisplay();
+      detectButtonPress();
     } else {
       connectionLost = false;
     }
@@ -1282,6 +1338,7 @@ short getSettingValue(uint8_t index) {
     case 26:    value = txSettings.policeMode;      break;
     case 27:    value = txSettings.homeScreen;      break;
     case 28:    value = txSettings.voltageAlarm;    break;
+    case 29:    value = txSettings.transmissionMode;break;
 
 
     default: /* Do nothing */ break;
@@ -1318,6 +1375,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 26:        txSettings.policeMode = value;      break;
     case 27:        txSettings.homeScreen = value;      break;
     case 28:        txSettings.voltageAlarm = value;    break;
+    case 29:        txSettings.transmissionMode = value;break;
 
     default: /* Do nothing */ break;
   }
