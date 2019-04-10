@@ -151,6 +151,8 @@ typedef struct {
   uint8_t policeMode;               // 24
   uint8_t homeScreen;               // 25
   uint8_t voltageAlarm;             // 26
+  uint8_t transmissionMode = 2;     // 27
+  uint8_t modemConfig = 0;          // 28
 } RxSettings;
 
 RxSettings rxSettings;
@@ -745,6 +747,17 @@ void initiateReceiver() {
   if (!rf69_manager.init()) {
     while (1);
   }
+
+  if (rxSettings.modemConfig == 0) {
+    rf69.setModemConfig(RH_RF69::FSK_Rb250Fd250);
+  } else if (rxSettings.modemConfig == 1){
+    rf69.setModemConfig(RH_RF69::GFSK_Rb250Fd250);
+  } else if (rxSettings.modemConfig == 2){
+    rf69.setModemConfig(RH_RF69::FSK_Rb125Fd125);
+  } else if (rxSettings.modemConfig == 3){
+    rf69.setModemConfig(RH_RF69::GFSK_Rb125Fd125);
+  }
+
 
   uint8_t len = 4;
   rf69.setSyncWords(syncWord, len);

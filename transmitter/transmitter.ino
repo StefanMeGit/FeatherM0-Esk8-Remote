@@ -169,6 +169,7 @@ typedef struct {
   uint8_t homeScreen;               // 25
   uint8_t voltageAlarm;             // 26
   uint8_t transmissionMode = 2;     // 27
+  uint8_t modemConfig = 0;          // 28
 } TxSettings;
 
 TxSettings txSettings;
@@ -177,7 +178,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 29;
+const uint8_t numOfSettings = 30;
 
 struct menuItems{
   uint8_t ID;
@@ -213,7 +214,8 @@ struct menuItems{
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
   {19,  RF69_FREQ,  RF69_FREQ - 10,  RF69_FREQ + 10,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
-  {28,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
+  {28,  0,    0,    4,    "Transmission mode", 0 , 12},         //24 Standby Mode
+  {29,  0,    0,    4,    "Modem config", 0 , 13},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
@@ -236,8 +238,9 @@ struct menuItems{
 #define DEFAULTKEY  21
 #define SETTINGS    22
 #define EXIT        23
+#define MODEM       29
 
-const char stringValues[12][6][15] = {
+const char stringValues[13][6][15] = {
   {"Killswitch", "Cruise", "", ""},
   {"Li-ion", "LiPo", "", ""},
   {"PPM", "PPM and UART", "UART only", ""},
@@ -249,16 +252,24 @@ const char stringValues[12][6][15] = {
   {"off", "startup", "activation", ""},
   {"SPEED", "POWER", "TEMP", "CONNECT"},
   {"off","on",""},
-  {"0/20","0/40","2/20", "5/20", "5/40", "0/100"}
+  {"0/20","0/40","2/20", "2/40", "5/30", ""},
+  {"FSK 250kbs","GFSK 250kbs","FSK 125kbs", "GFSK 125kbs"}
 };
 
 const uint16_t transmissionModes[6][2] = {
   {0,20},
   {0,40},
   {2,20},
-  {5,20},
-  {5,40},
+  {2,40},
+  {5,30},
   {0,100}
+};
+
+const uint8_t transmissionModemConfig[4][1] = {
+  {RH_RF69::FSK_Rb250Fd250},
+  {RH_RF69::GFSK_Rb250Fd250},
+  {RH_RF69::FSK_Rb125Fd125},
+  {RH_RF69::GFSK_Rb125Fd125}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
@@ -685,6 +696,16 @@ void initiateTransmitter() {
     #ifdef DEBUG_TRANSMISSION
         Serial.println("RFM module successfully started");
     #endif
+  }
+
+  if (txSettings.modemConfig == 0) {
+    rf69.setModemConfig(RH_RF69::FSK_Rb250Fd250);
+  } else if (txSettings.modemConfig == 1){
+    rf69.setModemConfig(RH_RF69::GFSK_Rb250Fd250);
+  } else if (txSettings.modemConfig == 2){
+    rf69.setModemConfig(RH_RF69::FSK_Rb125Fd125);
+  } else if (txSettings.modemConfig == 3){
+    rf69.setModemConfig(RH_RF69::GFSK_Rb125Fd125);
   }
 
   uint8_t len = 4;
@@ -1159,6 +1180,15 @@ void controlSettings() {
           updateFlashSettings();
           drawMessage("Complete", "Restart Board!", 2000);
         }
+      } else if (menuItems[currentSetting].ID == MODEM) {
+        if ( ! transmitSettingsToReceiver()) {
+          loadFlashSettings();
+          drawMessage("Failed", "No communication", 2000);
+        } else {
+          updateFlashSettings();
+          initiateTransmitter();
+          drawMessage("Complete", "Config changed!", 2000);
+        }
       }
       updateFlashSettings();
     }
@@ -1303,6 +1333,7 @@ short getSettingValue(uint8_t index) {
     case 27:    value = txSettings.homeScreen;      break;
     case 28:    value = txSettings.voltageAlarm;    break;
     case 29:    value = txSettings.transmissionMode;break;
+    case 30:    value = txSettings.modemConfig;     break;
 
 
     default: /* Do nothing */ break;
@@ -1340,6 +1371,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 27:        txSettings.homeScreen = value;      break;
     case 28:        txSettings.voltageAlarm = value;    break;
     case 29:        txSettings.transmissionMode = value;break;
+    case 30:        txSettings.modemConfig = value;break;
 
     default: /* Do nothing */ break;
   }
@@ -1968,7 +2000,7 @@ void drawPage() {
       unitThird = 10;
       break;
     case 3:
-      valueMain = debugData.cycleTime;
+      valueMain = debugData.transmissionTime;
       decimalsMain = 1;
       unitMain = 4;
       valueSecond = debugData.rssi;
