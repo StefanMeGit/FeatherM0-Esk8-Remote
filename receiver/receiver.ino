@@ -746,7 +746,8 @@ void initiateReceiver() {
     while (1);
   }
 
-  rf69.setSyncWords(syncWord);
+  uint8_t len = 4;
+  rf69.setSyncWords(syncWord, len);
 
   if (!rf69.setFrequency(rxSettings.Frequency)) {
   }

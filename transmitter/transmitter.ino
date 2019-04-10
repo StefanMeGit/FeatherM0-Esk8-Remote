@@ -687,7 +687,8 @@ void initiateTransmitter() {
     #endif
   }
 
-  rf69.setSyncWords(syncWord);
+  uint8_t len = 4;
+  rf69.setSyncWords(syncWord, len);
 
   rf69.setTxPower(20);
   #ifdef DEBUG_TRANSMISSION
