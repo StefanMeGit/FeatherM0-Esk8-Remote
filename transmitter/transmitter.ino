@@ -366,6 +366,8 @@ const uint8_t vibrationActuatorPin = A4;
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
+uint8_t syncWord[] = { 0x09, 0x10, 0x11, 0x12 };
+
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
 
@@ -684,6 +686,8 @@ void initiateTransmitter() {
         Serial.println("RFM module successfully started");
     #endif
   }
+
+  rf69.setSyncWords(syncWord);
 
   rf69.setTxPower(20);
   #ifdef DEBUG_TRANSMISSION
