@@ -136,6 +136,7 @@ struct debug {
   unsigned short transmissionTimeFinish = 0;
   unsigned long cycleTimeStart = 0;
   unsigned long cycleTimeFinish = 0;
+  unsigned long lostPackages = 0;
 } debugData;
 
 
@@ -564,12 +565,13 @@ void loop() {
       if (!displayOFF) {
         updateMainDisplay();
         detectButtonPress();
-        if (displayView >= 4) {
-            displayView = 0;
-        }
       } else {
         delay(10);
       }
+    } else {
+      updateMainDisplay();
+      detectButtonPress();
+      debugData.lostPackages++;
     }
   }
 
@@ -1485,6 +1487,10 @@ void controlVib() {
 //---------------------------------------------------------------------------------------
 void updateMainDisplay() {
 
+if (displayView >= 4) {
+    displayView = 0;
+}
+
 u8g2.clearBuffer();
     if ( changeSettings == true ) {
       drawSettingsMenu();
@@ -2006,7 +2012,7 @@ void drawPage() {
       valueSecond = debugData.rssi;
       decimalsSecond = 1;
       unitSecond = 5;
-      valueThird = returnData.receiverRssi;
+      valueThird = returnData.lostPackages;
       decimalsThird = 1;
       unitThird = 5;
       break;
