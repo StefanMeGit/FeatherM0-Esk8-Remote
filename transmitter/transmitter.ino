@@ -2012,7 +2012,7 @@ void drawPage() {
       valueSecond = debugData.rssi;
       decimalsSecond = 1;
       unitSecond = 5;
-      valueThird = returnData.lostPackages;
+      valueThird = debugData.lostPackages;
       decimalsThird = 1;
       unitThird = 5;
       break;
