@@ -15,7 +15,7 @@
 
 // - Activate DEBUG - remote will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-//#define DEBUG                 //activate serial monitor
+//#define DEBUG                  //activate serial monitor
 //#define DEBUG_BATTERY         //activate battery debugging
 //#define DEBUG_TRANSMISSION    //activate transmission debugging
 
@@ -24,8 +24,8 @@
 //#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose UART protocoll:
-//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
-#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
+#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
 // --------------------------------------------------------------------------------------
@@ -169,6 +169,7 @@ typedef struct {
   uint8_t policeMode;               // 24
   uint8_t homeScreen;               // 25
   uint8_t voltageAlarm;             // 26
+  uint8_t transmissionMode = 2;     // 27
 } TxSettings;
 
 TxSettings txSettings;
@@ -177,7 +178,7 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 28;
+const uint8_t numOfSettings = 29;
 
 struct menuItems{
   uint8_t ID;
@@ -201,25 +202,25 @@ struct menuItems{
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   1,    0,    1,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {9,   435,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
+  {9,   455,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
   {10,  638,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  930,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {11,  910,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
-  {14,  1,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
+  {14,  5,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
   {28,  1,    0,    1,    "Voltage alarm", 0 , 11},         //22 activate voltage alarm
   {27,  3,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  431,  RF69_FREQ - 2,  RF69_FREQ + 2,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  431,  RF69_FREQ - 5,  RF69_FREQ + 5,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
+  {28,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
   {22,  -1,   0,    0,    "Settings",       0 , 0},        //21 Settings
   {23,  -1,   0,    0,    "Exit",           0 , 0}         //22 Exit
 };
-
 
 // Defining constants to hold the special settings, so it's easy changed though the code
 #define BOARDID     0
@@ -237,7 +238,7 @@ struct menuItems{
 #define SETTINGS    22
 #define EXIT        23
 
-const char stringValues[11][4][15] = {
+const char stringValues[12][6][15] = {
   {"Killswitch", "Cruise", "", ""},
   {"Li-ion", "LiPo", "", ""},
   {"PPM", "PPM and UART", "UART only", ""},
@@ -248,7 +249,17 @@ const char stringValues[11][4][15] = {
   {"Metric", "Imperial", "", ""},
   {"off", "startup", "activation", ""},
   {"SPEED", "POWER", "TEMP", "CONNECT"},
-  {"off","on",""}
+  {"off","on",""},
+  {"0/20","0/40","2/20", "5/20", "5/40", "0/100"}
+};
+
+const uint16_t transmissionModes[6][2] = {
+  {0,20},
+  {0,40},
+  {2,20},
+  {5,20},
+  {5,40},
+  {0,100}
 };
 
 const char settingUnits[6][4] = {"S", "T", "mm", "#", "dBm", "Mhz"};
@@ -341,7 +352,7 @@ float ratioPulseDistance;
 // Pin defination
 const uint8_t triggerPin = 5;
 const uint8_t extraButtonPin = 6;
-const uint8_t batteryMeasurePin = 9;
+const uint8_t batteryMeasurePin = A7;
 const uint8_t hallSensorPin = A5;
 const uint8_t vibrationActuatorPin = 10;
 
@@ -381,6 +392,11 @@ uint16_t remoteBatterySample = 0;
 uint8_t averageRemoteBatteryTotalCounter = 0;
 uint16_t averageRemoteBatteryTotal = 0;
 uint8_t averageRemoteBattery = 0;
+float remoteBatteryFactor = 0.83;
+unsigned long remoteBatteryStartTimer = 0;
+unsigned long remoteBatteryStopTimer = 0;
+unsigned long lastSignalBlinkRemoteBattery;
+bool signalBlinkRemoteBattery = false;
 
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
@@ -461,8 +477,6 @@ void setup() {
   pinMode(DIAGLED, OUTPUT);
   pinMode(RFM69_RST, OUTPUT);
 
-  digitalWrite(RFM69_RST, LOW);
-
   calculateThrottlePosition();
 
   if (extraButtonActive() && triggerActive() && (throttlePosition == MIDDLE)) {
@@ -476,7 +490,16 @@ void setup() {
     u8g2.setDisplayRotation(U8G2_R3);
     u8g2.begin();
 
-    drawStartScreen();
+    if (!triggerActive()){
+      #ifdef DEBUG
+        Serial.println("Start animation");
+      #endif
+      drawStartScreen();
+    } else {
+      #ifdef DEBUG
+        Serial.println("Skip start animation");
+      #endif
+    }
   } else {
     #ifdef DEBUG
       Serial.println("Screen off");
@@ -513,10 +536,6 @@ void setup() {
 
 }
 
-#ifdef DEBUG
-  Serial.println("Setup Done");
-#endif
-
 // loop
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -528,6 +547,7 @@ void loop() {
 
   if (changeSettings) {
     controlSettings();
+    updateMainDisplay();
   } else {
     remPackage.type = 0;
     remPackage.trigger = triggerActive();
@@ -540,17 +560,16 @@ void loop() {
         remPackage.throttle = throttle;
       }
     }
-    transmitToReceiver(0,30);
-  }
-
-  if (!displayOFF) {
-    updateMainDisplay();
-    detectButtonPress();
-    if (displayView >= 4) {
-        displayView = 0;
+    if (transmitToReceiver(txSettings.transmissionMode)) {
+      if (!displayOFF) {
+        updateMainDisplay();
+        detectButtonPress();
+      } else {
+        delay(2);
+      }
+    } else {
+      updateMainDisplay();
     }
-  } else {
-    delay(10);
   }
 
   debugData.cycleTimeFinish = millis();
@@ -563,6 +582,10 @@ void loop() {
     checkBatteryLevel();
   }
   controlVib();
+
+  if (displayView >= 4) {
+      displayView = 0;
+  }
 
 }
 
@@ -595,6 +618,7 @@ void sleep() {
     u8g2.setPowerSave(0);
     u8g2.setDisplayRotation(U8G2_R3);
     drawMessage("Lets Ride!", "Switching on...", 2000);
+    u8g2.setDisplayRotation(U8G2_R3);
     updateMainDisplay();
   }
   detachInterrupt(6);
@@ -633,6 +657,8 @@ void sleep() {
 
       connectionLost = true;
       eStopAnnounced = false;
+      updateMainDisplay();
+      detectButtonPress();
     } else {
       connectionLost = false;
     }
@@ -732,8 +758,9 @@ void updateLastTransmissionTimer (){
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void checkEncryptionKey() {
-
-  Serial.print("Stored encryptionKey: ");
+  #ifdef DEBUG
+    Serial.print("Stored encryptionKey: ");
+  #endif
 
   for (uint8_t i = 0; i < 16; i++) {
     Serial.print(txSettings.customEncryptionKey[i]);
@@ -741,15 +768,19 @@ void checkEncryptionKey() {
     if (txSettings.customEncryptionKey[i] == 0) {
 
       if (i == 15 ) {
-        Serial.println("");
-        Serial.println("Default key detected => createCustomKey()");
-        //createCustomKey();
-        createTestKey();
+        #ifdef DEBUG
+          Serial.println("");
+          Serial.println("Default key detected => createCustomKey()");
+        #endif
+        createCustomKey();
+        //createTestKey();
       }
 
     } else {
-      Serial.println("");
-      Serial.println("Custom key detected => setup/loop");
+      #ifdef DEBUG
+        Serial.println("");
+        Serial.println("Custom key detected => setup/loop");
+      #endif
       break;
 
     }
@@ -769,11 +800,16 @@ void createTestKey() {
   }
 
   generatedCustomEncryptionKey[15] = 1;
+  Serial.print("Test key: ");
   for (uint8_t i = 0; i < 16; i++) {
     txSettings.customEncryptionKey[i] = generatedCustomEncryptionKey[i];
+    Serial.print(generatedCustomEncryptionKey[i]);
   }
+  Serial.println("");
 
-  txSettings.Frequency = 433;
+#ifdef DEBUG
+  Serial.println("WARNING: Test key active");
+#endif
 
   updateFlashSettings();
 
@@ -808,11 +844,11 @@ void createCustomKey() {
 //Function used to transmit the remPackage and receive auto acknowledgment
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool transmitToReceiver(uint8_t retries, uint16_t timeout) {
+bool transmitToReceiver(uint8_t transmissionMode) {
   debugData.transmissionTimeStart = millis();
 
-  rf69_manager.setRetries(retries);
-  rf69_manager.setTimeout(timeout);
+  rf69_manager.setRetries(transmissionModes[transmissionMode][0]);
+  rf69_manager.setTimeout(transmissionModes[transmissionMode][1]);
 
   uint8_t len = sizeof(remPackage);
 
@@ -872,7 +908,7 @@ bool transmitSettingsToReceiver() {
   rf69_manager.setRetries(0);
   rf69_manager.setTimeout(100);
 
-  if ( transmitToReceiver(0,100)) {
+  if ( transmitToReceiver(5)) {
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       uint8_t len = sizeof(returnData);
       uint8_t from;
@@ -904,7 +940,7 @@ bool transmitKeyToReceiver() {
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(1,200)) {
+  if ( transmitToReceiver(5)) {
 
     Serial.println("Good first phase");
 
@@ -945,15 +981,15 @@ bool transmitKeyToReceiver() {
 // --------------------------------------------------------------------------------------
 bool transmitFreqToReceiver() {
 
-  useDefaultKeyForTransmission = 2;
+  //useDefaultKeyForTransmission = 2;
 
-  initiateTransmitter();
+  //initiateTransmitter();
 
   remPackage.type = 1;
   txSettings.eStopArmed = false;
 
-  if ( transmitToReceiver(0,200)) {
-    Serial.println("First transmission ok -> remPackage.type = 1");
+  if ( transmitToReceiver(5)) {
+    Serial.println("FirstTrans ok");
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       Serial.println("SettingsSend ok");
       uint8_t len = sizeof(remPackage);
@@ -1010,7 +1046,7 @@ bool pairNewBoard() {
 
   remPackage.type = 0;
 
-  if (transmitToReceiver(0,200)) {
+  if (transmitToReceiver(5)) {
     drawMessage("Complete", "New board paired!", 1000);
   } else {
     drawMessage("Fail", "Board not paired", 1000);
@@ -1289,6 +1325,7 @@ short getSettingValue(uint8_t index) {
     case 26:    value = txSettings.policeMode;      break;
     case 27:    value = txSettings.homeScreen;      break;
     case 28:    value = txSettings.voltageAlarm;    break;
+    case 29:    value = txSettings.transmissionMode;break;
 
 
     default: /* Do nothing */ break;
@@ -1325,6 +1362,7 @@ void setSettingValue(uint8_t index, uint64_t value) {
     case 26:        txSettings.policeMode = value;      break;
     case 27:        txSettings.homeScreen = value;      break;
     case 28:        txSettings.voltageAlarm = value;    break;
+    case 29:        txSettings.transmissionMode = value;break;
 
     default: /* Do nothing */ break;
   }
@@ -1481,7 +1519,6 @@ void calculateThrottlePosition()
   // Hall sensor reading can be noisy, lets make an average reading.
   uint16_t total = 0;
   uint8_t samples = 10;
-  uint16_t uncompensatedThrottle;
 
   if ((txSettings.policeMode >= 1) && policeModeActive){
     throttleMax = 600;
@@ -1502,9 +1539,9 @@ void calculateThrottlePosition()
 
    if ( hallValue >= txSettings.centerHallValue )
   {
-    throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 4), centerThrottle, 1023 );
+    throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 3), centerThrottle, 1023 );
   } else {
-    throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -4), 0, centerThrottle );
+    throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -3), 0, centerThrottle );
   }
 
   // Remove hall center noise
@@ -1603,13 +1640,22 @@ newEnd, float inputValue, float curve){
 uint8_t remoteBatteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 3;
+  uint8_t samples = 5;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
+    Serial.print("Battery sample value: "); Serial.println(analogRead(batteryMeasurePin));
   }
 
-  float voltage = (refVoltage * 2 / 1024.0) * ( (float)total / (float)samples );
+  #ifdef DEBUG_BATTERY
+    Serial.print("Battery average value: "); Serial.println(analogRead(batteryMeasurePin));
+  #endif
+
+  float uncompvoltage = (refVoltage * 2 / 1024.0) * ( (float)total / (float)samples );
+  float voltage = uncompvoltage * remoteBatteryFactor;
+  #ifdef DEBUG_BATTERY
+    Serial.print("Battery voltage: "); Serial.println(voltage);
+  #endif
 
   if (voltage <= minVoltage) {
     return 0;
@@ -1956,7 +2002,7 @@ void longbuttonPress() {
     drawTitle("Settings", 1500);
     remPackage.throttle = 512;
     remPackage.trigger = 0;
-    transmitToReceiver(0,30);
+    transmitToReceiver(5);
     changeSettings = true;
   } else {
     sleep();
@@ -2418,13 +2464,29 @@ void drawBatteryRemote() {
   x = 43;
   y = 116;
 
-  if (millis() - batteryLevelRemoteTimer >= 1000) {
+  if (millis() - batteryLevelRemoteTimer >= 5000) {
       batteryLevelRemote = remoteBatteryLevel();
       batteryLevelRemoteTimer = millis();
+      #ifdef DEBUG_BATTERY
+        Serial.print("Battery level in %: "); Serial.println(batteryLevelRemote);
+      #endif
+  }
+  if (batteryLevelRemote <= 20) {
+    if (millis() - lastSignalBlinkRemoteBattery > 500) {
+      signalBlinkRemoteBattery = !signalBlinkRemoteBattery;
+      lastSignalBlinkRemoteBattery = millis();
+      #ifdef DEBUG_BATTERY
+        Serial.print("Battery low, blink frame: "); Serial.println(signalBlinkRemoteBattery);
+      #endif
+    }
+  } else {
+    signalBlinkRemoteBattery = true;
   }
 
-  u8g2.drawFrame(x + 2, y, 18, 9);
-  u8g2.drawBox(x, y + 2, 2, 5);
+  if (signalBlinkRemoteBattery == 1) {
+    u8g2.drawFrame(x + 2, y, 18, 9);
+    u8g2.drawBox(x, y + 2, 2, 5);
+  }
 
   for (uint8_t i = 0; i < 5; i++) {
     uint8_t p = round((100 / 5) * i);
