@@ -181,7 +181,7 @@ const short settingRules[numOfSettings][3] {
   { -1, 0, 0},        //16 pair new board
   {20, 14, 20},       //17 transmission power
   { -1, 0, 0},        //18 show Key
-  { RF69_FREQ, RF69_FREQ - 2, RF69_FREQ +2},  //19 Frequency
+  { RF69_FREQ, RF69_FREQ - 5, RF69_FREQ +5},  //19 Frequency
   { 0, 0 , 1},       //19 Stanby mode
   { -1, 0 , 0},       //20 Firmware
   { -1, 0, 0},        //22 Set default key
@@ -211,7 +211,7 @@ uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
-uint16_t uartPullInterval = 250;
+uint16_t uartPullInterval = 200;
 uint8_t uartFailCounter = 0;
 bool ignoreUartPull = false;
 uint8_t uartFailCounterLimit = 10;
@@ -795,6 +795,7 @@ void setThrottle( uint16_t throttle ) {
   else if ( rxSettings.controlMode == 2 ) {
 
     UART.nunchuck.valueY = map(throttle, 0, 1023, 0, 255);
+    UART.nunchuck.upperButton = false;
     UART.nunchuck.lowerButton = false;
     esc.detach();
     UART.setNunchuckValues();
@@ -819,20 +820,31 @@ void speedControl( uint16_t throttle , bool trigger ) {
 
   //Cruise control
   else if ( rxSettings.triggerMode == 1 ) {
-    if ( (trigger == true) && (throttle >= 500)) {
 
-      if ( cruising == false ) {
-        cruiseThrottle = throttle;
-        cruiseRPM = returnData.rpm;
-        cruising = true;
+      if ( (trigger == true) && (throttle >= 500)) {
+
+        if (rxSettings.controlMode == 2 ) {
+
+          UART.nunchuck.valueY = 127;
+          UART.nunchuck.upperButton = false;
+          UART.nunchuck.lowerButton = true;
+          esc.detach();
+          UART.setNunchuckValues();
+
+        } else {
+
+          if ( cruising == false ) {
+            cruiseThrottle = throttle;
+            cruiseRPM = returnData.rpm;
+            cruising = true;
+          }
+
+          setCruise( true, cruiseThrottle );
       }
-
-      setCruise( true, cruiseThrottle );
-
-    } else {
-      cruising = false;
-      setThrottle( throttle );
-    }
+      } else {
+        cruising = false;
+        setThrottle( throttle );
+      }
   }
 }
 

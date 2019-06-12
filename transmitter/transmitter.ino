@@ -201,7 +201,7 @@ struct menuItems{
   {5,   14,   0,    250,  "Motor pulley",   2 , 0},       //5 Motor pully
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
-  {8,   1,    0,    1,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   455,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
   {10,  638,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  910,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
@@ -212,7 +212,7 @@ struct menuItems{
   {27,  3,    0,    3,    "Home screen", 0 , 10},         //22 start page
   {17,  20,   14,   20,   "Transmission Power", 5 , 0},       //17 transmission power
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
-  {19,  431,  RF69_FREQ - 5,  RF69_FREQ + 5,  "Frequency",      6 , 0},            //19 Frequency
+  {19,  433,  RF69_FREQ -5, RF69_FREQ +5,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
   {28,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
