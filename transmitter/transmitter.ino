@@ -388,15 +388,9 @@ unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 uint8_t batteryLevelRemote = 0;
 unsigned long batteryLevelRemoteTimer = 2000;
-uint8_t remoteBatteryCheckCycleCounter = 0;
-uint16_t remoteBatterySample = 0;
 
-uint8_t averageRemoteBatteryTotalCounter = 0;
-uint16_t averageRemoteBatteryTotal = 0;
 uint8_t averageRemoteBattery = 0;
 float remoteBatteryFactor = 0.83;
-unsigned long remoteBatteryStartTimer = 0;
-unsigned long remoteBatteryStopTimer = 0;
 unsigned long lastSignalBlinkRemoteBattery;
 bool signalBlinkRemoteBattery = false;
 
@@ -535,6 +529,8 @@ void setup() {
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
+  
+  batteryLevelRemoteTimer = millis();
 
 }
 
