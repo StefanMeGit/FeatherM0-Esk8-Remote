@@ -200,6 +200,8 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
+							
+uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 
 // Current mode of receiver
 #define IDLE 0
@@ -744,9 +746,13 @@ void initiateReceiver() {
     while (1);
   }
 
-  if (!rf69.setFrequency(rxSettings.Frequency)) {
-  }
+  rf69.setFrequency(rxSettings.Frequency));
+  
+  uint8_t len = 4;
+  rf69.setSyncWords(syncWord, len);
+  
   rf69.setTxPower(20);
+  
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
 
   #ifdef DEBUG_TRANSMISSION
@@ -840,7 +846,7 @@ void speedControl( uint16_t throttle , bool trigger ) {
           }
 
           setCruise( true, cruiseThrottle );
-      }
+		}
       } else {
         cruising = false;
         setThrottle( throttle );

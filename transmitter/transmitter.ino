@@ -369,6 +369,8 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
+							
+uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 
 uint8_t useDefaultKeyForTransmission = 0;
 
@@ -700,7 +702,10 @@ void initiateTransmitter() {
         Serial.println("RFM module successfully started");
     #endif
   }
-
+  
+  uint8_t len = 4;
+  rf69.setSyncWords(syncWord, len);
+  
   rf69.setTxPower(20);
   #ifdef DEBUG_TRANSMISSION
     Serial.println("set power: 20 dBm");
@@ -2072,7 +2077,7 @@ void drawPage() {
     case 3:
       valueMain = throttle;
       decimalsMain = 1;
-      unitMain = 4;
+      unitMain = 6;
       valueSecond = debugData.rssi;
       decimalsSecond = 1;
       unitSecond = 5;
