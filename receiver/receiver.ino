@@ -746,7 +746,7 @@ void initiateReceiver() {
     while (1);
   }
 
-  rf69.setFrequency(rxSettings.Frequency));
+  rf69.setFrequency(rxSettings.Frequency);
   
   uint8_t len = 4;
   rf69.setSyncWords(syncWord, len);
@@ -1052,12 +1052,20 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
         Serial.print("uartFailCounter: "); Serial.println(uartFailCounter);
         Serial.print("uartFailCounterLimit: : "); Serial.println(uartFailCounterLimit);
       #endif
-      if (uartFailCounter > uartFailCounterLimit){
-        ignoreUartPull = true;
-        #ifdef DEBUG_TELEMETRY
-          Serial.println("uartFailcounter max reached > deactivate UART PULL until restart");
-        #endif
-      }
+	  if (rxSettings.controlMode <= 1) {
+		if (uartFailCounter > uartFailCounterLimit){
+			ignoreUartPull = true;
+			#ifdef DEBUG_TELEMETRY
+				Serial.println("uartFailcounter max reached > deactivate UART PULL until restart");
+			#endif
+		} else {
+			ignoreUartPull = false;
+			#ifdef DEBUG_TELEMETRY
+				Serial.println("uartFailcounter max reached > let UART PULL activated");
+			#endif
+		}
+			
+	  }
     }
 
   }
