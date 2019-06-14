@@ -214,7 +214,7 @@ uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 // Last time data was pulled from VESC
 unsigned long lastUartPull;
 uint16_t uartPullInterval = 200;
-uint8_t uartFailCounter = 0;
+uint16_t uartFailCounter = 0;
 bool ignoreUartPull = false;
 uint8_t uartFailCounterLimit = 10;
 bool uartPullAutoOff = true;
@@ -1050,7 +1050,6 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
       uartFailCounter++;
       #ifdef DEBUG_TELEMETRY
         Serial.print("uartFailCounter: "); Serial.println(uartFailCounter);
-        Serial.print("uartFailCounterLimit: : "); Serial.println(uartFailCounterLimit);
       #endif
 	  if (rxSettings.controlMode <= 1) {
 		if (uartFailCounter > uartFailCounterLimit){
@@ -1060,9 +1059,6 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
 			#endif
 		} else {
 			ignoreUartPull = false;
-			#ifdef DEBUG_TELEMETRY
-				Serial.println("uartFailcounter max reached > let UART PULL activated");
-			#endif
 		}
 			
 	  }

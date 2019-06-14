@@ -161,7 +161,7 @@ typedef struct {
   uint8_t pairNewBoard;             // 16
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
-  float firmVersion;                // 19
+  uint8_t firmVersion;              // 19
   bool eStopArmed = false;          // 20
   short Frequency;                  // 21
   uint8_t standbyMode;              // 22
@@ -387,7 +387,7 @@ const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 uint8_t batteryLevelRemote = 0;
-unsigned long batteryLevelRemoteTimer = 2000;
+unsigned long batteryLevelRemoteTimer = 5000;
 
 uint8_t averageRemoteBattery = 0;
 float remoteBatteryFactor = 0.83;
@@ -530,7 +530,7 @@ void setup() {
 
   updateLastTransmissionTimer();
   
-  batteryLevelRemoteTimer = millis();
+  batteryLevelRemoteTimer = 50000;
 
 }
 
@@ -1862,6 +1862,11 @@ void drawSettingsMenu() {
 
   if ( menuItems[ currentSetting ].ID == SETTINGS ) {
     tString = F("Reset");
+  }
+  
+    if ( menuItems[ currentSetting ].ID == FIRMWARE ) {
+    tString = F("1.0.");
+	tString += String(txSettings.firmVersion);
   }
 
   if ( changeThisSetting == true ) {
