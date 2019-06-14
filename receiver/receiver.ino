@@ -170,7 +170,7 @@ const short settingRules[numOfSettings][3] {
   {14, 0, 250},       //5 Motor pully
   {38, 0, 250},       //6 Wheel pulley
   {80, 0, 250},       //7 Wheel diameter
-  {1, 0, 2},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {2, 0, 2},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {300, 0, 400},      //9 Min hall value
   {520, 300, 700},    //10 Center hall value
   {730, 600, 1023},   //11 Max hall value
