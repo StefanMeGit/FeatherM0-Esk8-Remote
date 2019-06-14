@@ -201,7 +201,7 @@ struct menuItems{
   {5,   14,   0,    250,  "Motor pulley",   2 , 0},       //5 Motor pully
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
-  {8,   1,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
+  {8,   2,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {9,   455,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
   {10,  638,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
   {11,  910,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
