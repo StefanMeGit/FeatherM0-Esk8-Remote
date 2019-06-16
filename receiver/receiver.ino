@@ -200,7 +200,7 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
-							
+
 uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 
 // Current mode of receiver
@@ -605,8 +605,7 @@ bool analyseMessage() {
   if (rf69_manager.recvfromAck((uint8_t*)&remPackage, &len, &from)) {
 
   rf69_manager.setRetries(0);
-  rf69_manager.setTimeout(20);
-  updateLastTransmissionTimer();
+  rf69_manager.setTimeout(25);
 
   #ifdef DEBUG_TRANSMISSION
     Serial.println("Received message: ");
@@ -625,6 +624,7 @@ bool analyseMessage() {
         Serial.print("returnData.avgInputCurrent: "); Serial.println(returnData.avgInputCurrent);
         Serial.println("....");
       #endif
+      updateLastTransmissionTimer();
       return true;
     } else {
       updateLastTransmissionTimer();
@@ -650,13 +650,19 @@ void analyseSettingsMessage() {
   if (rf69_manager.recvfromAck((uint8_t*)&rxSettings, &len, &from)) {
     #ifdef DEBUG_SETTINGS
       Serial.println("New Settings received, restart RFM69 modul");
-      for ( int i = 0; i < numOfSettings; i++ ) {
-          Serial.print("Setting number: "); Serial.print(i); Serial.print(" value: "); Serial.println(settingRules[i][0]);
-        }
+      Serial.print("Frequency: "); Serial.println(rxSettings.Frequency);
+      Serial.print("ControlMode: "); Serial.println(rxSettings.controlMode);
     #endif
 
     if (!rf69_manager.sendtoWait((uint8_t*)&returnData, sizeof(returnData), from)) {
       updateLastTransmissionTimer();
+      #ifdef DEBUG_SETTINGS
+        Serial.println("Acknowledg new settings");
+      #endif
+    } else {
+      #ifdef DEBUG_SETTINGS
+        Serial.println("Could not Acknowledg new settings");
+      #endif
     }
 
     updateFlashSettings();
@@ -735,7 +741,7 @@ void controlStatusLed() {
 // --------------------------------------------------------------------------------------
 void initiateReceiver() {
   #ifdef DEBUG_TRANSMISSION
-    Serial.print("Initiate RFM69 modul: ");
+    Serial.println("Initiate RFM69 modul: ");
   #endif
   digitalWrite(RFM69_RST, HIGH);
   delay(10);
@@ -746,13 +752,15 @@ void initiateReceiver() {
     while (1);
   }
 
-  rf69.setFrequency(rxSettings.Frequency);
-  
+  if (!rf69.setFrequency(rxSettings.Frequency)){
+    Serial.println("Cannot set frequency");
+  }
+
   uint8_t len = 4;
   rf69.setSyncWords(syncWord, len);
-  
+
   rf69.setTxPower(20);
-  
+
   rf69.setEncryptionKey(rxSettings.customEncryptionKey);
 
   #ifdef DEBUG_TRANSMISSION
@@ -1060,7 +1068,7 @@ if (rxSettings.controlMode > 0 && (!ignoreUartPull && uartPullAutoOff)) {
 		} else {
 			ignoreUartPull = false;
 		}
-			
+
 	  }
     }
 

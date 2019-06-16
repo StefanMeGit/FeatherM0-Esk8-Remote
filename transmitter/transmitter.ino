@@ -42,8 +42,6 @@
   #define RF69_FREQ   915.0
 #endif
 
-
-
 // Defining the type of display used (128x64)
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -126,6 +124,16 @@ const unsigned char policeMode[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00,
 };
 
+typedef struct {
+  bool remoteInitialized = false;
+  bool throttleCalibrated = false;
+} LocalSettings;
+
+LocalSettings localSettings;
+
+FlashStorage(localSettingsFlashStore, LocalSettings);
+
+
 // Transmit and receive package
 struct debug {
   unsigned long cycleTime = 0;
@@ -161,7 +169,7 @@ typedef struct {
   uint8_t pairNewBoard;             // 16
   uint8_t transmissionPower;        // 17
   uint8_t customEncryptionKey[16];  // 18
-  uint8_t firmVersion;              // 19
+  float firmVersion;                // 19
   bool eStopArmed = false;          // 20
   short Frequency;                  // 21
   uint8_t standbyMode;              // 22
@@ -178,14 +186,14 @@ TxSettings txSettings;
 FlashStorage(flash_TxSettings, TxSettings);
 
 uint8_t currentSetting = 0;
-const uint8_t numOfSettings = 29;
+const uint8_t numOfSettings = 31;
 
 struct menuItems{
   uint8_t ID;
   short standart;
   short minimum;
   short maximum;
-  char name[19];
+  char name[22];
   uint8_t unitIdentifier;
   uint8_t valueIdentifier;
 } menuItems[] = {
@@ -202,9 +210,10 @@ struct menuItems{
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   2,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
-  {9,   455,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  638,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  910,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {30, -1,    0,    0,    "Throttle calibration",   0 , 0},      //9 Min hall value
+  {9,   645,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
+  {10,  645,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  645,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  5,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
@@ -214,7 +223,7 @@ struct menuItems{
   {18,  -1,   0,    0,    "Encyption key",  0 , 0},        //18 show Key
   {19,  433,  RF69_FREQ -5, RF69_FREQ +5,  "Frequency",      6 , 0},            //19 Frequency
   {24,  1,    0,    2,    "Standby mode", 0 , 7},         //24 Standby Mode
-  {28,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
+  {29,  0,    0,    4,    "transmission mode", 0 , 12},         //24 Standby Mode
   {26,  0,    0,    2,    "Police mode",     0 , 9},         //26 Police mode
   {20,  -1,   0,    0,    "Firmware Version", 0 , 0},       //19 Firmware
   {21,  -1,   0,    0,    "Set default key", 0 , 0},        //20 Set default key
@@ -223,20 +232,29 @@ struct menuItems{
 };
 
 // Defining constants to hold the special settings, so it's easy changed though the code
-#define BOARDID     0
-#define TRIGGER     1
-#define MODE        8
-#define ESTOP       12
-#define BREAKLIGHT  13
-#define DRIVINGMODE 15
-#define PAIR        16
-#define TXPOWER     17
-#define KEY         18
-#define FREQUENCY   19
-#define FIRMWARE    20
-#define DEFAULTKEY  21
-#define SETTINGS    22
-#define EXIT        23
+#define TXBOARDID     0
+#define TXTRIGGER     1
+#define TXMODE        8
+#define TXESTOP       12
+#define TXBREAKLIGHT  13
+#define TXDRIVINGMODE 15
+#define TXPAIR        16
+#define TXPOWER       17
+#define TXKEY         18
+#define TXFREQUENCY   19
+#define TXFIRMWARE    20
+#define TXDEFAULTKEY  21
+#define TXSETTINGS    22
+#define TXEXIT        23
+#define TXCALIBRATION 30
+
+#define IDLE 0
+#define CONNECTED 1
+#define CALIBRATION 2
+#define SETTINGS 3
+#define ESTOP 4
+
+uint8_t remoteStatus = 0;
 
 const char stringValues[12][6][15] = {
   {"Killswitch", "Cruise", "", ""},
@@ -369,7 +387,7 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 uint8_t encryptionKey[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01};
-							
+
 uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 
 uint8_t useDefaultKeyForTransmission = 0;
@@ -409,6 +427,12 @@ uint8_t throttlePosition;
 String tString;
 String tString2;
 String tString3;
+String calibrationTitle1;
+String calibrationTitle2;
+String hallString;
+String hallMaxString;
+String hallMinString;
+String hallCenterString;
 uint8_t displayView = 0;
 uint8_t x, y;
 
@@ -423,7 +447,6 @@ uint8_t vibIntervalCounter = 0;
 uint8_t vibIntervalTimer = 0;
 
 // Defining variables for Settings menu
-bool changeSettings     = false; // Global flag for whether or not one is editing the settings
 bool changeThisSetting  = false;
 bool settingsLoopFlag   = false;
 bool triggerFlag = false;
@@ -490,7 +513,7 @@ void setup() {
       #ifdef DEBUG
         Serial.println("Start animation");
       #endif
-      drawStartScreen();
+      //drawStartScreen();
     } else {
       #ifdef DEBUG
         Serial.println("Skip start animation");
@@ -521,15 +544,19 @@ void setup() {
   }
 
   if (extraButtonActive() && !displayOFF) {
-      changeSettings = true;
+      remoteStatus = SETTINGS;
       u8g2.setDisplayRotation(U8G2_R0);
       drawTitle("Settings", 1500);
+  }
+
+  if (true) {
+    remoteStatus = CALIBRATION;
   }
 
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
-  
+
   batteryLevelRemoteTimer = 50000;
 
 }
@@ -542,47 +569,59 @@ void loop() {
   debugData.cycleTimeStart = millis();
 
   calculateThrottlePosition();
+  controlVib();
+  detectButtonPress();
 
-  if (changeSettings) {
-    controlSettings();
-    updateMainDisplay();
-  } else {
-    remPackage.type = 0;
-    remPackage.trigger = triggerActive();
-    if (connectionInit) {
-      remPackage.throttle = throttle;
-    } else {
-      if (throttle >= 512){
-        remPackage.throttle = 512;
-      } else {
+  if (txSettings.voltageAlarm == 1) {
+    batteryWarning();
+  }
+
+  switch (remoteStatus) {
+
+      case IDLE:
+        u8g2.setDisplayRotation(U8G2_R3);
+        checkConnection();
+        drawIdleDisplay();
+        transmitToReceiver(txSettings.transmissionMode);
+        if (throttle > 512){
+          remPackage.throttle = 512;
+        } else {
+          remPackage.throttle = throttle;
+        }
+
+        break;
+
+      case CONNECTED:
+        u8g2.setDisplayRotation(U8G2_R3);
+        checkConnection();
+        remPackage.type = 0;
+        remPackage.trigger = triggerActive();
         remPackage.throttle = throttle;
-      }
-    }
-    if (transmitToReceiver(txSettings.transmissionMode)) {
-      if (!displayOFF) {
-        updateMainDisplay();
-        detectButtonPress();
-      } else {
-        delay(2);
-      }
-    } else {
-      updateMainDisplay();
-    }
+        transmitToReceiver(txSettings.transmissionMode);
+        if (!displayOFF) {
+          drawIdleDisplay();
+        } else {
+          delay(2);
+        }
+        break;
+
+      case CALIBRATION:
+        u8g2.setDisplayRotation(U8G2_R3);
+        controlCalibrationDisplay();
+        drawCalibrationDisplay();
+        break;
+
+      case SETTINGS:
+        u8g2.setDisplayRotation(U8G2_R0);
+        controlSettings();
+        drawIdleDisplay();
+        break;
   }
 
   debugData.cycleTimeFinish = millis();
   debugData.cycleTime = debugData.cycleTimeFinish - debugData.cycleTimeStart;
   if (debugData.cycleTime > debugData.longestCycleTime) {
       debugData.longestCycleTime = debugData.cycleTime;
-  }
-  checkConnection();
-  if (txSettings.voltageAlarm == 1) {
-    checkBatteryLevel();
-  }
-  controlVib();
-
-  if (displayView >= 4) {
-      displayView = 0;
   }
 
 }
@@ -596,12 +635,11 @@ void ISR (){}
 void sleep() {
 
   //sleeping
-  changeSettings = false;
   digitalWrite(13, LOW); //swtich off LED
   rf69.sleep(); // switch off radio
   drawMessage("See You!", "Switching off...", 2000);
   if (!displayOFF) {
-    updateMainDisplay();
+    drawIdleDisplay();
     u8g2.setPowerSave(1); // set OLED into sleep
   }
   delay(100);
@@ -611,13 +649,12 @@ void sleep() {
   __WFI();
 
   //wake up
-  changeSettings = false;
   if (!displayOFF) {
     u8g2.setPowerSave(0);
     u8g2.setDisplayRotation(U8G2_R3);
     drawMessage("Lets Ride!", "Switching on...", 2000);
     u8g2.setDisplayRotation(U8G2_R3);
-    updateMainDisplay();
+    drawIdleDisplay();
   }
   detachInterrupt(6);
   updateLastTransmissionTimer();
@@ -653,11 +690,11 @@ void sleep() {
 
       returnData.eStopArmed = false;
 
+      remoteStatus = IDLE;
       connectionLost = true;
       eStopAnnounced = false;
-      updateMainDisplay();
-      detectButtonPress();
     } else {
+      remoteStatus = CONNECTED;
       connectionLost = false;
     }
 
@@ -698,10 +735,10 @@ void initiateTransmitter() {
         Serial.println("RFM module successfully started");
     #endif
   }
-  
+
   uint8_t len = 4;
   rf69.setSyncWords(syncWord, len);
-  
+
   rf69.setTxPower(20);
   #ifdef DEBUG_TRANSMISSION
     Serial.println("set power: 20 dBm");
@@ -718,6 +755,7 @@ void initiateTransmitter() {
         Serial.print(encryptionKey[i]);
       }
       Serial.println("");
+      Serial.print("Frequency: "); Serial.println(txSettings.Frequency);
     #endif
 
   } else if (useDefaultKeyForTransmission == 2){
@@ -773,8 +811,8 @@ void checkEncryptionKey() {
           Serial.println("");
           Serial.println("Default key detected => createCustomKey()");
         #endif
-        createCustomKey();
-        //createTestKey();
+        //createCustomKey();
+        createTestKey();
       }
 
     } else {
@@ -809,7 +847,7 @@ void createTestKey() {
   Serial.println("");
 
 #ifdef DEBUG
-  Serial.println("WARNING: Test key active");
+  Serial.println("************ WARNING: Test key active ************");
 #endif
 
   updateFlashSettings();
@@ -835,7 +873,7 @@ void createCustomKey() {
   }
 
   Serial.print("Custom frequency: ");
-  txSettings.Frequency = random(RF69_FREQ - 2, RF69_FREQ + 2);
+  txSettings.Frequency = random(RF69_FREQ -5, RF69_FREQ +5);
   Serial.println(txSettings.Frequency);
 
   updateFlashSettings();
@@ -867,7 +905,7 @@ bool transmitToReceiver(uint8_t transmissionMode) {
     uint8_t len = sizeof(returnData);
     uint8_t from;
 
-    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 20, &from)) {
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 50, &from)) {
       updateLastTransmissionTimer();
       debugData.transmissionTimeFinish = millis();
       debugData.transmissionTime = debugData.transmissionTimeFinish - debugData.transmissionTimeStart;
@@ -945,16 +983,17 @@ bool transmitKeyToReceiver() {
 
     Serial.println("Good first phase");
 
-    rf69_manager.setRetries(1);
-    rf69_manager.setTimeout(300);
+    rf69_manager.setRetries(0);
+    rf69_manager.setTimeout(100);
 
     if (rf69_manager.sendtoWait((byte*)&txSettings, sizeof(txSettings), DEST_ADDRESS)) {
       Serial.println("Good second phase");
       uint8_t len = sizeof(returnData);
       uint8_t from;
-      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 200, &from)) {
-      } else {
+      if (rf69_manager.recvfromAckTimeout((uint8_t*)&returnData, &len, 30, &from)) {
         Serial.println("returned something");
+      } else {
+        Serial.println("nothing something");
         remPackage.type = 0;
         useDefaultKeyForTransmission = 0;
         initiateTransmitter();
@@ -981,10 +1020,6 @@ bool transmitKeyToReceiver() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 bool transmitFreqToReceiver() {
-
-  //useDefaultKeyForTransmission = 2;
-
-  //initiateTransmitter();
 
   remPackage.type = 1;
   txSettings.eStopArmed = false;
@@ -1049,11 +1084,30 @@ bool pairNewBoard() {
 
   if (transmitToReceiver(5)) {
     drawMessage("Complete", "New board paired!", 1000);
+    Serial.println("Successfully connected to remote");
   } else {
     drawMessage("Fail", "Board not paired", 1000);
   }
 
-  Serial.print("Exit pairNewBoard()");
+  Serial.println("Exit pairNewBoard()");
+}
+
+// Calibrate throttle
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void controlCalibrationDisplay() {
+  if (txSettings.minHallValue > hallValue){
+    txSettings.minHallValue = hallValue;
+  } else if (txSettings.maxHallValue < hallValue){
+    txSettings.maxHallValue = hallValue;
+  }
+
+  if (extraButtonActive()) {
+    txSettings.centerHallValue = hallValue;
+    localSettings.throttleCalibrated = true;
+    remoteStatus = IDLE;
+    updateFlashSettings();
+  }
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -1064,16 +1118,16 @@ void controlSettings() {
 
   if (changeThisSetting == true) {
 
-    if (menuItems[currentSetting].ID == EXIT) {
+    if (menuItems[currentSetting].ID == TXEXIT) {
       currentSetting = 0;
       u8g2.setDisplayRotation(U8G2_R3);
       u8g2.begin();
-      changeSettings = false;
       changeThisSetting  = false;
       settingsLoopFlag   = false;
       triggerFlag = false;
       settingScrollFlag  = false;
       settingsChangeValueFlag = false;
+      remoteStatus = IDLE;
     }
 
     if (settingsLoopFlag == false && menuItems[currentSetting].standart != -1) {
@@ -1128,7 +1182,7 @@ void controlSettings() {
   if ( triggerActive() ) {
     if (changeThisSetting == true && triggerFlag == false) {
       // Settings that needs to be transmitted to the recevier
-      if (menuItems[currentSetting].ID == TRIGGER) {
+      if (menuItems[currentSetting].ID == TXTRIGGER) {
         txSettings.triggerMode = getSettingValue(menuItems[currentSetting].ID);
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
@@ -1136,7 +1190,7 @@ void controlSettings() {
         } else {
           drawMessage("Complete", "Trigger mode changed", 2000);
         }
-      } else if (menuItems[currentSetting].ID == MODE) {
+      } else if (menuItems[currentSetting].ID == TXMODE) {
         txSettings.controlMode = getSettingValue(menuItems[currentSetting].ID);
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
@@ -1155,10 +1209,10 @@ void controlSettings() {
           initiateTransmitter();
           drawMessage("Complete", "Power changed", 2000);
         }
-      } else if (menuItems[currentSetting].ID == BOARDID) {
+      } else if (menuItems[currentSetting].ID == TXBOARDID) {
         selectBoard(getSettingValue(menuItems[currentSetting].ID));
         drawMessage("Complete", "New board selected!", 2000);
-      } else if (menuItems[currentSetting].ID == FREQUENCY) {
+      } else if (menuItems[currentSetting].ID == TXFREQUENCY) {
         if ( ! transmitFreqToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -1167,7 +1221,7 @@ void controlSettings() {
           initiateTransmitter();
           drawMessage("Complete", "Frequency changed", 2000);
         }
-      } else if (menuItems[currentSetting].ID == BREAKLIGHT) {
+      } else if (menuItems[currentSetting].ID == TXBREAKLIGHT) {
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -1175,7 +1229,7 @@ void controlSettings() {
           updateFlashSettings();
           drawMessage("Complete", "Changed!", 2000);
         }
-      } else if (menuItems[currentSetting].ID == ESTOP) {
+      } else if (menuItems[currentSetting].ID == TXESTOP) {
         if ( ! transmitSettingsToReceiver()) {
           loadFlashSettings();
           drawMessage("Failed", "No communication", 2000);
@@ -1188,10 +1242,10 @@ void controlSettings() {
     }
 
     if (triggerFlag == false) {
-      if (menuItems[currentSetting].ID == SETTINGS) {
+      if (menuItems[currentSetting].ID == TXSETTINGS) {
         setDefaultFlashSettings();
         drawMessage("Complete", "Default settings loaded!", 2000);
-      } else if (menuItems[currentSetting].ID == KEY) {
+      } else if (menuItems[currentSetting].ID == TXKEY) {
         for (uint8_t i = 0; i <= 15; i++) {
           txSettings.customEncryptionKey[i] = encryptionKey[i];
         }
@@ -1199,10 +1253,13 @@ void controlSettings() {
         initiateTransmitter();
 
         drawMessage("Complete", "Default encryption Key!", 2000);
-      } else if (menuItems[currentSetting].ID == PAIR) {
-        Serial.println("Settings menu - PAIR");
+      } else if (menuItems[currentSetting].ID == TXPAIR) {
+        Serial.println("Settings menu - TXPAIR");
         pairNewBoard();
-      } else {
+      } else if (menuItems[currentSetting].ID == TXCALIBRATION) {
+        Serial.println("Settings menu - throttle calibration");
+        remoteStatus = CALIBRATION;
+      }else {
       changeThisSetting = !changeThisSetting;
       triggerFlag = true;
       }
@@ -1212,6 +1269,17 @@ void controlSettings() {
   {
     triggerFlag = false;
   }
+}
+
+// Save the default settings in the FLASH
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void setDefaultLocalSettings() {
+
+  localSettings.remoteInitialized = false;
+  localSettings.throttleCalibrated = false;
+
+  updateFlashSettings();
 }
 
 // Save the default settings in the FLASH
@@ -1236,10 +1304,12 @@ void setDefaultFlashSettings() {
 // --------------------------------------------------------------------------------------
 void loadFlashSettings() {
 
+  localSettings = localSettingsFlashStore.read();
   txSettings = flash_TxSettings.read();
 
   if (txSettings.firmVersion != VERSION) {
     setDefaultFlashSettings();
+    setDefaultLocalSettings();
   }
   else {
     updateFlashSettings();
@@ -1254,7 +1324,12 @@ void loadFlashSettings() {
 // --------------------------------------------------------------------------------------
 void updateFlashSettings() {
 
+  localSettingsFlashStore.write(localSettings);
   flash_TxSettings.write(txSettings);
+  #ifdef DEBUG
+    Serial.println("Update flash settings");
+    Serial.print("Frequency: "); Serial.println(txSettings.Frequency);
+  #endif
 
   calculateRatios();
 }
@@ -1387,6 +1462,17 @@ bool triggerActive() {
   }
 }
 
+//
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+bool triggerActiveTest() {
+  if (digitalRead(triggerPin) == LOW) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 // Return true if extra Button is activated, false otherwise
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
@@ -1475,10 +1561,14 @@ void controlVib() {
 // Update the OLED for each loop
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void updateMainDisplay() {
+void drawIdleDisplay() {
+
+  if (displayView >= 4) {
+      displayView = 0;
+  }
 
 u8g2.clearBuffer();
-    if ( changeSettings == true ) {
+    if ( remoteStatus == SETTINGS ) {
       drawSettingsMenu();
     } else {
       if (activateAnnouncement){
@@ -1641,11 +1731,13 @@ newEnd, float inputValue, float curve){
 uint8_t remoteBatteryLevel() {
 
   uint16_t total = 0;
-  uint8_t samples = 5;
+  uint8_t samples = 3;
 
   for (uint8_t i = 0; i < samples; i++) {
     total += analogRead(batteryMeasurePin);
-    Serial.print("Battery sample value: "); Serial.println(analogRead(batteryMeasurePin));
+    #ifdef DEBUG_BATTERY
+      Serial.print("Battery sample value: "); Serial.println(analogRead(batteryMeasurePin));
+    #endif
   }
 
   #ifdef DEBUG_BATTERY
@@ -1699,7 +1791,7 @@ float batteryPackPercentage( float voltage ) {
 // check battery level and set alarm - 120 seconds blocked(not implemented yet)
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
-void checkBatteryLevel() {
+void batteryWarning() {
   float boardBattery;
   uint8_t remoteBattery;
   uint16_t boardBatteryAbs;
@@ -1836,19 +1928,19 @@ void drawSettingsMenu() {
     tString += settingUnits[ menuItems[currentSetting].unitIdentifier - 1 ];
   }
 
-  if ( menuItems[ currentSetting ].ID == EXIT ) {
+  if ( menuItems[ currentSetting ].ID == TXEXIT ) {
     tString = F("Exit");
   }
 
-  if ( menuItems[ currentSetting ].ID == PAIR ) {
+  if ( menuItems[ currentSetting ].ID == TXPAIR ) {
     tString = F("Pair now");
   }
 
-  if ( menuItems[ currentSetting ].ID == DEFAULTKEY ) {
+  if ( menuItems[ currentSetting ].ID == TXDEFAULTKEY ) {
     tString = F("Restore");
   }
 
-  if ( menuItems[ currentSetting ].ID == KEY ) {
+  if ( menuItems[ currentSetting ].ID == TXKEY ) {
     for (uint8_t i = 0; i < 6; i++) {
       tString += String(txSettings.customEncryptionKey[i]);
     }
@@ -1860,13 +1952,13 @@ void drawSettingsMenu() {
     }
   }
 
-  if ( menuItems[ currentSetting ].ID == SETTINGS ) {
+  if ( menuItems[ currentSetting ].ID == TXSETTINGS ) {
     tString = F("Reset");
   }
-  
-    if ( menuItems[ currentSetting ].ID == FIRMWARE ) {
+
+    if ( menuItems[ currentSetting ].ID == TXFIRMWARE ) {
     tString = F("1.0.");
-	tString += String(txSettings.firmVersion);
+  tString += String(txSettings.firmVersion);
   }
 
   if ( changeThisSetting == true ) {
@@ -1879,7 +1971,7 @@ void drawSettingsMenu() {
       drawString(tString, tString.length(), x + 50, y + 30, u8g2_font_profont12_tr );
     }
   } else {
-    if ( menuItems[ currentSetting ].ID == KEY ) {
+    if ( menuItems[ currentSetting ].ID == TXKEY ) {
       drawString(tString, tString.length(), x, y + 20, u8g2_font_profont12_tr );
       drawString(tString2, tString.length(), x, y + 33, u8g2_font_profont12_tr );
       drawString(tString3, tString.length(), x, y + 46, u8g2_font_profont12_tr );
@@ -1887,6 +1979,37 @@ void drawSettingsMenu() {
           drawString(tString, tString.length(), x, y + 30, u8g2_font_10x20_tr );
     }
   }
+}
+
+// Prints the calibration menu on the OLED display
+//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+void drawCalibrationDisplay() {
+
+    u8g2.firstPage();
+    do {
+
+      calibrationTitle1 = "Calibrate";
+      drawString(calibrationTitle1, calibrationTitle1.length(), 1, 12, u8g2_font_profont12_tr );
+      calibrationTitle2 = "Throttle";
+      drawString(calibrationTitle2, calibrationTitle2.length(), 1, 25, u8g2_font_profont12_tr );
+
+      hallMinString = String(txSettings.minHallValue) + " - ";
+      drawString(hallMinString, hallMinString.length(), 5, 85, u8g2_font_profont12_tr );
+      hallMaxString = String(txSettings.maxHallValue) + " - ";
+      drawString(hallMaxString, hallMaxString.length(), 5, 45, u8g2_font_profont12_tr );
+      hallCenterString = String(hallValue);
+      drawString(hallCenterString, hallCenterString.length(), 5, 65, u8g2_font_profont12_tr );
+
+      int8_t x = map(hallValue, txSettings.maxHallValue, txSettings.minHallValue, 39, 38 + 44);
+
+      u8g2.drawFrame(40, 38, 10, 45);
+      u8g2.drawBox(41, x - 1, 8, 2);
+
+      hallString = "<-" + String(hallValue) + "->";
+      drawString(hallString, hallString.length(), 8, 120, u8g2_font_profont12_tr );
+
+    } while ( u8g2.nextPage() );
 }
 
 // Print the startup screen
@@ -1949,10 +2072,12 @@ void drawMessage(String title, String details, uint16_t duration) {
 //---------------------------------------------------------------------------------------
 void buttonRelease() {
   if (buttonPressCount < longbuttonPressCountMax && buttonPressCount >= mediumbuttonPressCountMin) {
+    Serial.print("mediumbuttonPress: "); Serial.println(buttonPressCount);
     mediumbuttonPress();
   }
   else {
     if (buttonPressCount < mediumbuttonPressCountMin) {
+      Serial.print("shortbuttonPress: "); Serial.println(buttonPressCount);
       shortbuttonPress();
     }
   }
@@ -1966,11 +2091,12 @@ void buttonPress() {
 
 // called when button is kept pressed for less than .5 seconds
 void shortbuttonPress() {
-  if (changeSettings) {
-    changeSettings = false;
+  if (remoteStatus == SETTINGS) {
+    remoteStatus = IDLE;
     u8g2.setDisplayRotation(U8G2_R3);
   } else {
     displayView++;
+    Serial.print("displayView: "); Serial.println(displayView);
   }
 }
 
@@ -2009,7 +2135,7 @@ void longbuttonPress() {
     remPackage.throttle = 512;
     remPackage.trigger = 0;
     transmitToReceiver(5);
-    changeSettings = true;
+    remoteStatus = SETTINGS;
   } else {
     sleep();
   }
@@ -2079,7 +2205,7 @@ void drawPage() {
       valueMain = throttle;
       decimalsMain = 1;
       unitMain = 6;
-      valueSecond = debugData.rssi;
+      valueSecond = debugData.cycleTime;
       decimalsSecond = 1;
       unitSecond = 5;
       valueThird = returnData.receiverRssi;
