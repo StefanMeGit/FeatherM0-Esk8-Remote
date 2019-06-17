@@ -124,6 +124,33 @@ const unsigned char policeMode[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00,
 };
 
+const unsigned char acceptLogo[] PROGMEM = {
+	// 'Download, 50x50px
+	0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0, 0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xfc, 
+	0x00, 0x00, 0x0f, 0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xe0, 0x00, 0x00, 
+	0x01, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0x00, 0x0f, 0xfc, 0x00, 0x3f, 
+	0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xfc, 0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xf8, 
+	0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf0, 0x1f, 0xff, 
+	0xff, 0xfe, 0x03, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 0xff, 
+	0x01, 0xc0, 0xc0, 0x7f, 0xff, 0xff, 0xbf, 0x80, 0xc0, 0xc0, 0xff, 0xff, 0xff, 0x1f, 0xc0, 0xc0, 
+	0x80, 0xff, 0xff, 0xfe, 0x0f, 0xc0, 0xc0, 0x81, 0xff, 0xff, 0xfc, 0x07, 0xe0, 0x40, 0x81, 0xff, 
+	0xff, 0xf8, 0x03, 0xe0, 0x40, 0x81, 0xff, 0xff, 0xf0, 0x01, 0xe0, 0x40, 0x03, 0xff, 0x3f, 0xe0, 
+	0x03, 0xf0, 0x00, 0x03, 0xfe, 0x1f, 0xc0, 0x07, 0xf0, 0x00, 0x03, 0xfc, 0x0f, 0x80, 0x0f, 0xf0, 
+	0x00, 0x03, 0xf8, 0x07, 0x00, 0x1f, 0xf0, 0x00, 0x03, 0xf0, 0x02, 0x00, 0x3f, 0xf0, 0x00, 0x03, 
+	0xf0, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x03, 0xf8, 0x00, 0x00, 0xff, 0xf0, 0x00, 0x03, 0xfc, 0x00, 
+	0x01, 0xff, 0xf0, 0x00, 0x03, 0xfe, 0x00, 0x03, 0xff, 0xf0, 0x00, 0x03, 0xff, 0x00, 0x07, 0xff, 
+	0xf0, 0x00, 0x81, 0xff, 0x80, 0x0f, 0xff, 0xe0, 0x40, 0x81, 0xff, 0xc0, 0x1f, 0xff, 0xe0, 0x40, 
+	0x81, 0xff, 0xe0, 0x3f, 0xff, 0xe0, 0x40, 0xc0, 0xff, 0xf0, 0x7f, 0xff, 0xc0, 0xc0, 0xc0, 0xff, 
+	0xf8, 0xff, 0xff, 0xc0, 0xc0, 0xc0, 0x7f, 0xfd, 0xff, 0xff, 0x80, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 
+	0xff, 0x01, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xf0, 0x1f, 0xff, 0xff, 0xfc, 0x03, 
+	0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf8, 0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xfc, 
+	0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xff, 0x00, 0x0f, 
+	0xfc, 0x00, 0x3f, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0xe0, 0x00, 0x00, 0x01, 
+	0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xfc, 0x00, 0x00, 0x0f, 0xff, 0xc0, 
+	0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0
+};
+
+
 typedef struct {
   bool remoteInitialized = false;
   bool throttleCalibrated = false;
@@ -392,7 +419,6 @@ uint8_t syncWord[] = { 0x01, 0x02, 0x03, 0x04 };
 
 uint8_t useDefaultKeyForTransmission = 0;
 
-// Dont put this on the stack:
 uint8_t transmissionFailCounter = 0;
 bool connectionLost = false;
 bool connectionInit = false;
@@ -405,12 +431,10 @@ const float refVoltage = 3.3;
 unsigned long overchargeTimer = 0;
 unsigned long underVoltageTimer = 0;
 uint8_t batteryLevelRemote = 0;
-unsigned long batteryLevelRemoteTimer = 5000;
+unsigned long batteryLevelRemoteTimer = 10000;
 
 uint8_t averageRemoteBattery = 0;
 float remoteBatteryFactor = 0.83;
-unsigned long lastSignalBlinkRemoteBattery;
-bool signalBlinkRemoteBattery = false;
 
 // Defining variables for Hall Effect throttle.
 uint16_t hallValue, throttle;
@@ -423,22 +447,20 @@ uint8_t throttlePosition;
 #define MIDDLE 1
 #define BOTTOM 2
 
+// Calibration variables
+uint8_t calibrationStatus = 10;
+unsigned long calibrationTimer1000 = 0;
+
 // Defining variables for OLED display
 String tString;
 String tString2;
 String tString3;
-String calibrationTitle1;
-String calibrationTitle2;
 String hallString;
 String hallMaxString;
 String hallMinString;
 String hallCenterString;
 uint8_t displayView = 0;
 uint8_t x, y;
-
-// Defiing varibales for signal
-unsigned long lastSignalBlink;
-bool signalBlink = false;
 
 // Defining variables for vibration actuator
 unsigned long vibIntervalDuration = 0;
@@ -474,6 +496,18 @@ uint8_t remoteBatteryWanringLevel = 0;
 bool eStopAnnounced = false;
 
 bool displayOFF = false;
+
+int buttonState = 0;         // current state of the button
+int lastButtonState = 1;     // previous state of the button
+int buttonTriggered = 0;
+
+int triggerState = 0;         // current state of the button
+int lastTriggerState = 1;     // previous state of the button
+int triggerTriggered = 0;
+
+bool blink05 = true;
+unsigned long lastBlink = 0;
+
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -549,15 +583,13 @@ void setup() {
       drawTitle("Settings", 1500);
   }
 
-  if (true) {
+  if (!localSettings.throttleCalibrated) {
     remoteStatus = CALIBRATION;
   }
 
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
-
-  batteryLevelRemoteTimer = 50000;
 
 }
 
@@ -567,10 +599,12 @@ void setup() {
 void loop() {
 
   debugData.cycleTimeStart = millis();
-
-  calculateThrottlePosition();
-  controlVib();
+  triggerTrigger();
+  buttonTrigger();
   detectButtonPress();
+  controlVib();
+  blink();
+  calculateThrottlePosition();
 
   if (txSettings.voltageAlarm == 1) {
     batteryWarning();
@@ -606,9 +640,9 @@ void loop() {
         break;
 
       case CALIBRATION:
-        u8g2.setDisplayRotation(U8G2_R3);
-        controlCalibrationDisplay();
-        drawCalibrationDisplay();
+    u8g2.setDisplayRotation(U8G2_R3);
+    controlCalibrationDisplay();
+    drawCalibrationDisplay();
         break;
 
       case SETTINGS:
@@ -625,6 +659,57 @@ void loop() {
   }
 
 }
+
+// blink 0.5s
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void blink() {
+    if (millis() - lastBlink > 500) {
+      blink05 = !blink05;
+      lastBlink = millis();
+    }
+}
+
+// Button handling
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void buttonTrigger() {
+  buttonState = digitalRead(extraButtonPin);
+  
+  if (buttonState == LOW && lastButtonState == HIGH) {
+    lastButtonState = buttonState;
+    buttonTriggered = true;
+    Serial.println("buttonTriggered");
+  } else {
+    buttonTriggered = false;
+  }
+  
+  if (buttonState == HIGH) {
+    lastButtonState = HIGH;
+  }
+  
+}
+
+// Button handling
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void triggerTrigger() {
+  triggerState = digitalRead(triggerPin);
+  
+  if (triggerState == LOW && lastTriggerState == HIGH) {
+    lastTriggerState = triggerState;
+    triggerTriggered = true;
+    Serial.println("buttonTriggered");
+  } else {
+    triggerTriggered = false;
+  }
+  
+  if (triggerState == HIGH) {
+    lastTriggerState = HIGH;
+  }
+  
+}
+
 
 // Sleep mode handling
 // --------------------------------------------------------------------------------------
@@ -811,8 +896,8 @@ void checkEncryptionKey() {
           Serial.println("");
           Serial.println("Default key detected => createCustomKey()");
         #endif
-        //createCustomKey();
-        createTestKey();
+        createCustomKey();
+        //createTestKey();
       }
 
     } else {
@@ -1096,18 +1181,46 @@ bool pairNewBoard() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void controlCalibrationDisplay() {
-  if (txSettings.minHallValue > hallValue){
-    txSettings.minHallValue = hallValue;
-  } else if (txSettings.maxHallValue < hallValue){
-    txSettings.maxHallValue = hallValue;
-  }
+  
+  Serial.println(calibrationStatus);
+  
+  switch (calibrationStatus){
+    case 10:
+    if (buttonTriggered || triggerTriggered) {
+      calibrationStatus = 20;
+    }
+    break;
+      
+    case 20:
+    if (txSettings.minHallValue > hallValue){
+      txSettings.minHallValue = hallValue;
+    } else if (txSettings.maxHallValue < hallValue){
+      txSettings.maxHallValue = hallValue;
+    }
+    if (buttonTriggered || triggerTriggered) {
+    calibrationStatus = 30;
+    }
+    break;
+    
+  case 30:
+        calibrationTimer1000 = millis();
+    calibrationStatus = 40;
+    break;
 
-  if (extraButtonActive()) {
-    txSettings.centerHallValue = hallValue;
-    localSettings.throttleCalibrated = true;
-    remoteStatus = IDLE;
-    updateFlashSettings();
+    case 40:
+      if (millis() - calibrationTimer1000 > 1000) {
+        txSettings.centerHallValue = hallValue;
+        localSettings.throttleCalibrated = true;
+        remoteStatus = IDLE;
+        updateFlashSettings();
+        calibrationStatus = 10;
+      } else {
+
+      }
+    break;
+    
   }
+  
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -1451,21 +1564,10 @@ bool inRange(short val, short minimum, short maximum) {
   return ((minimum <= val) && (val <= maximum));
 }
 
-// Return true if trigger is activated, false otherwise
-// --------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------
-bool triggerActive() {
-  if (digitalRead(triggerPin) == LOW) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 //
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-bool triggerActiveTest() {
+bool triggerActive() {
   if (digitalRead(triggerPin) == LOW) {
     return true;
   } else {
@@ -1524,12 +1626,12 @@ void drawAnnouncement(){
       drawString(announcementStringLine2, announcementStringLine2.length(), x , y , u8g2_font_7x14_tr ); //u8g2_font_7x14B_tr smaller alternative
       u8g2.setFontDirection(0);
 
-
-    //if(triggerActive() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
-      //activateAnnouncement = false;
-      //u8g2.setFontMode(0);
-    //  u8g2.setDrawColor(1);
-    //}
+    if(triggerTrigger() && throttlePosition == MIDDLE){ // reset message when fade is off by trigger and throttle in middle pos
+      activateAnnouncement = false;
+      u8g2.setFontMode(0);
+      u8g2.setDrawColor(1);
+    }
+	
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
@@ -1985,31 +2087,73 @@ void drawSettingsMenu() {
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawCalibrationDisplay() {
+  
+  String calibrationTitle1;
+  String calibrationTitle2;
+  String calibrationTitle3;
+  String calibrationTitle4;
+  String calibrationTitle5;
+  String calibrationTitle6;
+  String calibrationTitle7;
+  String calibrationTitle8;
+  String calibrationTitle9;
+  String calibrationTitle10;
+  
+  u8g2.firstPage();
+  do {
+    
+    calibrationTitle1 = "Calibrate";
+    drawString(calibrationTitle1, calibrationTitle1.length(), 1, 12, u8g2_font_profont12_tr );
+    calibrationTitle2 = "Throttle";
+    drawString(calibrationTitle2, calibrationTitle2.length(), 1, 25, u8g2_font_profont12_tr );
+  
+  int8_t x = 0;
+    
+    switch (calibrationStatus) {
+    
+      case 10:
+        calibrationTitle3 = "Move throttle multiple times";
+        drawString(calibrationTitle3, calibrationTitle3.length(), 1, 38, u8g2_font_5x8_tf  );
+        calibrationTitle4 = "forwards and backwards";
+        drawString(calibrationTitle4, calibrationTitle4.length(), 1, 47, u8g2_font_5x8_tf  );
+        calibrationTitle5 = "START";
+        drawString(calibrationTitle5, calibrationTitle5.length(), 20, 80, u8g2_font_profont12_tr );
+        
+        break;
+      
+      case 20:
 
-    u8g2.firstPage();
-    do {
+        hallMinString = String(txSettings.minHallValue) + " - ";
+        drawString(hallMinString, hallMinString.length(), 5, 85, u8g2_font_profont12_tr );
+        hallMaxString = String(txSettings.maxHallValue) + " - ";
+        drawString(hallMaxString, hallMaxString.length(), 5, 45, u8g2_font_profont12_tr );
+        hallCenterString = String(hallValue);
+        drawString(hallCenterString, hallCenterString.length(), 5, 65, u8g2_font_profont12_tr );
 
-      calibrationTitle1 = "Calibrate";
-      drawString(calibrationTitle1, calibrationTitle1.length(), 1, 12, u8g2_font_profont12_tr );
-      calibrationTitle2 = "Throttle";
-      drawString(calibrationTitle2, calibrationTitle2.length(), 1, 25, u8g2_font_profont12_tr );
+        x = map(hallValue, txSettings.maxHallValue, txSettings.minHallValue, 39, 38 + 44);
 
-      hallMinString = String(txSettings.minHallValue) + " - ";
-      drawString(hallMinString, hallMinString.length(), 5, 85, u8g2_font_profont12_tr );
-      hallMaxString = String(txSettings.maxHallValue) + " - ";
-      drawString(hallMaxString, hallMaxString.length(), 5, 45, u8g2_font_profont12_tr );
-      hallCenterString = String(hallValue);
-      drawString(hallCenterString, hallCenterString.length(), 5, 65, u8g2_font_profont12_tr );
+        u8g2.drawFrame(40, 38, 10, 45);
+        u8g2.drawBox(41, x - 1, 8, 2);
 
-      int8_t x = map(hallValue, txSettings.maxHallValue, txSettings.minHallValue, 39, 38 + 44);
+        hallString = "<-" + String(hallValue) + "->";
+        drawString(hallString, hallString.length(), 8, 120, u8g2_font_profont12_tr );
+        
+        break;
+    
+      case 40:
+      
+        calibrationTitle6 = "Throttle is";
+        drawString(calibrationTitle6, calibrationTitle6.length(), 1, 48, u8g2_font_profont12_tr );
+        calibrationTitle7 = "calibrated!";
+        drawString(calibrationTitle7, calibrationTitle7.length(), 1, 57, u8g2_font_profont12_tr );
+		//u8g2.drawXBMP(6, 70, 50, 50, acceptLogo);
 
-      u8g2.drawFrame(40, 38, 10, 45);
-      u8g2.drawBox(41, x - 1, 8, 2);
-
-      hallString = "<-" + String(hallValue) + "->";
-      drawString(hallString, hallString.length(), 8, 120, u8g2_font_profont12_tr );
-
-    } while ( u8g2.nextPage() );
+        break;
+    
+    }
+    
+  } while ( u8g2.nextPage() );
+  
 }
 
 // Print the startup screen
@@ -2570,21 +2714,15 @@ void drawSignal() {
 
   if (connectionLost) {
 
-    if (millis() - lastSignalBlink > 500) {
-      signalBlink = !signalBlink;
-      lastSignalBlink = millis();
-    }
-
-    if (signalBlink == true) {
+    if (blink05) {
       u8g2.drawXBMP(x, y, 12, 12, connectedIcon);
     } else {
       u8g2.drawXBMP(x, y, 12, 12, noconnectionIcon);
     }
 
-    } else {
-
+  } else {
       u8g2.drawXBMP(x, y, 12, 12, connectedIcon);
-    }
+  }
 
 }
 
@@ -2603,21 +2741,11 @@ void drawBatteryRemote() {
         Serial.print("Battery level in %: "); Serial.println(batteryLevelRemote);
       #endif
   }
-  if (batteryLevelRemote <= 20) {
-    if (millis() - lastSignalBlinkRemoteBattery > 500) {
-      signalBlinkRemoteBattery = !signalBlinkRemoteBattery;
-      lastSignalBlinkRemoteBattery = millis();
-      #ifdef DEBUG_BATTERY
-        Serial.print("Battery low, blink frame: "); Serial.println(signalBlinkRemoteBattery);
-      #endif
-    }
-  } else {
-    signalBlinkRemoteBattery = true;
-  }
-
-  if (signalBlinkRemoteBattery == 1) {
-    u8g2.drawFrame(x + 2, y, 18, 9);
-    u8g2.drawBox(x, y + 2, 2, 5);
+  
+  if (batteryLevelRemote <= 20 && blink05) {
+  }	else {
+	u8g2.drawFrame(x + 2, y, 18, 9);
+	u8g2.drawBox(x, y + 2, 2, 5);
   }
 
   for (uint8_t i = 0; i < 5; i++) {
