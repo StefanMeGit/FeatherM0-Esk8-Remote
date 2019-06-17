@@ -1,4 +1,4 @@
-15943225227332745
+16037231950348341
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (http://www.bulgin.com/media/bulgin/data/Battery_holders.pdf)
@@ -5844,6 +5844,13 @@ SC-89
 0
 6
 6
+componentsearchengine
+MEE3S0505SC
+MEE3
+Undefined or Miscellaneous
+0
+4
+4
 Connector
 Banana_Jack_1Pin
 Single banana socket, footprint - 6mm drill
@@ -40886,6 +40893,314 @@ WSLP2726
 0
 4
 4
+CrumpPrints
+1W_RGB_LED_6PIN
+
+
+0
+7
+7
+CrumpPrints
+3x6x3.5mm_side_pushbutton_smd
+
+
+0
+2
+2
+CrumpPrints
+5V_buzzer
+
+5V Piezo Passive Buzzer
+0
+2
+2
+CrumpPrints
+6x6mm_pushbutton
+
+
+0
+4
+2
+CrumpPrints
+6x6mm_pushbutton_smd
+Based on TE Connectivity 2-1437565-8
+
+0
+4
+2
+CrumpPrints
+16_snap
+
+
+0
+1
+1
+CrumpPrints
+18650_Holder
+
+
+0
+2
+2
+CrumpPrints
+0480372200_Molex_USB_A_Plug_SMT
+
+USB
+0
+6
+5
+CrumpPrints
+APA102
+
+
+0
+6
+6
+CrumpPrints
+APA102_hand_solder
+
+
+0
+6
+6
+CrumpPrints
+Arduino_Pro_Mini
+
+
+0
+28
+28
+CrumpPrints
+CR2032_HOLDER
+http://www.mouser.com/ds/2/238/bat-hld-001-220194.pdf
+Linx Battery Holder 2032 bat-hld-001
+0
+3
+2
+CrumpPrints
+D1_mini
+
+
+0
+16
+16
+CrumpPrints
+FB-45-4
+
+
+0
+0
+0
+CrumpPrints
+Header_1x12_100
+
+
+0
+12
+12
+CrumpPrints
+Inductor_Bourns-SRN6045
+Bourns SRN6045 series SMD inductor
+Bourns SRN6045 SMD inductor
+0
+2
+2
+CrumpPrints
+MPCIe_full_card
+
+
+0
+60
+52
+CrumpPrints
+MPCIe_half_card
+
+
+0
+56
+52
+CrumpPrints
+MPCIe_socket
+
+mpci, pci, pci express
+0
+60
+52
+CrumpPrints
+QFN_44
+
+QFN44
+0
+44
+44
+CrumpPrints
+QRE1113
+
+
+0
+4
+4
+CrumpPrints
+QRE1113GR
+
+
+0
+4
+4
+CrumpPrints
+Raspberry_Pi_Zero
+Raspberry Pi Zero Hat Template
+rpi Raspberry Pi hat zero
+0
+40
+40
+CrumpPrints
+RF200
+
+
+0
+24
+24
+CrumpPrints
+RF200_nosilk
+
+
+0
+24
+24
+CrumpPrints
+SK22D07_DPDT_slide_switch
+
+switch slide toggle SK22D07 dpdt spdt
+0
+8
+6
+CrumpPrints
+SM200
+
+
+0
+64
+64
+CrumpPrints
+SM200_nosilk
+
+
+0
+64
+64
+CrumpPrints
+SMLP34RGB
+
+LED, RGB, SMLP34RGB
+0
+4
+4
+CrumpPrints
+SnapStack
+
+
+0
+32
+32
+CrumpPrints
+SPDT_slide_switch
+http://www.alps.com/prod/info/E/HTML/Switch/Slide/SSSS8/SSSS810701.html
+SPDT, slide, switch, alps, ssss810701
+0
+3
+3
+CrumpPrints
+Switch_APEM_ADTSM3_3.5x6mm
+https://www.mouser.com/datasheet/2/26/ADTS3-369939-1158421.pdf
+pushbutton tact tactile switch
+0
+2
+2
+CrumpPrints
+TC200
+
+
+0
+24
+24
+CrumpPrints
+TC200_nosilk
+
+
+0
+24
+24
+CrumpPrints
+TC2030-MCP
+
+tag-connect, tagconnect, icsp
+0
+6
+6
+CrumpPrints
+TerminalBlock_bornier-12_P5.08mm
+simple 12-pin terminal block, pitch 5.08mm, revamped version of bornier2
+terminal block bornier2
+0
+12
+12
+CrumpPrints
+Texas_VSON-10_3.0x3.0mm_P0.5mm_DRC
+
+
+0
+25
+11
+CrumpPrints
+Tiny_RTC_DS1307
+
+
+0
+12
+12
+CrumpPrints
+UCSP-9p-0.4mm
+
+UCSP, Maxim
+0
+9
+9
+CrumpPrints
+USB_Board_Edge
+
+
+0
+4
+4
+CrumpPrints
+USB_C_Receptacle_SMD_THT
+
+USB, type-c, c
+0
+28
+25
+CrumpPrints
+WS2812B
+
+LED, Neopixel, RGB, WS2811, WS2812
+0
+4
+4
+CrumpPrints
+WS2812B_smallsilk
+
+LED, Neopixel, RGB, WS2811, WS2812
+0
+4
+4
+CrumpPrints
+WSON-6p-2x2mm
+
+WSON
+0
+7
+7
 Crystal
 Crystal_AT310_D3.0mm_L10.0mm_Horizontal
 Crystal THT AT310 10.0mm-10.5mm length 3.0mm diameter
@@ -72344,3 +72659,122 @@ JST PH series connector, S16B-PH-KL
 0
 16
 16
+w_conn_misc
+6p4c
+6p4c socket
+
+0
+4
+4
+w_conn_misc
+6p6c
+6p6c socket
+
+0
+6
+6
+w_conn_misc
+8p8c
+8p8c socket
+
+0
+8
+8
+w_conn_misc
+arduino_header
+Arduino Header
+Arduino
+0
+32
+32
+w_conn_misc
+arduino_mega_header
+Arduino Mega/Due Header
+Arduino
+0
+86
+86
+w_conn_misc
+arduino_nano_header
+Arduino Nano Header
+Arduino
+0
+30
+30
+w_conn_misc
+arduino_pin_socket_8
+Pin socket 8pin for Arduino exp. boards
+CONN DEV
+0
+8
+8
+w_conn_misc
+dc_socket
+Socket, DC power supply
+
+0
+3
+3
+w_conn_misc
+dc_socket_rh
+Socket, DC power supply, round holes
+
+0
+18
+3
+w_conn_misc
+microsd_socket
+MicroSD Card socket, Molex P/N 502774-0811
+
+0
+14
+10
+w_conn_misc
+molex_6p6c
+RJ11 6p6c socket, Molex P/N 95009-7667
+
+0
+6
+6
+w_conn_misc
+sd_socket
+SD Card socket, 4UCON P/N 19607
+
+0
+17
+12
+w_conn_misc
+stm32f0_discovery_header
+STM32 F0 Discovery Header
+STM32F0 Discovery
+0
+66
+66
+w_conn_misc
+stm32f3_discovery_header
+STM32 F3 Discovery Header
+STM32F3 Discovery
+0
+106
+100
+w_conn_misc
+stm32f4_discovery_header
+STM32 F4 Discovery Header
+STM32F4 Discovery
+0
+104
+100
+w_conn_misc
+stm32vl_discovery_header
+STM32 Value Line Discovery Header
+STM32VL Discovery
+0
+62
+62
+w_conn_misc
+wago_2060-451
+Wago 2060-451
+
+0
+2
+1

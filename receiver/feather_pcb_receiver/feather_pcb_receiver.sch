@@ -591,78 +591,15 @@ Wire Wire Line
 	4050 3950 4050 3400
 Wire Wire Line
 	4050 3400 5250 3400
-Text GLabel 10300 5250 2    50   Input ~ 0
-MOSI
-Text GLabel 10300 5400 2    50   Input ~ 0
-MISO
-Text GLabel 10300 5100 2    50   Input ~ 0
-SCK
 Wire Wire Line
 	4800 2300 4800 2200
 Connection ~ 4800 2200
 Wire Wire Line
 	4800 2200 5150 2200
-Text GLabel 8300 5550 0    50   Input ~ 0
-CSN
 Text GLabel 5050 3800 0    50   Input ~ 0
 CSN
-Wire Wire Line
-	5050 3800 5250 3800
-Text GLabel 8300 5400 0    50   Input ~ 0
-CE
 Text GLabel 5050 3900 0    50   Input ~ 0
 CE
-Wire Wire Line
-	5050 3900 5250 3900
-$Comp
-L power:+3.3V #PWR0117
-U 1 1 5CDDB188
-P 8300 5250
-F 0 "#PWR0117" H 8300 5100 50  0001 C CNN
-F 1 "+3.3V" V 8315 5378 50  0000 L CNN
-F 2 "" H 8300 5250 50  0001 C CNN
-F 3 "" H 8300 5250 50  0001 C CNN
-	1    8300 5250
-	0    -1   -1   0   
-$EndComp
-$Comp
-L power:GND #PWR0118
-U 1 1 5CDDF200
-P 8300 5100
-F 0 "#PWR0118" H 8300 4850 50  0001 C CNN
-F 1 "GND" V 8305 4972 50  0000 R CNN
-F 2 "" H 8300 5100 50  0001 C CNN
-F 3 "" H 8300 5100 50  0001 C CNN
-	1    8300 5100
-	0    1    1    0   
-$EndComp
-Text Notes 8550 4650 0    50   ~ 0
-check pin numbers with footprint\ndo we need IRQ?
-$Comp
-L nRF24L01+:nRF24L01+ U3
-U 1 1 5CD631F7
-P 9250 5300
-F 0 "U3" H 9250 5815 50  0000 C CNN
-F 1 "nRF24L01+" H 9250 5724 50  0000 C CNN
-F 2 "" H 9250 5400 50  0001 C CNN
-F 3 "" H 9250 5250 50  0001 C CNN
-	1    9250 5300
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	8300 5100 8500 5100
-Wire Wire Line
-	8300 5250 8500 5250
-Wire Wire Line
-	8300 5400 8500 5400
-Wire Wire Line
-	8300 5550 8500 5550
-Wire Wire Line
-	10000 5100 10300 5100
-Wire Wire Line
-	10300 5250 10000 5250
-Wire Wire Line
-	10300 5400 10000 5400
 Wire Wire Line
 	1850 1600 2150 1600
 $Comp
@@ -795,4 +732,65 @@ Wire Wire Line
 Connection ~ 2450 4350
 Wire Wire Line
 	1700 4050 2050 4050
+Wire Wire Line
+	8000 5700 8200 5700
+Wire Wire Line
+	8050 5500 8200 5500
+Wire Wire Line
+	8050 5400 8200 5400
+Wire Wire Line
+	8050 5300 8200 5300
+Wire Wire Line
+	8050 5200 8200 5200
+Wire Wire Line
+	8050 5100 8200 5100
+Wire Wire Line
+	8050 5000 8200 5000
+$Comp
+L yj13039-nrf24l01:YJ13039-NRF24L01 U3
+U 1 1 5D0851A7
+P 8400 4900
+F 0 "U3" V 8812 5728 39  0000 L CNN
+F 1 "YJ13039-NRF24L01" V 8887 5728 39  0000 L CNN
+F 2 "mysensors_radios:YJ-13039-NRF24L01" H 8400 4900 39  0001 C CNN
+F 3 "" H 8400 4900 39  0001 C CNN
+	1    8400 4900
+	0    1    1    0   
+$EndComp
+$Comp
+L power:GND #PWR0118
+U 1 1 5CDDF200
+P 8000 5700
+F 0 "#PWR0118" H 8000 5450 50  0001 C CNN
+F 1 "GND" V 8005 5572 50  0000 R CNN
+F 2 "" H 8000 5700 50  0001 C CNN
+F 3 "" H 8000 5700 50  0001 C CNN
+	1    8000 5700
+	0    1    1    0   
+$EndComp
+$Comp
+L power:+3.3V #PWR0117
+U 1 1 5CDDB188
+P 8050 5000
+F 0 "#PWR0117" H 8050 4850 50  0001 C CNN
+F 1 "+3.3V" V 8050 5150 50  0000 L CNN
+F 2 "" H 8050 5000 50  0001 C CNN
+F 3 "" H 8050 5000 50  0001 C CNN
+	1    8050 5000
+	0    -1   -1   0   
+$EndComp
+Text GLabel 8050 5100 0    50   Input ~ 0
+CE
+Text GLabel 8050 5200 0    50   Input ~ 0
+CSN
+Text GLabel 8050 5300 0    50   Input ~ 0
+SCK
+Text GLabel 8050 5500 0    50   Input ~ 0
+MISO
+Text GLabel 8050 5400 0    50   Input ~ 0
+MOSI
+Wire Wire Line
+	5050 3800 5250 3800
+Wire Wire Line
+	5250 3900 5050 3900
 $EndSCHEMATC
