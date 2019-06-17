@@ -1,4 +1,4 @@
-15682894683711673
+15943225227332745
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (http://www.bulgin.com/media/bulgin/data/Battery_holders.pdf)
@@ -40025,6 +40025,867 @@ DCDC-Converter XP_POWER JTE06 Dual
 0
 8
 8
+crf1
+1PAD
+
+
+0
+1
+1
+crf1
+1PAD_4x5mm
+
+
+0
+1
+1
+crf1
+1PAD_6x5mm
+
+
+0
+1
+1
+crf1
+1PAD_Small
+
+
+0
+1
+1
+crf1
+1pin_2mm
+module 1 pin (ou trou mecanique de percage)
+DEV
+0
+1
+1
+crf1
+1pin_4mm
+module 1 pin (ou trou mecanique de percage)
+DEV
+0
+1
+1
+crf1
+1pin_6mm
+module 1 pin (ou trou mecanique de percage)
+DEV
+0
+1
+1
+crf1
+5x3.2 KRISTALL
+
+
+0
+4
+4
+crf1
+78D05
+MOS boitier DPACK G-D-S
+CMD DPACK
+0
+3
+3
+crf1
+891WP
+RELAY
+RELAY
+0
+4
+4
+crf1
+ABS06_KRISTALL
+
+
+0
+2
+2
+crf1
+ACS75xx
+
+
+0
+5
+5
+crf1
+B2C-PCB
+
+
+0
+2
+2
+crf1
+b7b-ph-kl
+JST PH series connector, B7B-PH-KL
+
+0
+7
+7
+crf1
+Batt_2xAA
+
+
+0
+2
+2
+crf1
+CAP_PLAST_30
+
+
+0
+2
+2
+crf1
+CAP_PLAST_36
+
+
+0
+2
+2
+crf1
+CAR_RELAY_1P
+
+
+0
+4
+4
+crf1
+CHUK_STICK
+
+
+0
+9
+7
+crf1
+Coil1
+
+
+0
+2
+2
+crf1
+con-cypressindustries-85-32004-10X
+USB B TYPE SINGLE R/A DIP WITH REAR SHELL, WITHOUT REAR SHELL
+USB B TYPE SINGLE R/A DIP WITH REAR SHELL, WITHOUT REAR SHELL
+0
+6
+6
+crf1
+con-cypressindustries-85-32006-001-1
+1394-4P R/A DIP TWO LEGS 2.0 PITCH
+1394-4P R/A DIP TWO LEGS 2.0 PITCH
+0
+6
+6
+crf1
+con-cypressindustries-32005-201
+MINI USB-B R/A SMT W/ REAR
+MINI USB-B R/A SMT W/ REAR
+0
+9
+9
+crf1
+con-cypressindustries-32005-601
+MINI USB-B R/A DIP
+MINI USB-B R/A DIP
+0
+7
+7
+crf1
+con-subd-HDF15H
+HARTING SUB-D
+HARTING SUB-D
+0
+17
+17
+crf1
+con-yamaichi-MDIN06SS
+MINI DIN YAMAICHI CONNECTOR
+MINI DIN YAMAICHI CONNECTOR
+0
+9
+6
+crf1
+CONN54_FFC_FPC
+CONN 54Pin SMD 0.50 Pitch 0.25X1.10 Pad  Rectangular Normal
+CONN54_SMD CONN54_SMD_0.50 CONN54_SMD_0.50_0.25X1.10_RN
+0
+56
+54
+crf1
+CP25V
+Condensateur polarise vertical
+CP
+0
+2
+2
+crf1
+CPA_20x35MM
+capacitor pol, axial 16x40mm
+
+0
+2
+2
+crf1
+crystal-HC49%2fS
+CRYSTAL
+CRYSTAL
+0
+2
+2
+crf1
+Crystal_5x3mm
+
+
+0
+4
+4
+crf1
+C_BP
+Condensateur = 2 pas
+C
+0
+2
+2
+crf1
+C_POL_1
+
+
+0
+2
+2
+crf1
+D2PAK-7-GDS
+
+
+0
+7
+3
+crf1
+DIODE_1
+Diode 4 pas
+DIODE DEV
+0
+2
+2
+crf1
+DM3D-SF
+
+
+0
+10
+10
+crf1
+FDS6064N3
+
+NMOS
+0
+9
+3
+crf1
+G5L
+RELAY
+RELAY
+0
+5
+5
+crf1
+HC%2f49US
+
+
+0
+3
+3
+crf1
+HSSOP-36
+
+
+0
+36
+36
+crf1
+HTSSOP-44
+
+
+0
+45
+45
+crf1
+HVSON8
+
+
+0
+8
+8
+crf1
+Inductor_20
+
+
+0
+2
+2
+crf1
+inductor_744834101
+
+
+0
+4
+4
+crf1
+inductor_74435580680
+
+
+0
+2
+2
+crf1
+Inductor_Power1
+
+
+0
+2
+2
+crf1
+inductor_smd_5.8mmx4.8hmm
+
+
+0
+2
+2
+crf1
+IRT8307_SMD
+
+
+0
+4
+4
+crf1
+IR_RECIVER
+IR_RECIVER
+IR_RECIVER
+0
+3
+3
+crf1
+isp_3x2
+Double rangee de contacts 2 x 4 pins
+CONN
+0
+6
+6
+crf1
+ITR8307
+
+
+0
+4
+4
+crf1
+K4000004
+
+
+0
+7
+7
+crf1
+L1_VERT
+
+
+0
+2
+2
+crf1
+L298 HM (h-bridge)
+MULTIWATT 15 LEAD
+MULTIWATT 15 LEAD
+0
+15
+15
+crf1
+L298P
+
+
+0
+20
+20
+crf1
+L298_H-Bridge
+MULTIWATT 15 LEAD
+MULTIWATT 15 LEAD
+0
+15
+15
+crf1
+LED_BP
+Led verticale diam 6mm
+LED DEV
+0
+2
+2
+crf1
+LGA-10
+
+
+0
+10
+10
+crf1
+LIF_16_1MM_TOP
+
+
+0
+18
+18
+crf1
+lqfp48_pad_mod
+LQFP-48
+
+0
+48
+48
+crf1
+lqfp64_pad_mod
+LQFP-64
+
+0
+64
+64
+crf1
+M3_Drill
+M3_DrillPad
+M3
+0
+1
+1
+crf1
+MICRO_JST_6
+
+
+0
+6
+6
+crf1
+mini_USB_gnd
+MINI USB-B R/A SMT W/ REAR
+MINI USB-B R/A SMT W/ REAR
+0
+9
+5
+crf1
+MPU60X0
+
+
+0
+24
+24
+crf1
+NRF24L01_SMD
+
+
+0
+8
+8
+crf1
+PDSO-10
+
+
+0
+10
+10
+crf1
+PDSO-G8
+
+
+0
+8
+8
+crf1
+PFO16807
+
+
+0
+45
+45
+crf1
+pinhead-1X02
+PIN HEADER
+PIN HEADER
+0
+2
+2
+crf1
+pinhead-1X02_BIG
+PIN HEADER
+PIN HEADER
+0
+2
+2
+crf1
+pinhead-1X03
+PIN HEADER
+PIN HEADER
+0
+3
+3
+crf1
+pinhead-1X04
+PIN HEADER
+PIN HEADER
+0
+4
+4
+crf1
+pinhead-1X05
+PIN HEADER
+PIN HEADER
+0
+5
+5
+crf1
+pinhead-1X06
+PIN HEADER
+PIN HEADER
+0
+6
+6
+crf1
+pinhead-1X08
+PIN HEADER
+PIN HEADER
+0
+8
+8
+crf1
+pinhead-1X09
+PIN HEADER
+PIN HEADER
+0
+9
+9
+crf1
+pinhead-1X10
+PIN HEADER
+PIN HEADER
+0
+10
+10
+crf1
+PINHEAD1-6
+
+
+0
+6
+6
+crf1
+pinhead_3x2_IDC
+Double rangee de contacts 2 x 4 pins
+CONN
+0
+6
+6
+crf1
+PIN_ARRAY-6X1_LP
+Connecteur 6 pins
+CONN DEV
+0
+6
+6
+crf1
+PIN_ARRAY_5x2_LP
+Double rangee de contacts 2 x 5 pins
+CONN
+0
+10
+10
+crf1
+QFN28_PAD
+
+
+0
+29
+29
+crf1
+RF2400-NANO
+
+
+0
+11
+11
+crf1
+RF2400-V03
+
+
+0
+10
+10
+crf1
+RN-41
+
+
+0
+32
+32
+crf1
+R_LP
+Resitance 3 pas
+R
+0
+2
+2
+crf1
+SD-84864-003
+
+
+0
+9
+6
+crf1
+sdcard-SDCARD_SCDA4A0301
+
+
+0
+16
+16
+crf1
+Shunt_0_023
+
+
+0
+2
+2
+crf1
+Si114x
+
+
+0
+10
+10
+crf1
+SMA_SMD_Straight
+
+
+0
+5
+5
+crf1
+SMD-0603_c
+
+
+0
+2
+2
+crf1
+SMD-0603_r
+
+
+0
+2
+2
+crf1
+SMD-0805
+
+
+0
+2
+2
+crf1
+SMD-1206
+
+
+0
+2
+2
+crf1
+SMD_POT_5x5mm
+SMD_POT_TS53
+SMD_POT_TS53
+0
+3
+3
+crf1
+SO28_LP
+Module CMS SO 28 pins large
+CMS SOJ SO SOIC
+0
+28
+28
+crf1
+SOD-123
+
+
+0
+2
+2
+crf1
+SOIC-8-W
+module SMD SOIC SOJ 8 pins etroit
+CMS SOJ
+0
+8
+8
+crf1
+SOJ32_LP
+Module CMS SOJ 32 pins
+CMS SOJ
+0
+32
+32
+crf1
+SOT-223
+module CMS SOT223 4 pins
+CMS SOT
+0
+4
+3
+crf1
+SOT23GDS
+Module CMS SOT23 Transistore EBC
+CMS SOT
+0
+3
+3
+crf1
+sot89
+SOT89
+
+0
+4
+3
+crf1
+sot89-bcx55-10
+SOT89
+
+0
+4
+3
+crf1
+SOT223_bcp53
+module CMS SOT223 4 pins
+CMS SOT
+0
+4
+3
+crf1
+SSOP17_W
+SSOP17pins (16 pins + 1 ground or thermal pin)
+
+0
+17
+17
+crf1
+SW_PUSH_SMALL_LP
+
+
+0
+4
+2
+crf1
+TFCard_A
+
+
+0
+12
+9
+crf1
+TM240320C1NFWGWC
+
+
+0
+36
+36
+crf1
+TO-247
+
+
+0
+3
+3
+crf1
+TO-247GDS
+
+
+0
+3
+3
+crf1
+TO92_LP
+Transistor TO92 brochage type BC237
+TR TO92
+0
+3
+3
+crf1
+TO220GDS_VERT
+Regulateur TO220 serie LM78xx
+TR TO220
+0
+3
+3
+crf1
+TO220_2P
+Transistor TO 220
+TR TO220 DEV
+0
+3
+3
+crf1
+TQFP64_08
+
+AVR
+0
+64
+64
+crf1
+Trimpot1
+
+
+0
+3
+3
+crf1
+TSSOP-56-PP
+TSSOP-56-PP
+
+0
+57
+57
+crf1
+uln-udn-SO16
+SMALL OUTLINE PACKAGE
+SMALL OUTLINE PACKAGE
+0
+16
+16
+crf1
+USB-UX60R-MB-5ST
+
+
+0
+9
+5
+crf1
+v-reg-78XXS
+VOLTAGE REGULATOR
+VOLTAGE REGULATOR
+0
+3
+3
+crf1
+vasch_strip_25x2_LP
+Vaschetta strip 25x2pin
+CONN DEV
+0
+50
+50
+crf1
+WSLP2726
+
+
+0
+4
+4
 Crystal
 Crystal_AT310_D3.0mm_L10.0mm_Horizontal
 Crystal THT AT310 10.0mm-10.5mm length 3.0mm diameter
@@ -45807,41 +46668,6 @@ Filter 5
 0
 5
 5
-footprint
-MountingHole_5.3mm_M5_DIN965_Pad
-Mounting Hole 5.3mm, M5, DIN965
-mounting hole 5.3mm m5 din965
-0
-2
-2
-footprint
-NESE_2p
-Mounting Hole 5.3mm, M5, DIN965
-mounting hole 5.3mm m5 din965
-0
-2
-2
-footprint
-panda
-
-
-0
-0
-0
-footprint
-stitch
-
-
-0
-0
-0
-footprint
-yoda
-
-
-0
-0
-0
 Fuse
 Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin
 Fuseholder ATO Blade littelfuse Pudenz 2 Pin
@@ -51344,6 +52170,62 @@ mounting hole 8.4mm m8
 0
 9
 1
+mysensors_radios
+NRF24L01
+NRF24L01
+nRF 24 NRF24L01 NRF24L01+
+0
+8
+8
+mysensors_radios
+NRF24L01-SMD
+
+
+0
+8
+8
+mysensors_radios
+NRF24L01_PA_LNA-SMD
+
+
+0
+8
+8
+mysensors_radios
+RFM69HW_SMD
+RFM69HW
+RFM69HW, RF69
+0
+16
+16
+mysensors_radios
+RFM69HW_SMD_Handsoldering
+RFM69HW
+RFM69HW, RF69
+0
+16
+16
+mysensors_radios
+RFM69HW_SMD_ThroughHole
+RFM69HW
+RFM69HW, RF69
+0
+32
+16
+mysensors_radios
+RFM69HW_SMD_ThroughHole_Handsoldering
+RFM69HW
+RFM69HW, RF69
+0
+32
+16
+mysensors_radios
+RFM69HW_ThroughHole
+RFM69HW
+RFM69HW, RF69
+0
+16
+16
 NetTie
 NetTie-2_SMD_Pad0.5mm
 Net tie, 2 pin, 0.5mm square SMD pads
@@ -71154,3 +72036,311 @@ varistor SIOV
 0
 2
 2
+w_conn_jst-ph
+b2b-ph-kl
+JST PH series connector, B2B-PH-KL
+
+0
+2
+2
+w_conn_jst-ph
+b3b-ph-kl
+JST PH series connector, B3B-PH-KL
+
+0
+3
+3
+w_conn_jst-ph
+b4b-ph-kl
+JST PH series connector, B4B-PH-KL
+
+0
+4
+4
+w_conn_jst-ph
+b5b-ph-kl
+JST PH series connector, B5B-PH-KL
+
+0
+5
+5
+w_conn_jst-ph
+b6b-ph-kl
+JST PH series connector, B6B-PH-KL
+
+0
+6
+6
+w_conn_jst-ph
+b7b-ph-kl
+JST PH series connector, B7B-PH-KL
+
+0
+7
+7
+w_conn_jst-ph
+b8b-ph-kl
+JST PH series connector, B8B-PH-KL
+
+0
+8
+8
+w_conn_jst-ph
+b9b-ph-kl
+JST PH series connector, B9B-PH-KL
+
+0
+9
+9
+w_conn_jst-ph
+b10b-ph-kl
+JST PH series connector, B10B-PH-KL
+
+0
+10
+10
+w_conn_jst-ph
+b11b-ph-kl
+JST PH series connector, B11B-PH-KL
+
+0
+11
+11
+w_conn_jst-ph
+b12b-ph-kl
+JST PH series connector, B12B-PH-KL
+
+0
+12
+12
+w_conn_jst-ph
+b13b-ph-kl
+JST PH series connector, B13B-PH-KL
+
+0
+13
+13
+w_conn_jst-ph
+b14b-ph-kl
+JST PH series connector, B14B-PH-KL
+
+0
+14
+14
+w_conn_jst-ph
+b15b-ph-kl
+JST PH series connector, B15B-PH-KL
+
+0
+15
+15
+w_conn_jst-ph
+b16b-ph-kl
+JST PH series connector, B16B-PH-KL
+
+0
+16
+16
+w_conn_jst-ph
+s2b-ph-kl
+JST PH series connector, S2B-PH-KL
+
+0
+2
+2
+w_conn_jst-ph
+s2b-ph-sm4-tb
+JST PH series connector, S2B-PH-SM4-TB
+
+0
+4
+2
+w_conn_jst-ph
+s3b-ph-kl
+JST PH series connector, S3B-PH-KL
+
+0
+3
+3
+w_conn_jst-ph
+s3b-ph-sm4-tb
+JST PH series connector, S3B-PH-SM4-TB
+
+0
+5
+3
+w_conn_jst-ph
+s4b-ph-kl
+JST PH series connector, S4B-PH-KL
+
+0
+4
+4
+w_conn_jst-ph
+s4b-ph-sm4-tb
+JST PH series connector, S4B-PH-SM4-TB
+
+0
+6
+4
+w_conn_jst-ph
+s5b-ph-kl
+JST PH series connector, S5B-PH-KL
+
+0
+5
+5
+w_conn_jst-ph
+s5b-ph-sm4-tb
+JST PH series connector, S5B-PH-SM4-TB
+
+0
+7
+5
+w_conn_jst-ph
+s6b-ph-kl
+JST PH series connector, S6B-PH-KL
+
+0
+6
+6
+w_conn_jst-ph
+s6b-ph-sm4-tb
+JST PH series connector, S6B-PH-SM4-TB
+
+0
+8
+6
+w_conn_jst-ph
+s7b-ph-kl
+JST PH series connector, S7B-PH-KL
+
+0
+7
+7
+w_conn_jst-ph
+s7b-ph-sm4-tb
+JST PH series connector, S7B-PH-SM4-TB
+
+0
+9
+7
+w_conn_jst-ph
+s8b-ph-kl
+JST PH series connector, S8B-PH-KL
+
+0
+8
+8
+w_conn_jst-ph
+s8b-ph-sm4-tb
+JST PH series connector, S8B-PH-SM4-TB
+
+0
+10
+8
+w_conn_jst-ph
+s9b-ph-kl
+JST PH series connector, S9B-PH-KL
+
+0
+9
+9
+w_conn_jst-ph
+s9b-ph-sm4-tb
+JST PH series connector, S9B-PH-SM4-TB
+
+0
+11
+9
+w_conn_jst-ph
+s10b-ph-kl
+JST PH series connector, S10B-PH-KL
+
+0
+10
+10
+w_conn_jst-ph
+s10b-ph-sm4-tb
+JST PH series connector, S10B-PH-SM4-TB
+
+0
+12
+10
+w_conn_jst-ph
+s11b-ph-kl
+JST PH series connector, S11B-PH-KL
+
+0
+11
+11
+w_conn_jst-ph
+s11b-ph-sm4-tb
+JST PH series connector, S11B-PH-SM4-TB
+
+0
+13
+11
+w_conn_jst-ph
+s12b-ph-kl
+JST PH series connector, S12B-PH-KL
+
+0
+12
+12
+w_conn_jst-ph
+s12b-ph-sm4-tb
+JST PH series connector, S12B-PH-SM4-TB
+
+0
+14
+12
+w_conn_jst-ph
+s13b-ph-kl
+JST PH series connector, S13B-PH-KL
+
+0
+13
+13
+w_conn_jst-ph
+s13b-ph-sm4-tb
+JST PH series connector, S13B-PH-SM4-TB
+
+0
+15
+13
+w_conn_jst-ph
+s14b-ph-kl
+JST PH series connector, S14B-PH-KL
+
+0
+14
+14
+w_conn_jst-ph
+s14b-ph-sm4-tb
+JST PH series connector, S14B-PH-SM4-TB
+
+0
+16
+14
+w_conn_jst-ph
+s15b-ph-kl
+JST PH series connector, S15B-PH-KL
+
+0
+15
+15
+w_conn_jst-ph
+s15b-ph-sm4-tb
+JST PH series connector, S15B-PH-SM4-TB
+
+0
+17
+15
+w_conn_jst-ph
+s16b-ph-kl
+JST PH series connector, S16B-PH-KL
+
+0
+16
+16

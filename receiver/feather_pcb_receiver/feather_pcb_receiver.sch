@@ -71,7 +71,7 @@ U 1 1 5CD5B37B
 P 5900 800
 F 0 "J1" V 5911 1130 50  0000 L CNN
 F 1 "USB_B_Micro" V 6002 1130 50  0000 L CNN
-F 2 "" H 6050 750 50  0001 C CNN
+F 2 "Connector_USB:USB_Micro-B_Molex-105017-0001" H 6050 750 50  0001 C CNN
 F 3 "~" H 6050 750 50  0001 C CNN
 	1    5900 800 
 	0    1    1    0   
@@ -179,15 +179,13 @@ F 3 "" H 7900 1850 50  0001 C CNN
 	1    7900 1850
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	8200 1850 7900 1850
 $Comp
 L Device:C_Small C2
 U 1 1 5CD6C170
 P 1850 1700
 F 0 "C2" H 1800 1900 50  0000 L CNN
 F 1 "10uF" H 1750 2000 50  0000 L CNN
-F 2 "" H 1850 1700 50  0001 C CNN
+F 2 "Capacitor_SMD:C_1206_3216Metric" H 1850 1700 50  0001 C CNN
 F 3 "~" H 1850 1700 50  0001 C CNN
 	1    1850 1700
 	1    0    0    -1  
@@ -198,7 +196,7 @@ U 1 1 5CD6CB90
 P 1550 1700
 F 0 "C1" H 1500 1900 50  0000 L CNN
 F 1 "CP_Small" H 1400 1550 50  0000 L CNN
-F 2 "" H 1550 1700 50  0001 C CNN
+F 2 "Capacitor_SMD:C_1206_3216Metric" H 1550 1700 50  0001 C CNN
 F 3 "~" H 1550 1700 50  0001 C CNN
 	1    1550 1700
 	1    0    0    -1  
@@ -274,7 +272,7 @@ U 1 1 5CD748CA
 P 3950 1700
 F 0 "C5" H 3900 1900 50  0000 L CNN
 F 1 "10uF" H 3850 2000 50  0000 L CNN
-F 2 "" H 3950 1700 50  0001 C CNN
+F 2 "Capacitor_SMD:C_1206_3216Metric" H 3950 1700 50  0001 C CNN
 F 3 "~" H 3950 1700 50  0001 C CNN
 	1    3950 1700
 	1    0    0    -1  
@@ -290,7 +288,7 @@ U 1 1 5CD7635F
 P 4200 1700
 F 0 "C6" H 4250 1800 50  0000 L CNN
 F 1 "CP_Small" H 4050 1550 50  0000 L CNN
-F 2 "" H 4200 1700 50  0001 C CNN
+F 2 "Capacitor_SMD:C_1206_3216Metric" H 4200 1700 50  0001 C CNN
 F 3 "~" H 4200 1700 50  0001 C CNN
 	1    4200 1700
 	1    0    0    -1  
@@ -406,17 +404,6 @@ Wire Wire Line
 	6750 1150 6100 1150
 Wire Wire Line
 	6100 1150 6100 1100
-$Comp
-L power:+5V #PWR0111
-U 1 1 5CD8362A
-P 7700 2100
-F 0 "#PWR0111" H 7700 1950 50  0001 C CNN
-F 1 "+5V" V 7715 2228 50  0000 L CNN
-F 2 "" H 7700 2100 50  0001 C CNN
-F 3 "" H 7700 2100 50  0001 C CNN
-	1    7700 2100
-	0    -1   -1   0   
-$EndComp
 Wire Wire Line
 	5250 4200 5050 4200
 $Comp
@@ -649,21 +636,6 @@ F 3 "" H 8300 5100 50  0001 C CNN
 	1    8300 5100
 	0    1    1    0   
 $EndComp
-$Comp
-L Device:Antenna AE1
-U 1 1 5CDF4696
-P 1500 4050
-F 0 "AE1" V 1717 3993 50  0000 C CNN
-F 1 "Antenna" V 1626 3993 50  0000 C CNN
-F 2 "" H 1500 4050 50  0001 C CNN
-F 3 "~" H 1500 4050 50  0001 C CNN
-	1    1500 4050
-	0    -1   -1   0   
-$EndComp
-Wire Wire Line
-	1700 4050 2050 4050
-Text Notes 1450 4200 0    50   ~ 0
-GND?\n
 Text Notes 8550 4650 0    50   ~ 0
 check pin numbers with footprint\ndo we need IRQ?
 $Comp
@@ -672,7 +644,7 @@ U 1 1 5CD631F7
 P 9250 5300
 F 0 "U3" H 9250 5815 50  0000 C CNN
 F 1 "nRF24L01+" H 9250 5724 50  0000 C CNN
-F 2 "mysensors_radios:NRF24L01_PA_LNA-SMD" H 9250 5400 50  0001 C CNN
+F 2 "" H 9250 5400 50  0001 C CNN
 F 3 "" H 9250 5250 50  0001 C CNN
 	1    9250 5300
 	1    0    0    -1  
@@ -691,8 +663,6 @@ Wire Wire Line
 	10300 5250 10000 5250
 Wire Wire Line
 	10300 5400 10000 5400
-Text Notes 8300 2800 0    50   ~ 0
-Todo: Connect those two\n
 Wire Wire Line
 	1850 1600 2150 1600
 $Comp
@@ -712,5 +682,117 @@ Wire Wire Line
 Wire Wire Line
 	1850 1800 2150 1800
 Wire Wire Line
-	8000 1950 8000 3600
+	8000 1950 8000 2200
+Wire Wire Line
+	7900 1850 7950 1850
+Wire Wire Line
+	8200 2100 7950 2100
+Wire Wire Line
+	7950 2100 7950 1850
+Connection ~ 7950 1850
+Wire Wire Line
+	7950 1850 8200 1850
+Wire Wire Line
+	8200 2200 8000 2200
+Connection ~ 8000 2200
+Wire Wire Line
+	8000 2200 8000 3100
+Text GLabel 7750 2300 0    50   Input ~ 0
+VESC1
+Text GLabel 7750 2400 0    50   Input ~ 0
+VESC2
+Text GLabel 7750 2500 0    50   Input ~ 0
+VESC3
+Text GLabel 7750 2600 0    50   Input ~ 0
+VESC4
+Wire Wire Line
+	8200 2300 7750 2300
+Wire Wire Line
+	8200 2400 7750 2400
+Wire Wire Line
+	8200 2500 7850 2500
+Wire Wire Line
+	8200 2600 7850 2600
+Text GLabel 5050 3600 0    50   Input ~ 0
+VESC1
+Wire Wire Line
+	5050 3600 5250 3600
+Text GLabel 5050 3500 0    50   Input ~ 0
+VESC2
+Wire Wire Line
+	5050 3500 5250 3500
+Text GLabel 5150 4300 0    50   Input ~ 0
+VESC3
+Text GLabel 7750 3200 0    50   Input ~ 0
+UT1
+Text GLabel 7750 3300 0    50   Input ~ 0
+UT2
+Text GLabel 7750 3400 0    50   Input ~ 0
+UT3
+Text GLabel 7750 3500 0    50   Input ~ 0
+UT4
+Wire Wire Line
+	8000 3100 8200 3100
+Connection ~ 8000 3100
+Wire Wire Line
+	8000 3100 8000 3600
+Wire Wire Line
+	7950 2100 7950 3000
+Wire Wire Line
+	7950 3000 8200 3000
+Connection ~ 7950 2100
+Wire Wire Line
+	7750 3200 8200 3200
+Wire Wire Line
+	7750 3300 8200 3300
+Wire Wire Line
+	7750 3400 8200 3400
+Wire Wire Line
+	7750 3500 8200 3500
+Text GLabel 5150 4100 0    50   Input ~ 0
+UT1
+Wire Wire Line
+	5150 4100 5250 4100
+Text GLabel 5150 4400 0    50   Input ~ 0
+UT2
+Wire Wire Line
+	5150 4300 5250 4300
+Wire Wire Line
+	7850 2500 7850 2600
+Connection ~ 7850 2500
+Wire Wire Line
+	7850 2500 7750 2500
+Connection ~ 7850 2600
+Wire Wire Line
+	7850 2600 7750 2600
+Wire Wire Line
+	5150 4400 5250 4400
+Text GLabel 5050 3200 0    50   Input ~ 0
+UT3
+Wire Wire Line
+	5050 3200 5250 3200
+Text GLabel 5050 4000 0    50   Input ~ 0
+UT4
+Wire Wire Line
+	5050 4000 5250 4000
+$Comp
+L Device:Antenna_Shield AE1
+U 1 1 5CF58F9F
+P 1500 4050
+F 0 "AE1" V 1283 4043 50  0000 C CNN
+F 1 "Antenna_Shield" V 1374 4043 50  0000 C CNN
+F 2 "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical" H 1500 4150 50  0001 C CNN
+F 3 "~" H 1500 4150 50  0001 C CNN
+	1    1500 4050
+	0    -1   1    0   
+$EndComp
+Wire Wire Line
+	1700 4150 1900 4150
+Wire Wire Line
+	1900 4150 1900 4350
+Wire Wire Line
+	1900 4350 2450 4350
+Connection ~ 2450 4350
+Wire Wire Line
+	1700 4050 2050 4050
 $EndSCHEMATC
