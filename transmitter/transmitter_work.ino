@@ -1980,12 +1980,23 @@ void calculateThrottlePosition()
 
   hallValue = total / samples;
 
+#ifdef PCB_FULLSMD
    if ( hallValue >= txSettings.centerHallValue )
   {
     throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 3), centerThrottle, 1023 );
   } else {
     throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -3), 0, centerThrottle );
   }
+#endif
+
+#ifdef PCB_TH
+    if ( hallValue >= txSettings.centerHallValue )
+    {
+      throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 1), centerThrottle, 1023 );
+    } else {
+      throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -1), 0, centerThrottle );
+    }
+ #endif
 
   // Remove hall center noise
   hallNoiseMargin = txSettings.throttleDeath;
