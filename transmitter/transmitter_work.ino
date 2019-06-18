@@ -779,26 +779,20 @@ u8g2.clearBuffer();
 	u8g2.drawFrame(124, 0, 4, 64);
   
 	u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
-    
-    for (uint8_t i = 0; i <= numberOfCategorys; i++){
-		if (i == curserPos) {
-			u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
-		}
-			if (minCategory <= i) {
-			
-				if (menuLevel == 1) {
-					
-					String strCategory = menuCategorys[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-							
-				} else if (menuLevel == 2) {
-					
-					
-					
-				} else if (menuLevel == 3) {
-	
-				}
+    if (menuLevel == 1) {
+		for (uint8_t i = 0; i <= numberOfCategorys; i++){
+			if (i == curserPos) {
+				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
 			}
+				if (minCategory <= i) {
+					
+						String strCategory = menuCategorys[i].name;
+						drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
+					
+				}
+		}
+	} else if (menuLevel == 2) {
+		
 	}
     
 u8g2.sendBuffer();
