@@ -509,15 +509,49 @@ int triggerTriggered = 0;
 bool blink05 = true;
 unsigned long lastBlink = 0;
 
+struct menuCategorys{
+  uint8_t ID;
+  uint8_t menuLevel;			// 1 main menu // 2 sub menu // 3 setting
+  char name[20];
+} menuCategorys[] = {
+  {0,  1,    "Main0"},
+  {1,  1,    "Main1"},
+  {2,  1,    "Main2"},
+  {3,  1,    "Main3"},
+  {4,  1,    "Main4"},
+  {5,  1,    "Main5"},
+  {6,  1,    "Main6"},
+};
 
-const char testCategorys[7][15] = {"","Pairing", "Control Mode", "Throttle", "Buttons", "Trigger", "Buttons"};
+uint8_t numberOfCategorys = 6;
 
+struct menuActionsNew{
+  uint8_t ID;
+  uint8_t parentCategory;
+  short standart;
+  short minimum;
+  short maximum;
+  char name[20];
+  uint8_t unitIdentifier;
+  uint8_t valueIdentifier;
+} menuActionsNew[] = {
+  {0,  1,	-1,   0,    9,    "Action1",      	4 , 0},          	//0 boardID
+  {1,  2,	-1,   0,    0,    "Action2", 		0 , 0},        		//16 pair new board
+  {2,  3,	-1,   0,    2,    "Action3",   		0 , 6},         	//15 Driving Mode
+  {3,  0,	-1,   0,    2,    "Action4",     	0 , 4},         	//12 EStop mode |0soft|1hard|2off
+  {4,  1,	-1,   0,    1,    "Action5",    	0 , 1},          	//1 0: Killswitch
+  {5,  2,	-1,   0,    2,    "Action6",   		0 , 6},         	//15 Driving Mode
+  {6,  3,	-1,   0,    2,    "Action7",     	0 , 4},         	//12 EStop mode |0soft|1hard|2off
+};
 
-  //uint8_t numberOfTestCategorys = ((sizeof(menuItems) / sizeof(menuItems[0]))-1);
-  uint8_t numberOfTestCategorys = 10;
-  uint8_t curserPos = 2;
-  bool throttleCentered = false;
+//uint8_t numberOfCategorys = (sizeof(menuCategorys) / sizeof(menuCategorys[0]));
+uint8_t curserPos = 0;
+bool throttleCentered = false;
+char settingsHeader[20] = {"SETTINGS"};
+char settingsHeaderDefault[20] = {"SETTINGS"};
+uint8_t menuLevel = 1;
 
+//uint8_t countMenuItmes[7];
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -596,6 +630,14 @@ void setup() {
   //if (!localSettings.throttleCalibrated) {
   //  remoteStatus = CALIBRATION;
   //}
+  
+  	//for (uint8_t i = 0; i <= numberOfCategorys; i++){
+	//	for (uint8_t u = 0; u <= numberOfCategorys; u++){
+	//		if (menuCategorys[i].parentCategory == u){
+	//			countMenuItmes[u]++;
+	//		}
+	//	}
+	//}
 
   remoteStatus = MENU;
   
@@ -686,46 +728,81 @@ void drawMenu() {
   //variables for menu
 
   uint16_t x = 1;
-  uint16_t y = 1;
-  uint16_t scrollBoxheight = 0;
+  uint16_t y = 14;
+  uint8_t scrollBoxheight = 0;
   uint16_t y_scroll = 0;
   uint16_t y_offset = 0;
+  uint8_t minCategory = 1;
+  uint8_t shiftTextPixel = 0;
   
   //calculations
-  scrollBoxheight = 64/numberOfTestCategorys;         // calculate the number of segments in scrollbar -> height of scrollbar box
+  scrollBoxheight = 64/numberOfCategorys;         // calculate the number of segments in scrollbar -> height of scrollbar box
   
   y_scroll = (scrollBoxheight*curserPos-scrollBoxheight); // calculate the start point in y for scrollbar box in respect to curser pos
   
-  if (curserPos >= 5) {
-    y_offset = (4 - curserPos)* 13;
+  // calculate select bar position
+  if (curserPos >= 3) {
+    y_offset = (2 - curserPos)* 13;
   } else {
     y_offset = 0;
   }
   
-  if (curserPos > numberOfTestCategorys) {
-    curserPos = 1;
-  } else if (curserPos < 1){
-    curserPos = numberOfTestCategorys;
+  // scrolling overrun
+  if (curserPos > numberOfCategorys) {
+    curserPos = 0;
+  } else if (curserPos < 0){
+    curserPos = numberOfCategorys;
   }
   
+ // calculate upper categorys when scrolling down
+  if (curserPos >= 3) {
+	  minCategory = curserPos - 2;
+  } else {
+	  minCategory = 0;
+  }
+  
+  // calculate length of string to find the center
+  	u8g2.setFont(u8g2_font_profont12_tr); 
+	shiftTextPixel = 58 - (u8g2.getStrWidth(settingsHeader)/2);
+	
+	Serial.println(curserPos);
+	Serial.println(numberOfCategorys);
+	
+	
   //draw menu
-  u8g2.firstPage();
-  do {
-    
-  u8g2.drawFrame(124, 0, 4, 64);
+	
+u8g2.clearBuffer();
+	  
+	drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
+    u8g2.drawLine(1, 15, 120, 15);
+	
+	u8g2.drawFrame(124, 0, 4, 64);
   
-  u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
+	u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
     
-    for (uint8_t i = 1; i <= numberOfTestCategorys; i++){
-    if (i == curserPos) {
-      u8g2.drawFrame(1, y + 13 * i - 11 + y_offset, 110, 14);
-    } else {
-    }
-    String testItem = menuItems[i].name;
-    drawString(testItem, testItem.length(), 3, y + 13*i + y_offset, u8g2_font_profont12_tr );
-  }
+    for (uint8_t i = 0; i <= numberOfCategorys; i++){
+		if (i == curserPos) {
+			u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
+		}
+			if (minCategory <= i) {
+			
+				if (menuLevel == 1) {
+					
+					String strCategory = menuCategorys[i].name;
+					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
+							
+				} else if (menuLevel == 2) {
+					
+					
+					
+				} else if (menuLevel == 3) {
+	
+				}
+			}
+	}
     
-  } while ( u8g2.nextPage() );
+u8g2.sendBuffer();
+
   
 }
 
@@ -745,6 +822,16 @@ void controlMenu(){
   }
   if (throttlePosition == MIDDLE){
     throttleCentered = true;
+  }
+  
+  if (triggerTriggered) {
+	  if (menuLevel == 2 ){
+		menuLevel = 1;
+		strncpy(settingsHeader, settingsHeaderDefault, 20);
+	  } else {
+		menuLevel = 2;
+		strncpy(settingsHeader, menuCategorys[curserPos].name, 20);
+	  }
   }
 }
 
