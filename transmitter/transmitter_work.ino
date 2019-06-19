@@ -509,21 +509,36 @@ int triggerTriggered = 0;
 bool blink05 = true;
 unsigned long lastBlink = 0;
 
+// Defining struct to hold setting values while remote is turned on.
+typedef struct {
+  uint8_t boardID = 1;              // 0
+  uint8_t triggerMode;              // 1
+  uint8_t batteryType;              // 2
+  uint8_t batteryCells;             // 3
+  uint8_t motorPoles;               // 4
+  uint8_t motorPulley;              // 5
+} RemoteSettings;
+
+RemoteSettings remoteSettings;
+
+// Defining flash storage
+FlashStorage(flash_RemoteSettings, RemoteSettings);
+
 struct menuCategorys{
   uint8_t ID;
-  uint8_t menuLevel;			// 1 main menu // 2 sub menu // 3 setting
   char name[20];
 } menuCategorys[] = {
-  {0,  1,    "Main0"},
-  {1,  1,    "Main1"},
-  {2,  1,    "Main2"},
-  {1,  1,    "Main3"},
-  {2,  1,    "Main4"},
+  {0, "Board"},
+  {1, "Throttle"},
+  {2, "Trigger"},
+  {3, "Connection"},
+  {4, "System"},
+  {5, "Debug"},
 };
 
-uint8_t numberOfCategorys = 3;
+uint8_t numberOfCategorys = 6;
 
-struct menuActions01{
+struct menuActions{
   uint8_t ID;
   short standart;
   short minimum;
@@ -531,68 +546,36 @@ struct menuActions01{
   char name[20];
   uint8_t unitIdentifier;
   uint8_t valueIdentifier;
-} menuActions01[] = {
-  {0,	 1,   0,    9,    "Action_1_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_1_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_1_3",   		0 , 6},
+} menuActions[6][5]{
+	{
+		{0,	-1,   0,    9,    "Calibration",      	4 , 0},
+		{1,	-1,   0,    0,    "Center throttle", 	0 , 0},
+		{2,	-1,   0,    0,    "Min throttle", 		0 , 0},
+		{3,	-1,   0,    2,    "Max throttle",   	0 , 6},
+		{4,	-1,   0,    2,    "Deathband",   		0 , 6},
+	},{
+		{0,	-1,   0,    9,    "Calibration",      	4 , 0},
+		{1,	-1,   0,    0,    "Center throttle", 	0 , 0},
+		{2,	-1,   0,    0,    "Min throttle", 		0 , 0},
+		{3,	-1,   0,    2,    "Max throttle",   	0 , 6},
+		{4,	-1,   0,    2,    "Deathband",   		0 , 6},
+	},{
+		{0,	-1,   0,    9,    "Main trigger use",   4 , 0},
+		{1,	-1,   0,    0,    "Second trigger use", 0 , 0},
+	},{
+		{0,	-1,   0,    9,    "Pair new receiver",  4 , 0},
+		{1,	-1,   0,    0,    "Transmission Power", 0 , 0},
+		{2,	-1,   0,    2,    "Frequency",   		0 , 6},
+		{3,	-1,   0,    2,    "Encyption key",   	0 , 6},
+	},{
+		{0,	-1,   0,    9,    "Version",      		4 , 0},
+		{1,	-1,   0,    0,    "Reset", 				0 , 0},
+	},{
+		{0,	-1,   0,    9,    "Spare",      	4 , 0},
+	}
 };
 
-struct menuActions02{
-  uint8_t ID;
-  short standart;
-  short minimum;
-  short maximum;
-  char name[20];
-  uint8_t unitIdentifier;
-  uint8_t valueIdentifier;
-} menuActions02[] = {
-  {0,	-1,   0,    9,    "Action_2_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_2_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_2_3",   		0 , 6},
-};
-
-struct menuActions03{
-  uint8_t ID;
-  short standart;
-  short minimum;
-  short maximum;
-  char name[20];
-  uint8_t unitIdentifier;
-  uint8_t valueIdentifier;
-} menuActions03[] = {
-  {0,	-1,   0,    9,    "Action_3_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_3_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_3_3",   		0 , 6},
-};
-
-struct menuActions04{
-  uint8_t ID;
-  short standart;
-  short minimum;
-  short maximum;
-  char name[20];
-  uint8_t unitIdentifier;
-  uint8_t valueIdentifier;
-} menuActions04[] = {
-  {0,	-1,   0,    9,    "Action_4_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_4_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_4_3",   		0 , 6},
-};
-
-struct menuActions05{
-  uint8_t ID;
-  short standart;
-  short minimum;
-  short maximum;
-  char name[20];
-  uint8_t unitIdentifier;
-  uint8_t valueIdentifier;
-} menuActions05[] = {             
-  {0,	-1,   0,    9,    "Action_5_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_5_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_5_3",   		0 , 6},
-};
-uint8_t numberOfActions[5] = {3,3,3,3,3};
+uint8_t numberOfActions[6] = {5,5,2,4,2,1};
 
 //uint8_t numberOfCategorys = (sizeof(menuCategorys) / sizeof(menuCategorys[0]));
 uint8_t curserPos = 0;
@@ -703,6 +686,9 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
+	
+	Serial.print("menuActions[0][0]: "); Serial.println(menuActions[0][0].maximum);
+	Serial.print("menuActions[1][1]: "); Serial.println(menuActions[1][0].maximum);
 
   debugData.cycleTimeStart = millis();
   triggerTrigger();
@@ -824,13 +810,18 @@ void drawMenu() {
   //draw menu
 	
 u8g2.clearBuffer();
-	  
-	drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
-    u8g2.drawLine(1, 15, 120, 15);
+
+	u8g2.drawLine(1, 15, 120, 15);
+	 
+	if (menuLevel != 3) {
+		drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
 	
-	u8g2.drawFrame(124, 0, 4, 64);
+		u8g2.drawFrame(124, 0, 4, 64);
   
-	u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
+		u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
+	}
+	
+	
     if (menuLevel == 1) {
 		for (uint8_t i = 0; i <= numberOfCategorys; i++){
 			if (i == curserPos) {
@@ -849,28 +840,23 @@ u8g2.clearBuffer();
 				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
 			}
 			if (minCategory <= i) {
-				if (actualCategory == 0){
-					String strCategory = menuActions01[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-				} else if (actualCategory == 1){
-					String strCategory = menuActions02[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-				} else if (actualCategory == 2) {
-					String strCategory = menuActions03[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-				} else if (actualCategory == 3) {
-					String strCategory = menuActions04[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-				} else if (actualCategory == 4) {
-					String strCategory = menuActions05[i].name;
-					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-				}
+				String strCategory = menuActions[actualCategory][i].name;
+				drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
 			}
 		}
 	} else if (menuLevel == 3) {
-		String strAction = menuActions01[actualAction].name;
-		drawString(strAction, strAction.length(), 40, 30, u8g2_font_profont12_tr );
-	}
+		String strActionChange = "change";
+		drawString(strActionChange, strActionChange.length(), 15, 60, u8g2_font_profont12_tr );
+		String strAction = "back";
+		drawString(strAction, strAction.length(), 70, 60, u8g2_font_profont12_tr );
+		
+		if (curserPos == 0){
+			u8g2.drawFrame(13, 48 , 38, 14);
+		} else {
+			u8g2.drawFrame(68, 48 , 30, 14);
+		}
+		
+	}	
     
 u8g2.sendBuffer();
 
@@ -896,19 +882,33 @@ void controlMenu(){
   }
   
   if (triggerTriggered) {
-	  if (menuLevel == 2 ){
-		menuLevel = 3;
-		strncpy(settingsHeader, menuActions01[curserPos].name, 20);
-		actualAction = curserPos;
-	  } else if (menuLevel == 1 ){
-		menuLevel = 2;
-		actualCategory = curserPos;
-		strncpy(settingsHeader, menuCategorys[curserPos].name, 20);
-	  } else if (menuLevel == 3) {
-		  menuLevel = 2;
-	  }
-  }
+
+		if (menuLevel == 2 ){
+			menuLevel = 3;
+			strncpy(settingsHeader, menuActions[actualCategory][curserPos].name, 20);
+			actualAction = curserPos;
+		} else if (menuLevel == 1 ){
+			menuLevel = 2;
+			actualCategory = curserPos;
+			strncpy(settingsHeader, menuCategorys[curserPos].name, 20);
+		} else if (menuLevel == 3) {
+			if (curserPos == 0) {
+				menuLevel == 3;
+			} else if (curserPos == 1) {
+				menuLevel == 4;
+			}
+		} else if (menuLevel == 4) {
+			
+		}
+	} else if (buttonTriggered){
+		menuLevel = 1;
+	}
+
 }
+
+// load default values
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 
 // blink 0.5s
 // --------------------------------------------------------------------------------------
