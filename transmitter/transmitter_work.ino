@@ -15,7 +15,7 @@
 
 // - Activate DEBUG - remote will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-//#define DEBUG                  //activate serial monitor
+#define DEBUG                  //activate serial monitor
 //#define DEBUG_BATTERY         //activate battery debugging
 //#define DEBUG_TRANSMISSION    //activate transmission debugging
 
@@ -546,32 +546,33 @@ struct menuActions{
   char name[20];
   uint8_t unitIdentifier;
   uint8_t valueIdentifier;
-} menuActions[6][5]{
+} menuActions[6][6]{
 	{
-		{0,	-1,   0,    9,    "Calibration",      	4 , 0},
-		{1,	-1,   0,    0,    "Center throttle", 	0 , 0},
-		{2,	-1,   0,    0,    "Min throttle", 		0 , 0},
-		{3,	-1,   0,    2,    "Max throttle",   	0 , 6},
-		{4,	-1,   0,    2,    "Deathband",   		0 , 6},
+		{0,		 1,   0,    9,    "BoardID",      		4 , 0},
+		{1,		 0,   0,    2,    "Headlight", 			0 , 0},
+		{2,		 0,   0,    0,    "Breaklight", 		0 , 0},
+		{3,		 8,   1,   50,    "Motor poles",   		0 , 6},
+		{4,		70,  50,  200,    "Wheel size",   		0 , 6},
+		{4,		10,   1,   14,    "Battery cells",   	0 , 6},
 	},{
-		{0,	-1,   0,    9,    "Calibration",      	4 , 0},
-		{1,	-1,   0,    0,    "Center throttle", 	0 , 0},
-		{2,	-1,   0,    0,    "Min throttle", 		0 , 0},
-		{3,	-1,   0,    2,    "Max throttle",   	0 , 6},
-		{4,	-1,   0,    2,    "Deathband",   		0 , 6},
+		{5,		-1,   0,    9,    "Calibrate Throttle", 4 , 0},
+		{6,		550, 400,  650,    "Center throttle", 	0 , 0},
+		{7,		300, 100,  400,    "Min throttle", 		0 , 0},
+		{8,		950, 600, 1024,    "Max throttle",   	0 , 6},
+		{9,		5,   1,    20,    "Deathband",   		0 , 6},
 	},{
-		{0,	-1,   0,    9,    "Main trigger use",   4 , 0},
-		{1,	-1,   0,    0,    "Second trigger use", 0 , 0},
+		{10,	-1,   0,    9,    "Main trigger use",   4 , 0},
+		{11,	-1,   0,    0,    "Second trigger use", 0 , 0},
 	},{
-		{0,	-1,   0,    9,    "Pair new receiver",  4 , 0},
-		{1,	-1,   0,    0,    "Transmission Power", 0 , 0},
-		{2,	-1,   0,    2,    "Frequency",   		0 , 6},
-		{3,	-1,   0,    2,    "Encyption key",   	0 , 6},
+		{12,	-1,   0,    9,    "Pair new receiver",  4 , 0},
+		{13,	-1,   0,    0,    "Transmission Power", 0 , 0},
+		{14,	-1,   0,    2,    "Frequency",   		0 , 6},
+		{15,	-1,   0,    2,    "Encyption key",   	0 , 6},
 	},{
-		{0,	-1,   0,    9,    "Version",      		4 , 0},
-		{1,	-1,   0,    0,    "Reset", 				0 , 0},
+		{16,	-1,   0,    9,    "Version",      		4 , 0},
+		{17,	-1,   0,    0,    "Reset", 				0 , 0},
 	},{
-		{0,	-1,   0,    9,    "Spare",      	4 , 0},
+		{18,	-1,   0,    9,    "Spare",      	4 , 0},
 	}
 };
 
@@ -679,6 +680,8 @@ void setup() {
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
+  
+  loadDefaultRemoteSettings();
 
 }
 
@@ -686,9 +689,6 @@ void setup() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void loop() {
-	
-	Serial.print("menuActions[0][0]: "); Serial.println(menuActions[0][0].maximum);
-	Serial.print("menuActions[1][1]: "); Serial.println(menuActions[1][0].maximum);
 
   debugData.cycleTimeStart = millis();
   triggerTrigger();
@@ -785,11 +785,19 @@ void drawMenu() {
     y_offset = 0;
   }
   
-  // scrolling overrun
-  if (curserPos > numberOfCategorys) {
-    curserPos = 0;
-  } else if (curserPos < 0){
-    curserPos = numberOfCategorys;
+ // scrolling overrun
+  if (menuLevel == 3) { // when only "back" or "change"
+	 if (curserPos > 1) {
+		curserPos = 0;
+	} else if (curserPos < 0){
+		curserPos = 1;
+	} 
+  } else {
+	if (curserPos > numberOfCategorys) {
+		curserPos = 0;
+	} else if (curserPos < 0){
+		curserPos = numberOfCategorys;
+	}
   }
   
  // calculate upper categorys when scrolling down
@@ -802,10 +810,7 @@ void drawMenu() {
   // calculate length of string to find the center
   	u8g2.setFont(u8g2_font_profont12_tr); 
 	shiftTextPixel = 58 - (u8g2.getStrWidth(settingsHeader)/2);
-	
-	Serial.println(curserPos);
-	Serial.println(numberOfCategorys);
-	
+
 	
   //draw menu
 	
@@ -813,7 +818,7 @@ u8g2.clearBuffer();
 
 	u8g2.drawLine(1, 15, 120, 15);
 	 
-	if (menuLevel != 3) {
+	if (menuLevel <= 2) {
 		drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
 	
 		u8g2.drawFrame(124, 0, 4, 64);
@@ -822,7 +827,7 @@ u8g2.clearBuffer();
 	}
 	
 	
-    if (menuLevel == 1) {
+    if (menuLevel == 1) { // draw main category's
 		for (uint8_t i = 0; i <= numberOfCategorys; i++){
 			if (i == curserPos) {
 				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
@@ -834,7 +839,7 @@ u8g2.clearBuffer();
 					
 				}
 		}
-	} else if (menuLevel == 2) {
+	} else if (menuLevel == 2) { // draw sub menu to specific category
 		for (uint8_t i = 0; i < numberOfActions[actualCategory]; i++){
 			if (i == curserPos) {
 				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
@@ -844,7 +849,7 @@ u8g2.clearBuffer();
 				drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
 			}
 		}
-	} else if (menuLevel == 3) {
+	} else if (menuLevel == 3) { // draw specific option
 		String strActionChange = "change";
 		drawString(strActionChange, strActionChange.length(), 15, 60, u8g2_font_profont12_tr );
 		String strAction = "back";
@@ -856,7 +861,9 @@ u8g2.clearBuffer();
 			u8g2.drawFrame(68, 48 , 30, 14);
 		}
 		
-	}	
+	} else if (menuLevel == 4) { // draw change option
+		
+	}
     
 u8g2.sendBuffer();
 
@@ -891,17 +898,24 @@ void controlMenu(){
 			menuLevel = 2;
 			actualCategory = curserPos;
 			strncpy(settingsHeader, menuCategorys[curserPos].name, 20);
+			curserPos = 0;
 		} else if (menuLevel == 3) {
+			Serial.println("menuLevel = 3 triggered");
 			if (curserPos == 0) {
-				menuLevel == 3;
+				Serial.println("curserPos0");
+				strncpy(settingsHeader, menuCategorys[actualCategory].name, 20);
+				menuLevel = 2;
 			} else if (curserPos == 1) {
-				menuLevel == 4;
+				Serial.println("curserPos1");
+				menuLevel = 4;
+				curserPos = 0;
 			}
 		} else if (menuLevel == 4) {
 			
 		}
 	} else if (buttonTriggered){
 		menuLevel = 1;
+		strncpy(settingsHeader, settingsHeaderDefault, 20);
 	}
 
 }
@@ -909,6 +923,40 @@ void controlMenu(){
 // load default values
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
+void loadDefaultRemoteSettings() {
+	
+	for ( uint8_t i = 0; i < numberOfCategorys; i++ ){
+		for ( uint8_t u = 0; u < 6; u++ ){
+			if (menuActions[i][u].standart != -1){
+					setRemoteSettingValue(menuActions[i][u].ID, menuActions[i][u].standart);
+			}
+		}
+	}
+	updateFlashSettings();
+	
+	Serial.println();
+
+}
+
+// load default values
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void setRemoteSettingValue(uint8_t index, short value) {
+	
+	Serial.print("ID: "); Serial.println(index); Serial.print("value: "); Serial.println(value);
+	
+  switch (index) {
+    case 0:         remoteSettings.boardID = value;         break;
+    case 1:         remoteSettings.triggerMode = value;     break;
+    case 2:         remoteSettings.batteryType = value;     break;
+    case 3:         remoteSettings.batteryCells = value;    break;
+    case 4:         remoteSettings.motorPoles = value;      break;
+    case 5:         remoteSettings.motorPulley = value;     break;
+	
+
+    default: /* Do nothing */ break;
+  }
+}
 
 // blink 0.5s
 // --------------------------------------------------------------------------------------
