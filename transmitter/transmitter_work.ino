@@ -126,27 +126,27 @@ const unsigned char policeMode[] PROGMEM = {
 
 const unsigned char acceptLogo[] PROGMEM = {
   // 'Download, 50x50px
-  0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0, 0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xfc,
-  0x00, 0x00, 0x0f, 0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xe0, 0x00, 0x00,
-  0x01, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0x00, 0x0f, 0xfc, 0x00, 0x3f,
-  0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xfc, 0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xf8,
-  0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf0, 0x1f, 0xff,
-  0xff, 0xfe, 0x03, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 0xff,
-  0x01, 0xc0, 0xc0, 0x7f, 0xff, 0xff, 0xbf, 0x80, 0xc0, 0xc0, 0xff, 0xff, 0xff, 0x1f, 0xc0, 0xc0,
-  0x80, 0xff, 0xff, 0xfe, 0x0f, 0xc0, 0xc0, 0x81, 0xff, 0xff, 0xfc, 0x07, 0xe0, 0x40, 0x81, 0xff,
-  0xff, 0xf8, 0x03, 0xe0, 0x40, 0x81, 0xff, 0xff, 0xf0, 0x01, 0xe0, 0x40, 0x03, 0xff, 0x3f, 0xe0,
-  0x03, 0xf0, 0x00, 0x03, 0xfe, 0x1f, 0xc0, 0x07, 0xf0, 0x00, 0x03, 0xfc, 0x0f, 0x80, 0x0f, 0xf0,
-  0x00, 0x03, 0xf8, 0x07, 0x00, 0x1f, 0xf0, 0x00, 0x03, 0xf0, 0x02, 0x00, 0x3f, 0xf0, 0x00, 0x03,
-  0xf0, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x03, 0xf8, 0x00, 0x00, 0xff, 0xf0, 0x00, 0x03, 0xfc, 0x00,
-  0x01, 0xff, 0xf0, 0x00, 0x03, 0xfe, 0x00, 0x03, 0xff, 0xf0, 0x00, 0x03, 0xff, 0x00, 0x07, 0xff,
-  0xf0, 0x00, 0x81, 0xff, 0x80, 0x0f, 0xff, 0xe0, 0x40, 0x81, 0xff, 0xc0, 0x1f, 0xff, 0xe0, 0x40,
-  0x81, 0xff, 0xe0, 0x3f, 0xff, 0xe0, 0x40, 0xc0, 0xff, 0xf0, 0x7f, 0xff, 0xc0, 0xc0, 0xc0, 0xff,
-  0xf8, 0xff, 0xff, 0xc0, 0xc0, 0xc0, 0x7f, 0xfd, 0xff, 0xff, 0x80, 0xc0, 0xe0, 0x3f, 0xff, 0xff,
-  0xff, 0x01, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xf0, 0x1f, 0xff, 0xff, 0xfc, 0x03,
-  0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf8, 0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xfc,
-  0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xff, 0x00, 0x0f,
-  0xfc, 0x00, 0x3f, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0xe0, 0x00, 0x00, 0x01,
-  0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xfc, 0x00, 0x00, 0x0f, 0xff, 0xc0,
+  0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0, 0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xfc, 
+  0x00, 0x00, 0x0f, 0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xe0, 0x00, 0x00, 
+  0x01, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0x00, 0x0f, 0xfc, 0x00, 0x3f, 
+  0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xfc, 0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xf8, 
+  0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf0, 0x1f, 0xff, 
+  0xff, 0xfe, 0x03, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 0xff, 
+  0x01, 0xc0, 0xc0, 0x7f, 0xff, 0xff, 0xbf, 0x80, 0xc0, 0xc0, 0xff, 0xff, 0xff, 0x1f, 0xc0, 0xc0, 
+  0x80, 0xff, 0xff, 0xfe, 0x0f, 0xc0, 0xc0, 0x81, 0xff, 0xff, 0xfc, 0x07, 0xe0, 0x40, 0x81, 0xff, 
+  0xff, 0xf8, 0x03, 0xe0, 0x40, 0x81, 0xff, 0xff, 0xf0, 0x01, 0xe0, 0x40, 0x03, 0xff, 0x3f, 0xe0, 
+  0x03, 0xf0, 0x00, 0x03, 0xfe, 0x1f, 0xc0, 0x07, 0xf0, 0x00, 0x03, 0xfc, 0x0f, 0x80, 0x0f, 0xf0, 
+  0x00, 0x03, 0xf8, 0x07, 0x00, 0x1f, 0xf0, 0x00, 0x03, 0xf0, 0x02, 0x00, 0x3f, 0xf0, 0x00, 0x03, 
+  0xf0, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x03, 0xf8, 0x00, 0x00, 0xff, 0xf0, 0x00, 0x03, 0xfc, 0x00, 
+  0x01, 0xff, 0xf0, 0x00, 0x03, 0xfe, 0x00, 0x03, 0xff, 0xf0, 0x00, 0x03, 0xff, 0x00, 0x07, 0xff, 
+  0xf0, 0x00, 0x81, 0xff, 0x80, 0x0f, 0xff, 0xe0, 0x40, 0x81, 0xff, 0xc0, 0x1f, 0xff, 0xe0, 0x40, 
+  0x81, 0xff, 0xe0, 0x3f, 0xff, 0xe0, 0x40, 0xc0, 0xff, 0xf0, 0x7f, 0xff, 0xc0, 0xc0, 0xc0, 0xff, 
+  0xf8, 0xff, 0xff, 0xc0, 0xc0, 0xc0, 0x7f, 0xfd, 0xff, 0xff, 0x80, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 
+  0xff, 0x01, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xf0, 0x1f, 0xff, 0xff, 0xfc, 0x03, 
+  0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf8, 0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xfc, 
+  0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xff, 0x00, 0x0f, 
+  0xfc, 0x00, 0x3f, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0xe0, 0x00, 0x00, 0x01, 
+  0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xfc, 0x00, 0x00, 0x0f, 0xff, 0xc0, 
   0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0
 };
 
@@ -575,24 +575,7 @@ struct menuActions{
 	}
 };
 
-<<<<<<< HEAD
 uint8_t numberOfActions[6] = {5,5,2,4,2,1};
-=======
-struct menuActions05{
-  uint8_t ID;
-  short standart;
-  short minimum;
-  short maximum;
-  char name[20];
-  uint8_t unitIdentifier;
-  uint8_t valueIdentifier;
-} menuActions05[] = {
-  {0,	-1,   0,    9,    "Action_5_1",      	4 , 0},
-  {1,	-1,   0,    0,    "Action_5_2", 		0 , 0},
-  {2,	-1,   0,    2,    "Action_5_3",   		0 , 6},
-};
-uint8_t numberOfActions[5] = {3,3,3,3,3};
->>>>>>> 3f3a6b95b0a0cf141985fd3c79ca08e732e56039
 
 //uint8_t numberOfCategorys = (sizeof(menuCategorys) / sizeof(menuCategorys[0]));
 uint8_t curserPos = 0;
@@ -682,7 +665,7 @@ void setup() {
   //if (!localSettings.throttleCalibrated) {
   //  remoteStatus = CALIBRATION;
   //}
-
+  
   	//for (uint8_t i = 0; i <= numberOfCategorys; i++){
 	//	for (uint8_t u = 0; u <= numberOfCategorys; u++){
 	//		if (menuCategorys[i].parentCategory == u){
@@ -692,7 +675,7 @@ void setup() {
 	//}
 
   remoteStatus = MENU;
-
+  
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
@@ -759,7 +742,7 @@ void loop() {
         controlSettings();
         drawIdleDisplay();
      break;
-
+    
   case MENU:
         u8g2.setDisplayRotation(U8G2_R0);
         controlMenu();
@@ -779,7 +762,7 @@ void loop() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void drawMenu() {
-
+  
   //variables for menu
 
   uint16_t x = 1;
@@ -789,46 +772,45 @@ void drawMenu() {
   uint16_t y_offset = 0;
   uint8_t minCategory = 1;
   uint8_t shiftTextPixel = 0;
-
+  
   //calculations
   scrollBoxheight = 64/numberOfCategorys;         // calculate the number of segments in scrollbar -> height of scrollbar box
-
+  
   y_scroll = (scrollBoxheight*curserPos-scrollBoxheight); // calculate the start point in y for scrollbar box in respect to curser pos
-
+  
   // calculate select bar position
   if (curserPos >= 3) {
     y_offset = (2 - curserPos)* 13;
   } else {
     y_offset = 0;
   }
-
+  
   // scrolling overrun
   if (curserPos > numberOfCategorys) {
     curserPos = 0;
   } else if (curserPos < 0){
     curserPos = numberOfCategorys;
   }
-
+  
  // calculate upper categorys when scrolling down
   if (curserPos >= 3) {
 	  minCategory = curserPos - 2;
   } else {
 	  minCategory = 0;
   }
-
+  
   // calculate length of string to find the center
-  	u8g2.setFont(u8g2_font_profont12_tr);
+  	u8g2.setFont(u8g2_font_profont12_tr); 
 	shiftTextPixel = 58 - (u8g2.getStrWidth(settingsHeader)/2);
-
+	
 	Serial.println(curserPos);
 	Serial.println(numberOfCategorys);
-
-
+	
+	
   //draw menu
-
+	
 u8g2.clearBuffer();
 
-<<<<<<< HEAD
 	u8g2.drawLine(1, 15, 120, 15);
 	 
 	if (menuLevel != 3) {
@@ -840,24 +822,16 @@ u8g2.clearBuffer();
 	}
 	
 	
-=======
-	drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
-    u8g2.drawLine(1, 15, 120, 15);
-
-	u8g2.drawFrame(124, 0, 4, 64);
-
-	u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
->>>>>>> 3f3a6b95b0a0cf141985fd3c79ca08e732e56039
     if (menuLevel == 1) {
 		for (uint8_t i = 0; i <= numberOfCategorys; i++){
 			if (i == curserPos) {
 				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
 			}
 				if (minCategory <= i) {
-
+					
 					String strCategory = menuCategorys[i].name;
 					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
-
+					
 				}
 		}
 	} else if (menuLevel == 2) {
@@ -871,7 +845,6 @@ u8g2.clearBuffer();
 			}
 		}
 	} else if (menuLevel == 3) {
-<<<<<<< HEAD
 		String strActionChange = "change";
 		drawString(strActionChange, strActionChange.length(), 15, 60, u8g2_font_profont12_tr );
 		String strAction = "back";
@@ -885,24 +858,18 @@ u8g2.clearBuffer();
 		
 	}	
     
-=======
-		String strAction = menuActions01[actualAction].name;
-		drawString(strAction, strAction.length(), 40, 30, u8g2_font_profont12_tr );
-	}
-
->>>>>>> 3f3a6b95b0a0cf141985fd3c79ca08e732e56039
 u8g2.sendBuffer();
 
-
+  
 }
 
 // controlMenu
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void controlMenu(){
-
+  
   calculateThrottlePosition();
-
+  
   if (throttlePosition == TOP && throttleCentered){
     throttleCentered = false;
     curserPos++;
@@ -913,7 +880,7 @@ void controlMenu(){
   if (throttlePosition == MIDDLE){
     throttleCentered = true;
   }
-
+  
   if (triggerTriggered) {
 
 		if (menuLevel == 2 ){
@@ -958,7 +925,7 @@ void blink() {
 // --------------------------------------------------------------------------------------
 void buttonTrigger() {
   buttonState = digitalRead(extraButtonPin);
-
+  
   if (buttonState == LOW && lastButtonState == HIGH) {
     lastButtonState = buttonState;
     buttonTriggered = true;
@@ -966,11 +933,11 @@ void buttonTrigger() {
   } else {
     buttonTriggered = false;
   }
-
+  
   if (buttonState == HIGH) {
     lastButtonState = HIGH;
   }
-
+  
 }
 
 // Button handling
@@ -978,7 +945,7 @@ void buttonTrigger() {
 // --------------------------------------------------------------------------------------
 void triggerTrigger() {
   triggerState = digitalRead(triggerPin);
-
+  
   if (triggerState == LOW && lastTriggerState == HIGH) {
     lastTriggerState = triggerState;
     triggerTriggered = true;
@@ -986,11 +953,11 @@ void triggerTrigger() {
   } else {
     triggerTriggered = false;
   }
-
+  
   if (triggerState == HIGH) {
     lastTriggerState = HIGH;
   }
-
+  
 }
 
 
@@ -1464,16 +1431,16 @@ bool pairNewBoard() {
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
 void controlCalibrationDisplay() {
-
+  
   Serial.println(calibrationStatus);
-
+  
   switch (calibrationStatus){
     case 10:
     if (buttonTriggered || triggerTriggered) {
       calibrationStatus = 20;
     }
     break;
-
+      
     case 20:
     if (txSettings.minHallValue > hallValue){
       txSettings.minHallValue = hallValue;
@@ -1484,7 +1451,7 @@ void controlCalibrationDisplay() {
     calibrationStatus = 30;
     }
     break;
-
+    
   case 30:
         calibrationTimer1000 = millis();
     calibrationStatus = 40;
@@ -1501,9 +1468,9 @@ void controlCalibrationDisplay() {
 
       }
     break;
-
+    
   }
-
+  
 }
 
 // Uses the throttle and trigger to navigate and change settings
@@ -1914,7 +1881,7 @@ void drawAnnouncement(){
       u8g2.setFontMode(0);
       u8g2.setDrawColor(1);
     }
-
+  
   } else {
     if (announcementFade) {
       activateAnnouncement = false;
@@ -2013,23 +1980,12 @@ void calculateThrottlePosition()
 
   hallValue = total / samples;
 
-#ifdef PCB_FULLSMD
    if ( hallValue >= txSettings.centerHallValue )
   {
     throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 3), centerThrottle, 1023 );
   } else {
     throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -3), 0, centerThrottle );
   }
-#endif
-
-#ifdef PCB_TH
-    if ( hallValue >= txSettings.centerHallValue )
-    {
-      throttle = constrain( fscale( txSettings.centerHallValue, txSettings.maxHallValue, centerThrottle, throttleMax, hallValue, 1), centerThrottle, 1023 );
-    } else {
-      throttle = constrain( fscale( txSettings.minHallValue, txSettings.centerHallValue, 0, centerThrottle, hallValue, -1), 0, centerThrottle );
-    }
- #endif
 
   // Remove hall center noise
   hallNoiseMargin = txSettings.throttleDeath;
@@ -2381,7 +2337,7 @@ void drawSettingsMenu() {
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
 void drawCalibrationDisplay() {
-
+  
   String calibrationTitle1;
   String calibrationTitle2;
   String calibrationTitle3;
@@ -2392,19 +2348,19 @@ void drawCalibrationDisplay() {
   String calibrationTitle8;
   String calibrationTitle9;
   String calibrationTitle10;
-
+  
   u8g2.firstPage();
   do {
-
+    
     calibrationTitle1 = "Calibrate";
     drawString(calibrationTitle1, calibrationTitle1.length(), 1, 12, u8g2_font_profont12_tr );
     calibrationTitle2 = "Throttle";
     drawString(calibrationTitle2, calibrationTitle2.length(), 1, 25, u8g2_font_profont12_tr );
-
+  
   int8_t x = 0;
-
+    
     switch (calibrationStatus) {
-
+    
       case 10:
         calibrationTitle3 = "Move throttle multiple times";
         drawString(calibrationTitle3, calibrationTitle3.length(), 1, 38, u8g2_font_5x8_tf  );
@@ -2412,9 +2368,9 @@ void drawCalibrationDisplay() {
         drawString(calibrationTitle4, calibrationTitle4.length(), 1, 47, u8g2_font_5x8_tf  );
         calibrationTitle5 = "START";
         drawString(calibrationTitle5, calibrationTitle5.length(), 20, 80, u8g2_font_profont12_tr );
-
+        
         break;
-
+      
       case 20:
 
         hallMinString = String(txSettings.minHallValue) + " - ";
@@ -2431,11 +2387,11 @@ void drawCalibrationDisplay() {
 
         hallString = "<-" + String(hallValue) + "->";
         drawString(hallString, hallString.length(), 8, 120, u8g2_font_profont12_tr );
-
+        
         break;
-
+    
       case 40:
-
+      
         calibrationTitle6 = "Throttle is";
         drawString(calibrationTitle6, calibrationTitle6.length(), 1, 48, u8g2_font_profont12_tr );
         calibrationTitle7 = "calibrated!";
@@ -2443,11 +2399,11 @@ void drawCalibrationDisplay() {
     //u8g2.drawXBMP(6, 70, 50, 50, acceptLogo);
 
         break;
-
+    
     }
-
+    
   } while ( u8g2.nextPage() );
-
+  
 }
 
 // Print the startup screen
@@ -3035,7 +2991,7 @@ void drawBatteryRemote() {
         Serial.print("Battery level in %: "); Serial.println(batteryLevelRemote);
       #endif
   }
-
+  
   if (batteryLevelRemote <= 20 && blink05) {
   } else {
   u8g2.drawFrame(x + 2, y, 18, 9);
