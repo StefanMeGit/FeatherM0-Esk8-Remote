@@ -1,7 +1,7 @@
 # E-Skate Remote based on Feather M0
 ### Still in Development! 
 Designed off of the Firefly remote by SolidGeek, this version of the remote has implemented a couple of new features- namely:
-- Redigned Shell- Shorther shell fits nicer into the hand
+- Redesigned Shell- Shorther shell fits nicer into the hand
 - Assorted Design Changes- Bearings on the moving parts, PCB based connections, and more!
 - Feather M0 Architecture- Reliable connection thanks to the Feather M0 board, also allows for VESC data as before!
 - Optional "Advanced" Reciever- Control your board's lighting! Headlights, Adaptive Tail Lights, or Stylelights! Anything up to 24w can be powered and activated from your remote! 
