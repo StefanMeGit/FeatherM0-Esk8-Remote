@@ -557,26 +557,26 @@ struct menuActions{
 		{2,		 0,   0,    0,    "Breaklight", 		0 , 0},
 		{3,		 8,   1,   50,    "Motor poles",   		0 , 6},
 		{4,		70,  50,  200,    "Wheel size",   		0 , 6},
-		{4,		10,   1,   14,    "Battery cells",   	0 , 6},
+		{5,		10,   1,   14,    "Battery cells",   	0 , 6},
 	},{
-		{5,		-1,   0,    9,    "Calibrate Throttle", 4 , 0},
-		{6,		550, 400,  650,    "Center throttle", 	0 , 0},
-		{7,		300, 100,  400,    "Min throttle", 		0 , 0},
-		{8,		950, 600, 1024,    "Max throttle",   	0 , 6},
-		{9,		5,   1,    20,    "Deathband",   		0 , 6},
+		{6,		-1,   0,    9,    "Calibrate Throttle", 4 , 0},
+		{7,		550, 400,  650,    "Center throttle", 	0 , 0},
+		{8,		300, 100,  400,    "Min throttle", 		0 , 0},
+		{9,		950, 600, 1024,    "Max throttle",   	0 , 6},
+		{10,		5,   1,    20,    "Deathband",   		0 , 6},
 	},{
-		{10,	-1,   0,    9,    "Main trigger use",   4 , 0},
-		{11,	-1,   0,    0,    "Second trigger use", 0 , 0},
+		{11,	-1,   0,    9,    "Main trigger use",   4 , 0},
+		{12,	-1,   0,    0,    "Second trigger use", 0 , 0},
 	},{
-		{12,	-1,   0,    9,    "Pair new receiver",  4 , 0},
-		{13,	-1,   0,    0,    "Transmission Power", 0 , 0},
-		{14,	-1,   0,    2,    "Frequency",   		0 , 6},
-		{15,	-1,   0,    2,    "Encyption key",   	0 , 6},
+		{13,	-1,   0,    9,    "Pair new receiver",  4 , 0},
+		{14,	-1,   0,    0,    "Transmission Power", 0 , 0},
+		{15,	-1,   0,    2,    "Frequency",   		0 , 6},
+		{16,	-1,   0,    2,    "Encyption key",   	0 , 6},
 	},{
-		{16,	-1,   0,    9,    "Version",      		4 , 0},
-		{17,	-1,   0,    0,    "Reset", 				0 , 0},
+		{17,	-1,   0,    9,    "Version",      		4 , 0},
+		{18,	-1,   0,    0,    "Reset", 				0 , 0},
 	},{
-		{18,	-1,   0,    9,    "Spare",      	4 , 0},
+		{19,	-1,   0,    9,    "Spare",      	4 , 0},
 	}
 };
 
@@ -951,12 +951,24 @@ void setRemoteSettingValue(uint8_t index, short value) {
 
   switch (index) {
     case 0:         remoteSettings.boardID = value;         break;
-    case 1:         remoteSettings.triggerMode = value;     break;
-    case 2:         remoteSettings.batteryType = value;     break;
-    case 3:         remoteSettings.batteryCells = value;    break;
-    case 4:         remoteSettings.motorPoles = value;      break;
-    case 5:         remoteSettings.motorPulley = value;     break;
-
+    case 1:         remoteSettings.headlight = value;     break;
+    case 2:         remoteSettings.breaklight = value;     break;
+    case 3:         remoteSettings.motorPoles = value;    break;
+    case 4:         remoteSettings.wheelSize = value;      break;
+    case 5:         remoteSettings.batteryCells = value;     break;
+    case 6:         remoteSettings.calibrateRemote = value;         break;
+    case 7:         remoteSettings.centerThrottle = value;     break;
+    case 8:         remoteSettings.minThrottle = value;     break;
+    case 9:         remoteSettings.maxThrottle = value;    break;
+    case 10:        remoteSettings.deathband = value;      break;
+    case 11:        remoteSettings.triggerUse = value;     break;
+    case 12:        remoteSettings.boardID = value;         break;
+    case 13:        remoteSettings.triggerMode = value;     break;
+    case 14:        remoteSettings.batteryType = value;     break;
+    case 15:        remoteSettings.batteryCells = value;    break;
+    case 16:        remoteSettings.motorPoles = value;      break;
+    case 17:        remoteSettings.motorPulley = value;     break;
+    case 18:        remoteSettings.motorPulley = value;     break;
 
     default: /* Do nothing */ break;
   }
