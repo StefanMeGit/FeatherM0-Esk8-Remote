@@ -1,5 +1,9 @@
 // FeatherFly SMD Transmitter - eSk8 Remote
 
+// --------------------------------------------------------------------------------------
+// -------- WORKING ON NEW MENU! NOT FOR USE!
+// --------------------------------------------------------------------------------------
+
 #include <U8g2lib.h>
 #include <Wire.h>
 #include <SPI.h>
@@ -15,21 +19,17 @@
 
 // - Activate DEBUG - remote will not start up when its not connected to pc
 //    and monitor in Arduino IDE is open (Baudrate: 115200)
-//#define DEBUG                   //activate serial monitor
-//#define DEBUG_BATTERY           //activate battery debugging
-//#define DEBUG_TRANSMISSION      //activate transmission debugging
+//#define DEBUG                  //activate serial monitor
+//#define DEBUG_BATTERY         //activate battery debugging
+//#define DEBUG_TRANSMISSION    //activate transmission debugging
 
 // - Choose frequency:
-#define RFM_EU                    // RFM_EU for 415Mhz in Europe
-//#define RFM_USA                 // RFM_USA for 915Mhz in USA and AUS
+#define RFM_EU        // RFM_EU for 415Mhz in Europe
+//#define RFM_USA     // RFM_USA for 915Mhz in USA and AUS
 
 // - Choose UART protocoll:
-#define ESC_UNITY                 // ESC_UNITY for UART communication with a UNITY
-//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
-
-// - Choose pcb layout:
-#define PCB_TH                    // traditionl PCB (with Adafruit Feather)
-//#define PCB_FULLSMD             // full smd design (no Adafruit Feather)
+//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
 // --------------------------------------------------------------------------------------
@@ -129,29 +129,29 @@ const unsigned char policeMode[] PROGMEM = {
 };
 
 const unsigned char acceptLogo[] PROGMEM = {
-	// 'Download, 50x50px
-	0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0, 0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xfc,
-	0x00, 0x00, 0x0f, 0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xe0, 0x00, 0x00,
-	0x01, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0x00, 0x0f, 0xfc, 0x00, 0x3f,
-	0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xfc, 0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xf8,
-	0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf0, 0x1f, 0xff,
-	0xff, 0xfe, 0x03, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 0xff,
-	0x01, 0xc0, 0xc0, 0x7f, 0xff, 0xff, 0xbf, 0x80, 0xc0, 0xc0, 0xff, 0xff, 0xff, 0x1f, 0xc0, 0xc0,
-	0x80, 0xff, 0xff, 0xfe, 0x0f, 0xc0, 0xc0, 0x81, 0xff, 0xff, 0xfc, 0x07, 0xe0, 0x40, 0x81, 0xff,
-	0xff, 0xf8, 0x03, 0xe0, 0x40, 0x81, 0xff, 0xff, 0xf0, 0x01, 0xe0, 0x40, 0x03, 0xff, 0x3f, 0xe0,
-	0x03, 0xf0, 0x00, 0x03, 0xfe, 0x1f, 0xc0, 0x07, 0xf0, 0x00, 0x03, 0xfc, 0x0f, 0x80, 0x0f, 0xf0,
-	0x00, 0x03, 0xf8, 0x07, 0x00, 0x1f, 0xf0, 0x00, 0x03, 0xf0, 0x02, 0x00, 0x3f, 0xf0, 0x00, 0x03,
-	0xf0, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x03, 0xf8, 0x00, 0x00, 0xff, 0xf0, 0x00, 0x03, 0xfc, 0x00,
-	0x01, 0xff, 0xf0, 0x00, 0x03, 0xfe, 0x00, 0x03, 0xff, 0xf0, 0x00, 0x03, 0xff, 0x00, 0x07, 0xff,
-	0xf0, 0x00, 0x81, 0xff, 0x80, 0x0f, 0xff, 0xe0, 0x40, 0x81, 0xff, 0xc0, 0x1f, 0xff, 0xe0, 0x40,
-	0x81, 0xff, 0xe0, 0x3f, 0xff, 0xe0, 0x40, 0xc0, 0xff, 0xf0, 0x7f, 0xff, 0xc0, 0xc0, 0xc0, 0xff,
-	0xf8, 0xff, 0xff, 0xc0, 0xc0, 0xc0, 0x7f, 0xfd, 0xff, 0xff, 0x80, 0xc0, 0xe0, 0x3f, 0xff, 0xff,
-	0xff, 0x01, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xf0, 0x1f, 0xff, 0xff, 0xfc, 0x03,
-	0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf8, 0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xfc,
-	0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xff, 0x00, 0x0f,
-	0xfc, 0x00, 0x3f, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0xe0, 0x00, 0x00, 0x01,
-	0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xfc, 0x00, 0x00, 0x0f, 0xff, 0xc0,
-	0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0
+  // 'Download, 50x50px
+  0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0, 0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xfc,
+  0x00, 0x00, 0x0f, 0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xe0, 0x00, 0x00,
+  0x01, 0xff, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0x00, 0x0f, 0xfc, 0x00, 0x3f,
+  0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xfc, 0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xf8,
+  0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf0, 0x1f, 0xff,
+  0xff, 0xfe, 0x03, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xe0, 0x3f, 0xff, 0xff, 0xff,
+  0x01, 0xc0, 0xc0, 0x7f, 0xff, 0xff, 0xbf, 0x80, 0xc0, 0xc0, 0xff, 0xff, 0xff, 0x1f, 0xc0, 0xc0,
+  0x80, 0xff, 0xff, 0xfe, 0x0f, 0xc0, 0xc0, 0x81, 0xff, 0xff, 0xfc, 0x07, 0xe0, 0x40, 0x81, 0xff,
+  0xff, 0xf8, 0x03, 0xe0, 0x40, 0x81, 0xff, 0xff, 0xf0, 0x01, 0xe0, 0x40, 0x03, 0xff, 0x3f, 0xe0,
+  0x03, 0xf0, 0x00, 0x03, 0xfe, 0x1f, 0xc0, 0x07, 0xf0, 0x00, 0x03, 0xfc, 0x0f, 0x80, 0x0f, 0xf0,
+  0x00, 0x03, 0xf8, 0x07, 0x00, 0x1f, 0xf0, 0x00, 0x03, 0xf0, 0x02, 0x00, 0x3f, 0xf0, 0x00, 0x03,
+  0xf0, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x03, 0xf8, 0x00, 0x00, 0xff, 0xf0, 0x00, 0x03, 0xfc, 0x00,
+  0x01, 0xff, 0xf0, 0x00, 0x03, 0xfe, 0x00, 0x03, 0xff, 0xf0, 0x00, 0x03, 0xff, 0x00, 0x07, 0xff,
+  0xf0, 0x00, 0x81, 0xff, 0x80, 0x0f, 0xff, 0xe0, 0x40, 0x81, 0xff, 0xc0, 0x1f, 0xff, 0xe0, 0x40,
+  0x81, 0xff, 0xe0, 0x3f, 0xff, 0xe0, 0x40, 0xc0, 0xff, 0xf0, 0x7f, 0xff, 0xc0, 0xc0, 0xc0, 0xff,
+  0xf8, 0xff, 0xff, 0xc0, 0xc0, 0xc0, 0x7f, 0xfd, 0xff, 0xff, 0x80, 0xc0, 0xe0, 0x3f, 0xff, 0xff,
+  0xff, 0x01, 0xc0, 0xe0, 0x1f, 0xff, 0xff, 0xfe, 0x01, 0xc0, 0xf0, 0x1f, 0xff, 0xff, 0xfc, 0x03,
+  0xc0, 0xf8, 0x07, 0xff, 0xff, 0xf8, 0x07, 0xc0, 0xf8, 0x03, 0xff, 0xff, 0xf0, 0x07, 0xc0, 0xfc,
+  0x01, 0xff, 0xff, 0xe0, 0x0f, 0xc0, 0xfe, 0x00, 0x7f, 0xff, 0x80, 0x1f, 0xc0, 0xff, 0x00, 0x0f,
+  0xfc, 0x00, 0x3f, 0xc0, 0xff, 0x80, 0x00, 0x00, 0x00, 0x7f, 0xc0, 0xff, 0xe0, 0x00, 0x00, 0x01,
+  0xff, 0xc0, 0xff, 0xf0, 0x00, 0x00, 0x03, 0xff, 0xc0, 0xff, 0xfc, 0x00, 0x00, 0x0f, 0xff, 0xc0,
+  0xff, 0xff, 0x80, 0x00, 0x7f, 0xff, 0xc0, 0xff, 0xff, 0xf0, 0x03, 0xff, 0xff, 0xc0
 };
 
 
@@ -242,9 +242,9 @@ struct menuItems{
   {7,   80,   0,    250,  "Wheel diameter", 3 , 0},       //7 Wheel diameter
   {8,   2,    0,    2,    "Control mode",   0 , 3},          //8 0: PPM only   | 1: PPM and UART | 2: UART only
   {30, -1,    0,    0,    "Throttle calibration",   0 , 0},      //9 Min hall value
-  {9,   645,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
-  {10,  645,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
-  {11,  645,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
+  {9,   200,  0,    500,  "Throttle min",   0 , 0},      //9 Min hall value
+  {10,  655,  400,  700,  "Throttle center", 0 , 0},    //10 Center hall value
+  {11,  900,  600,  1023, "Throttle max",   0 , 0},   //11 Max hall value
   {13,  0,    0,    2,    "Breaklight Mode", 0 , 5},         //13 breaklight mode |0off|1alwaysOn|onWithheadlight
   {14,  5,   0,    30,   "Deathband",  0 , 0},       //14 throttle death center
   {25,  0,    0,    1,    "Unit selection", 0 , 8},         //22 Metric/Imperial
@@ -279,11 +279,12 @@ struct menuItems{
 #define TXEXIT        23
 #define TXCALIBRATION 30
 
-#define IDLE 0
-#define CONNECTED 1
-#define CALIBRATION 2
-#define SETTINGS 3
-#define ESTOP 4
+#define IDLE      0
+#define CONNECTED     1
+#define CALIBRATION   2
+#define SETTINGS    3
+#define ESTOP       4
+#define MENU      5
 
 uint8_t remoteStatus = 0;
 
@@ -399,20 +400,11 @@ float ratioRpmSpeed;
 float ratioPulseDistance;
 
 // Pin defination
-#ifdef PCB_FULLSMD
-  const uint8_t triggerPin = 5;
-  const uint8_t extraButtonPin = 6;
-  const uint8_t batteryMeasurePin = A7;
-  const uint8_t hallSensorPin = A5;
-  const uint8_t vibrationActuatorPin = 10;
-#endif
-#ifdef PCB_TH
-  const uint8_t triggerPin = 5;
-  const uint8_t extraButtonPin = 6;
-  const uint8_t batteryMeasurePin = 9;
-  const uint8_t hallSensorPin = A5;
-  const uint8_t vibrationActuatorPin = A4;
-#endif
+const uint8_t triggerPin = 5;
+const uint8_t extraButtonPin = 6;
+const uint8_t batteryMeasurePin = A7;
+const uint8_t hallSensorPin = A5;
+const uint8_t vibrationActuatorPin = 10;
 
 // Definition for RFM69HW radio on Feather m0
 #define RFM69_CS     8
@@ -521,6 +513,85 @@ int triggerTriggered = 0;
 bool blink05 = true;
 unsigned long lastBlink = 0;
 
+// Defining struct to hold setting values while remote is turned on.
+typedef struct {
+  uint8_t boardID = 1;              // 0
+  uint8_t triggerMode;              // 1
+  uint8_t batteryType;              // 2
+  uint8_t batteryCells;             // 3
+  uint8_t motorPoles;               // 4
+  uint8_t motorPulley;              // 5
+} RemoteSettings;
+
+RemoteSettings remoteSettings;
+
+// Defining flash storage
+FlashStorage(flash_RemoteSettings, RemoteSettings);
+
+struct menuCategorys{
+  uint8_t ID;
+  char name[20];
+} menuCategorys[] = {
+  {0, "Board"},
+  {1, "Throttle"},
+  {2, "Trigger"},
+  {3, "Connection"},
+  {4, "System"},
+  {5, "Debug"},
+};
+
+uint8_t numberOfCategorys = 6;
+
+struct menuActions{
+  uint8_t ID;
+  short standart;
+  short minimum;
+  short maximum;
+  char name[20];
+  uint8_t unitIdentifier;
+  uint8_t valueIdentifier;
+} menuActions[6][6]{
+	{
+		{0,		 1,   0,    9,    "BoardID",      		4 , 0},
+		{1,		 0,   0,    2,    "Headlight", 			0 , 0},
+		{2,		 0,   0,    0,    "Breaklight", 		0 , 0},
+		{3,		 8,   1,   50,    "Motor poles",   		0 , 6},
+		{4,		70,  50,  200,    "Wheel size",   		0 , 6},
+		{4,		10,   1,   14,    "Battery cells",   	0 , 6},
+	},{
+		{5,		-1,   0,    9,    "Calibrate Throttle", 4 , 0},
+		{6,		550, 400,  650,    "Center throttle", 	0 , 0},
+		{7,		300, 100,  400,    "Min throttle", 		0 , 0},
+		{8,		950, 600, 1024,    "Max throttle",   	0 , 6},
+		{9,		5,   1,    20,    "Deathband",   		0 , 6},
+	},{
+		{10,	-1,   0,    9,    "Main trigger use",   4 , 0},
+		{11,	-1,   0,    0,    "Second trigger use", 0 , 0},
+	},{
+		{12,	-1,   0,    9,    "Pair new receiver",  4 , 0},
+		{13,	-1,   0,    0,    "Transmission Power", 0 , 0},
+		{14,	-1,   0,    2,    "Frequency",   		0 , 6},
+		{15,	-1,   0,    2,    "Encyption key",   	0 , 6},
+	},{
+		{16,	-1,   0,    9,    "Version",      		4 , 0},
+		{17,	-1,   0,    0,    "Reset", 				0 , 0},
+	},{
+		{18,	-1,   0,    9,    "Spare",      	4 , 0},
+	}
+};
+
+uint8_t numberOfActions[6] = {5,5,2,4,2,1};
+
+//uint8_t numberOfCategorys = (sizeof(menuCategorys) / sizeof(menuCategorys[0]));
+uint8_t curserPos = 0;
+bool throttleCentered = false;
+char settingsHeader[20] = {"SETTINGS"};
+char settingsHeaderDefault[20] = {"SETTINGS"};
+uint8_t menuLevel = 1;
+uint8_t actualCategory = 0;
+uint8_t actualAction = 0;
+
+//uint8_t countMenuItmes[7];
 
 // SETUP
 // --------------------------------------------------------------------------------------
@@ -596,13 +667,25 @@ void setup() {
       drawTitle("Settings", 1500);
   }
 
-  if (!localSettings.throttleCalibrated) {
-    remoteStatus = CALIBRATION;
-  }
+  //if (!localSettings.throttleCalibrated) {
+  //  remoteStatus = CALIBRATION;
+  //}
+
+  	//for (uint8_t i = 0; i <= numberOfCategorys; i++){
+	//	for (uint8_t u = 0; u <= numberOfCategorys; u++){
+	//		if (menuCategorys[i].parentCategory == u){
+	//			countMenuItmes[u]++;
+	//		}
+	//	}
+	//}
+
+  remoteStatus = MENU;
 
   displayView = txSettings.homeScreen;
 
   updateLastTransmissionTimer();
+
+  loadDefaultRemoteSettings();
 
 }
 
@@ -658,11 +741,17 @@ void loop() {
     drawCalibrationDisplay();
         break;
 
-      case SETTINGS:
-        u8g2.setDisplayRotation(U8G2_R0);
+     case SETTINGS:
+    u8g2.setDisplayRotation(U8G2_R0);
         controlSettings();
         drawIdleDisplay();
-        break;
+     break;
+
+  case MENU:
+        u8g2.setDisplayRotation(U8G2_R0);
+        controlMenu();
+        drawMenu();
+     break;
   }
 
   debugData.cycleTimeFinish = millis();
@@ -671,6 +760,206 @@ void loop() {
       debugData.longestCycleTime = debugData.cycleTime;
   }
 
+}
+
+// drawMenu
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void drawMenu() {
+
+  //variables for menu
+
+  uint16_t x = 1;
+  uint16_t y = 14;
+  uint8_t scrollBoxheight = 0;
+  uint16_t y_scroll = 0;
+  uint16_t y_offset = 0;
+  uint8_t minCategory = 1;
+  uint8_t shiftTextPixel = 0;
+
+  //calculations
+  scrollBoxheight = 64/numberOfCategorys;         // calculate the number of segments in scrollbar -> height of scrollbar box
+
+  y_scroll = (scrollBoxheight*curserPos-scrollBoxheight); // calculate the start point in y for scrollbar box in respect to curser pos
+
+  // calculate select bar position
+  if (curserPos >= 3) {
+    y_offset = (2 - curserPos)* 13;
+  } else {
+    y_offset = 0;
+  }
+
+ // scrolling overrun
+  if (menuLevel == 3) { // when only "back" or "change"
+	 if (curserPos > 1) {
+		curserPos = 0;
+	} else if (curserPos < 0){
+		curserPos = 1;
+	}
+  } else {
+	if (curserPos > numberOfCategorys) {
+		curserPos = 0;
+	} else if (curserPos < 0){
+		curserPos = numberOfCategorys;
+	}
+  }
+
+ // calculate upper categorys when scrolling down
+  if (curserPos >= 3) {
+	  minCategory = curserPos - 2;
+  } else {
+	  minCategory = 0;
+  }
+
+  // calculate length of string to find the center
+  	u8g2.setFont(u8g2_font_profont12_tr);
+	shiftTextPixel = 58 - (u8g2.getStrWidth(settingsHeader)/2);
+
+
+  //draw menu
+
+u8g2.clearBuffer();
+
+	u8g2.drawLine(1, 15, 120, 15);
+
+	if (menuLevel <= 2) {
+		drawString(settingsHeader, strlen(settingsHeader), 1 + shiftTextPixel , 14, u8g2_font_profont12_tr );
+
+		u8g2.drawFrame(124, 0, 4, 64);
+
+		u8g2.drawBox(125, y_scroll, 2, scrollBoxheight);
+	}
+
+
+    if (menuLevel == 1) { // draw main category's
+		for (uint8_t i = 0; i <= numberOfCategorys; i++){
+			if (i == curserPos) {
+				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
+			}
+				if (minCategory <= i) {
+
+					String strCategory = menuCategorys[i].name;
+					drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
+
+				}
+		}
+	} else if (menuLevel == 2) { // draw sub menu to specific category
+		for (uint8_t i = 0; i < numberOfActions[actualCategory]; i++){
+			if (i == curserPos) {
+				u8g2.drawFrame(1, y + 13 + 13 * i - 11 + y_offset, 120, 14);
+			}
+			if (minCategory <= i) {
+				String strCategory = menuActions[actualCategory][i].name;
+				drawString(strCategory, strCategory.length(), 3, 13 + y + 13 * i + y_offset, u8g2_font_profont12_tr );
+			}
+		}
+	} else if (menuLevel == 3) { // draw specific option
+		String strActionChange = "change";
+		drawString(strActionChange, strActionChange.length(), 15, 60, u8g2_font_profont12_tr );
+		String strAction = "back";
+		drawString(strAction, strAction.length(), 70, 60, u8g2_font_profont12_tr );
+
+		if (curserPos == 0){
+			u8g2.drawFrame(13, 48 , 38, 14);
+		} else {
+			u8g2.drawFrame(68, 48 , 30, 14);
+		}
+
+	} else if (menuLevel == 4) { // draw change option
+
+	}
+
+u8g2.sendBuffer();
+
+
+}
+
+// controlMenu
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void controlMenu(){
+
+  calculateThrottlePosition();
+
+  if (throttlePosition == TOP && throttleCentered){
+    throttleCentered = false;
+    curserPos++;
+  } else if (throttlePosition == BOTTOM && throttleCentered) {
+    throttleCentered = false;
+    curserPos--;
+  }
+  if (throttlePosition == MIDDLE){
+    throttleCentered = true;
+  }
+
+  if (triggerTriggered) {
+
+		if (menuLevel == 2 ){
+			menuLevel = 3;
+			strncpy(settingsHeader, menuActions[actualCategory][curserPos].name, 20);
+			actualAction = curserPos;
+		} else if (menuLevel == 1 ){
+			menuLevel = 2;
+			actualCategory = curserPos;
+			strncpy(settingsHeader, menuCategorys[curserPos].name, 20);
+			curserPos = 0;
+		} else if (menuLevel == 3) {
+			Serial.println("menuLevel = 3 triggered");
+			if (curserPos == 0) {
+				Serial.println("curserPos0");
+				strncpy(settingsHeader, menuCategorys[actualCategory].name, 20);
+				menuLevel = 2;
+			} else if (curserPos == 1) {
+				Serial.println("curserPos1");
+				menuLevel = 4;
+				curserPos = 0;
+			}
+		} else if (menuLevel == 4) {
+
+		}
+	} else if (buttonTriggered){
+		menuLevel = 1;
+		strncpy(settingsHeader, settingsHeaderDefault, 20);
+	}
+
+}
+
+// load default values
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void loadDefaultRemoteSettings() {
+
+	for ( uint8_t i = 0; i < numberOfCategorys; i++ ){
+		for ( uint8_t u = 0; u < 6; u++ ){
+			if (menuActions[i][u].standart != -1){
+					setRemoteSettingValue(menuActions[i][u].ID, menuActions[i][u].standart);
+			}
+		}
+	}
+	updateFlashSettings();
+
+	Serial.println();
+
+}
+
+// load default values
+// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+void setRemoteSettingValue(uint8_t index, short value) {
+
+	Serial.print("ID: "); Serial.println(index); Serial.print("value: "); Serial.println(value);
+
+  switch (index) {
+    case 0:         remoteSettings.boardID = value;         break;
+    case 1:         remoteSettings.triggerMode = value;     break;
+    case 2:         remoteSettings.batteryType = value;     break;
+    case 3:         remoteSettings.batteryCells = value;    break;
+    case 4:         remoteSettings.motorPoles = value;      break;
+    case 5:         remoteSettings.motorPulley = value;     break;
+
+
+    default: /* Do nothing */ break;
+  }
 }
 
 // blink 0.5s
@@ -2159,7 +2448,7 @@ void drawCalibrationDisplay() {
         drawString(calibrationTitle6, calibrationTitle6.length(), 1, 48, u8g2_font_profont12_tr );
         calibrationTitle7 = "calibrated!";
         drawString(calibrationTitle7, calibrationTitle7.length(), 1, 57, u8g2_font_profont12_tr );
-		//u8g2.drawXBMP(6, 70, 50, 50, acceptLogo);
+    //u8g2.drawXBMP(6, 70, 50, 50, acceptLogo);
 
         break;
 
@@ -2756,9 +3045,9 @@ void drawBatteryRemote() {
   }
 
   if (batteryLevelRemote <= 20 && blink05) {
-  }	else {
-	u8g2.drawFrame(x + 2, y, 18, 9);
-	u8g2.drawBox(x, y + 2, 2, 5);
+  } else {
+  u8g2.drawFrame(x + 2, y, 18, 9);
+  u8g2.drawBox(x, y + 2, 2, 5);
   }
 
   for (uint8_t i = 0; i < 5; i++) {
