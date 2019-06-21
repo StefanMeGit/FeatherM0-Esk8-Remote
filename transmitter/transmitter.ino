@@ -1,5 +1,9 @@
 // FeatherFly SMD Transmitter - eSk8 Remote
 
+// --------------------------------------------------------------------------------------
+// -------- Ongoing development branch / not for use exept of beta testers!
+// --------------------------------------------------------------------------------------
+
 #include <U8g2lib.h>
 #include <Wire.h>
 #include <SPI.h>
