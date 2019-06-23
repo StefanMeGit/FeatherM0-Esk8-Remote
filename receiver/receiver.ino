@@ -27,8 +27,8 @@
 #define BOARD_V0_2          // BOARD_V0_2 no status LED, Breaklight pin 13, Headlight pin 12, Status led pin 9
 
 // - Choose UART protocoll:
-#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
-//#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
+//#define ESC_UNITY             // ESC_UNITY for UART communication with a UNITY
+#define ESC_VESC                // ESC_VESC for UART communication with a VESC 4.12-6.6
 
 
 // --------------------------------------------------------------------------------------
@@ -778,7 +778,7 @@ void initiateReceiver() {
 // cruise control
 // --------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------
-void setCruise ( bool cruise = true, uint16_t setPoint = defaultThrottle ) {
+void setCruise ( bool cruise, uint16_t setPoint) {
   if ( rxSettings.controlMode == 0 ) {
 
     setThrottle( setPoint );
