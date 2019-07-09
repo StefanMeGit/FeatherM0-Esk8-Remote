@@ -1,7 +1,7 @@
 // FeatherFly SMD Transmitter - eSk8 Remote
 
 // --------------------------------------------------------------------------------------
-// -------- latest stable for public 
+// -------- latest stable for public
 // --------------------------------------------------------------------------------------
 
 #include <U8g2lib.h>
@@ -239,7 +239,7 @@ struct menuItems{
   {12,  0,    0,    2,    "Estop Mode",     0 , 4},         //12 EStop mode |0soft|1hard|2off
   {1,   1,    0,    1,    "Trigger use",    0 , 1},          //1 0: Killswitch
   {2,   1,    0,    1,    "Battery type",   0 , 2},          //2 0: Li-ion      | 1: LiPo
-  {3,   10,   6,    12,   "Battery cells",  1 , 0},        //3 Cell count
+  {3,   10,   6,    14,   "Battery cells",  1 , 0},        //3 Cell count
   {4,   14,   0,    250,  "Motor poles",    0 , 0},       //4 Motor poles
   {5,   14,   0,    250,  "Motor pulley",   2 , 0},       //5 Motor pully
   {6,   38,   0,    250,  "Wheel pulley",   2 , 0},       //6 Wheel pulley
@@ -2118,7 +2118,7 @@ void drawCalibrationDisplay() {
 
   u8g2.firstPage();
   do {
-	
+
     String strText = "Calibrate";
     drawString(strText, strText.length(), 6, 12, u8g2_font_profont11_tr  );
 	u8g2.drawLine(0,14,64,14);
@@ -2135,8 +2135,8 @@ void drawCalibrationDisplay() {
         drawString(strText, strText.length(), 1, 50, u8g2_font_5x8_tf  );
         strText = "backwards";
         drawString(strText, strText.length(), 1, 60, u8g2_font_5x8_tf  );
-    
-    
+
+
         strText = "Push trigger";
         drawString(strText, strText.length(), 1, 90, u8g2_font_5x8_tf );
         strText = "to START";
